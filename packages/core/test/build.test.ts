@@ -51,7 +51,7 @@ domains: [writing]
 include: [context.organisation]
 budgets:
   prompt:
-    recommended_tokens: 10000
+    recommended_tokens: ${Math.min(10000, maximumTokens)}
     maximum_tokens: ${maximumTokens}
 `,
     },
