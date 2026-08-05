@@ -3,11 +3,18 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { inspectPromptBuild, preparePromptBuild } from "../src/build.js";
+import {
+  inspectPromptBuild,
+  inspectTargetBuild,
+  preparePromptBuild,
+  prepareTargetBuild,
+} from "../src/build.js";
 import {
   installPromptBuild,
+  installTargetBuild,
   openProject,
   readInstalledPromptBuild,
+  readInstalledTargetBuild,
 } from "../src/node.js";
 
 const fixture = fileURLToPath(
@@ -29,8 +36,8 @@ const copyFixture = async (): Promise<string> => {
   return projectRoot;
 };
 
-describe("installed prompt builds", () => {
-  it("installs atomically and reports later output edits", async () => {
+describe("installed destination builds", () => {
+  it("installs a prompt atomically and reports later output edits", async () => {
     const projectRoot = await copyFixture();
     const project = await openProject(projectRoot);
     const prepared = await preparePromptBuild(project, "writing");
@@ -58,5 +65,42 @@ describe("installed prompt builds", () => {
 
     const secondInstall = await installPromptBuild(projectRoot, prepared);
     expect(secondInstall.backupDirectory).not.toBeNull();
+  });
+
+  it("keeps prompt and AGENTS.md builds separate and current", async () => {
+    const projectRoot = await copyFixture();
+    const project = await openProject(projectRoot);
+    const prompt = await prepareTargetBuild(project, "writing", "prompt");
+    const agents = await prepareTargetBuild(project, "writing", "agents-md");
+
+    const promptInstall = await installTargetBuild(projectRoot, prompt);
+    const agentsInstall = await installTargetBuild(projectRoot, agents);
+
+    expect(promptInstall.directory).not.toBe(agentsInstall.directory);
+    expect(await readFile(path.join(promptInstall.directory, "system-prompt.md"), "utf8"))
+      .toContain("# Writing");
+    expect(await readFile(path.join(agentsInstall.directory, "AGENTS.md"), "utf8"))
+      .toContain("# AGENTS.md");
+
+    expect(
+      (
+        await inspectTargetBuild(
+          project,
+          "writing",
+          "prompt",
+          await readInstalledTargetBuild(projectRoot, "prompt", "writing"),
+        )
+      ).status,
+    ).toBe("current");
+    expect(
+      (
+        await inspectTargetBuild(
+          project,
+          "writing",
+          "agents-md",
+          await readInstalledTargetBuild(projectRoot, "agents-md", "writing"),
+        )
+      ).status,
+    ).toBe("current");
   });
 });
