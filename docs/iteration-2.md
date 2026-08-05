@@ -1,25 +1,54 @@
 # Iteration 2 — Writing vertical slice
 
-Iteration 2 turns the read-only foundation into the first complete guided product journey.
+Issue: #3
+
+Iteration 2 now has two coherent local threads.
+
+## Compiler thread
+
+```text
+parsed Rack project
+→ Set-up resolution
+→ dependency closure
+→ blocking diagnostics
+→ compiled profile
+→ generic prompt
+→ CLI output
+```
+
+Included:
+
+- deterministic dependency closure;
+- missing, excluded, cyclic and exact-version diagnostics;
+- domain compatibility checks for explicitly included instructions;
+- target-neutral compiled profile;
+- deterministic generic Markdown prompt;
+- `rack build --profile <id> --target prompt`;
+- package tests and a byte-for-byte golden Writing fixture.
+
+## Guided desktop thread
 
 ```text
 choose Writing and communications
-→ answer a short guided set-up
+→ answer a short local guide
 → review the proposed instructions
-→ save a local Rack
-→ assemble a Writing Set-up
-→ preview and copy a generic prompt
+→ choose a parent folder
+→ atomically create the Rack
+→ select or edit a Set-up
+→ preview, copy or export the prompt
 ```
 
-## Intended scope
+Included:
 
-- Writing starting-route selection;
-- guided context, voice, boundary and task creation;
-- local project scaffolding and safe writes;
-- simple editors for the four initial instruction types;
-- Set-up creation and dependency explanation;
-- canonical intermediate representation;
-- deterministic generic prompt renderer;
-- prompt preview, contribution list and token estimate.
+- no-model Writing route;
+- organisation and audience context;
+- voice guidance and avoided language;
+- evidence boundary;
+- one progressively structured task;
+- review before canonical files are written;
+- safe staged project creation in Rust;
+- conflict-safe source editing for instructions and Set-ups;
+- Set-up selection and contribution preview;
+- copy and Markdown export actions.
 
-AI assistance remains optional. It may propose content only after the user explicitly chooses a managed, direct-provider or local connection, and it must never mutate canonical files without review.
+The visual treatment remains provisional until the Good Ship product-family audit. Guided type-specific maintenance editors remain for a later slice; the advanced source editor keeps the canonical files usable now.

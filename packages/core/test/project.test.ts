@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseProjectSnapshot } from "../src/index.js";
 
 describe("parseProjectSnapshot", () => {
-  it("parses a small Rack and skips modules/index.md", () => {
+  it("parses a small Rack and preserves source paths", () => {
     const project = parseProjectSnapshot({
       root: "/example",
       manifest: {
@@ -49,6 +49,8 @@ include: [voice.tone]
 
     expect(project.manifest?.name).toBe("example-rack");
     expect(project.modules).toHaveLength(1);
+    expect(project.modules[0]?.path).toBe("modules/voice/tone.md");
+    expect(project.profiles[0]?.path).toBe("profiles/writing.yaml");
     expect(project.diagnostics).toEqual([]);
   });
 });

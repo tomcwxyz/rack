@@ -1,0 +1,117 @@
+.card-footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.source-edit-button {
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.setup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  padding: 32px;
+  display: grid;
+  place-items: center;
+  background: rgb(32 31 28 / 62%);
+  backdrop-filter: blur(8px);
+}
+
+.source-editor {
+  width: min(980px, 100%);
+  height: min(780px, calc(100vh - 64px));
+  padding: 24px;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: var(--paper);
+  box-shadow: 0 30px 90px rgb(18 16 13 / 28%);
+}
+
+.source-editor-header,
+.source-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.source-editor-header h2 {
+  margin-bottom: 6px;
+}
+
+.source-editor-header code {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.editor-explanation {
+  margin: 0;
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.editor-loading {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  color: var(--muted);
+}
+
+.source-textarea {
+  width: 100%;
+  min-height: 0;
+  padding: 18px;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: #2c2924;
+  background: #fbfaf5;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.source-editor-actions {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.source-editor-actions > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 980px) {
+  .editor-backdrop {
+    padding: 16px;
+  }
+
+  .source-editor {
+    height: calc(100vh - 32px);
+  }
+}
