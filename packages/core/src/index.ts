@@ -24,11 +24,12 @@ export type ProjectSnapshot = {
   modules: ProjectSourceFile[];
   profiles: ProjectSourceFile[];
 };
+export type RackProjectProfile = RackProfile & { path: string };
 export type RackProject = {
   root: string;
   manifest: RackManifest | null;
   modules: RackModule[];
-  profiles: RackProfile[];
+  profiles: RackProjectProfile[];
   diagnostics: Diagnostic[];
 };
 
@@ -126,11 +127,11 @@ export const parseProjectSnapshot = (snapshot: ProjectSnapshot): RackProject => 
     }
   }
 
-  const profiles: RackProfile[] = [];
+  const profiles: RackProjectProfile[] = [];
   for (const file of snapshot.profiles) {
     try {
       const result = profileSchema.safeParse(parseYaml(file.content));
-      if (result.success) profiles.push(result.data);
+      if (result.success) profiles.push({ ...result.data, path: file.path });
       else
         diagnostics.push({
           code: "RACK-SCHEMA-003",

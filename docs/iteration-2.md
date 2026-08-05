@@ -24,7 +24,7 @@ Included:
 - target-neutral compiled profile;
 - deterministic generic Markdown prompt;
 - `rack build --profile <id> --target prompt`;
-- package tests for dependency closure, exclusion and reproducibility.
+- package tests and a byte-for-byte golden Writing fixture.
 
 ## Guided desktop thread
 
@@ -34,7 +34,7 @@ choose Writing and communications
 → review the proposed instructions
 → choose a parent folder
 → atomically create the Rack
-→ select a Set-up
+→ select or edit a Set-up
 → preview, copy or export the prompt
 ```
 
@@ -47,7 +47,8 @@ Included:
 - one progressively structured task;
 - review before canonical files are written;
 - safe staged project creation in Rust;
+- conflict-safe source editing for instructions and Set-ups;
 - Set-up selection and contribution preview;
 - copy and Markdown export actions.
 
-The visual treatment remains provisional until the Good Ship product-family audit. Direct editing of existing source files and golden prompt fixtures remain before the Iteration 2 PR leaves draft.
+The visual treatment remains provisional until the Good Ship product-family audit. Guided type-specific maintenance editors remain for a later slice; the advanced source editor keeps the canonical files usable now.

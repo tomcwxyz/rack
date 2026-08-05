@@ -290,16 +290,30 @@ export function ProjectWorkspace({
                         <dd>{blocked ? "Blocked" : "Ready"}</dd>
                       </div>
                     </dl>
-                    <button
-                      className="secondary-action"
-                      type="button"
-                      onClick={() => {
-                        setSelectedProfile(profile.id);
-                        setSection("preview");
-                      }}
-                    >
-                      Preview this Set-up
-                    </button>
+                    <div className="setup-actions">
+                      <button
+                        className="quiet-action"
+                        type="button"
+                        onClick={() =>
+                          setEditing({
+                            path: profile.path,
+                            title: `${profile.title} Set-up`,
+                          })
+                        }
+                      >
+                        Edit Set-up source
+                      </button>
+                      <button
+                        className="secondary-action"
+                        type="button"
+                        onClick={() => {
+                          setSelectedProfile(profile.id);
+                          setSection("preview");
+                        }}
+                      >
+                        Preview this Set-up
+                      </button>
+                    </div>
                   </article>
                 );
               })}
