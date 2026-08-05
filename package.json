@@ -7,12 +7,14 @@
   "packageManager": "pnpm@10.15.0",
   "engines": { "node": ">=22.12.0" },
   "scripts": {
+    "assets": "node scripts/generate-assets.cjs",
     "build": "turbo run build",
     "check": "turbo run check",
     "dev": "turbo run dev --parallel",
     "dev:desktop": "pnpm --filter @rack/desktop dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "postinstall": "pnpm assets",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
