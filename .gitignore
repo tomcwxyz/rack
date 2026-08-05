@@ -23,6 +23,7 @@ target/
 
 # Tauri and platform
 src-tauri/target/
+apps/desktop/src-tauri/icons/icon.png
 .DS_Store
 Thumbs.db
 
