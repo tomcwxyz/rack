@@ -271,8 +271,7 @@ export const inspectPromptBuild = async (
     installedManifest.source.digest !== current.manifest.source.digest;
   const rendererChanged =
     installedManifest.compiler.version !== current.manifest.compiler.version ||
-    installedManifest.adapter.version !== current.manifest.adapter.version ||
-    installedManifest.artifact.digest !== current.manifest.artifact.digest;
+    installedManifest.adapter.version !== current.manifest.adapter.version;
   const outputDigest = installed.artifactContent
     ? await sha256Text(installed.artifactContent)
     : null;

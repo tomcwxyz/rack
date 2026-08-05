@@ -107,9 +107,14 @@ describe("canonical build state", () => {
     );
 
     const changedProject = parseProjectSnapshot(snapshot("Write very clearly."));
-    expect(
-      (await inspectPromptBuild(changedProject, "writing", installed)).status,
-    ).toBe("stale");
+    const staleInspection = await inspectPromptBuild(
+      changedProject,
+      "writing",
+      installed,
+    );
+    expect(staleInspection.status).toBe("stale");
+    expect(staleInspection.sourceChanged).toBe(true);
+    expect(staleInspection.rendererChanged).toBe(false);
 
     expect(
       (
