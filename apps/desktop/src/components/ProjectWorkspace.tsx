@@ -1,13 +1,20 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { buildPrompt, type RackProject } from "@rack/core";
+import {
+  buildPrompt,
+  type ProjectSnapshot,
+  type RackProject,
+} from "@rack/core";
+import { SourceEditor } from "./SourceEditor.js";
 
 type WorkspaceSection = "rack" | "setups" | "preview";
+type EditingSource = { path: string; title: string };
 
 type ProjectWorkspaceProps = {
   project: RackProject;
   onOpenAnother: () => void;
+  onProjectChanged: (snapshot: ProjectSnapshot) => void;
 };
 
 const typeLabels: Record<string, string> = {
@@ -23,12 +30,14 @@ const typeLabels: Record<string, string> = {
 export function ProjectWorkspace({
   project,
   onOpenAnother,
+  onProjectChanged,
 }: ProjectWorkspaceProps) {
   const defaultProfile =
     project.manifest?.default_profile ?? project.profiles[0]?.id ?? "";
   const [section, setSection] = useState<WorkspaceSection>("rack");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditingSource | null>(null);
 
   const groupedModules = useMemo(() => {
     const groups = new Map<string, RackProject["modules"]>();
@@ -116,7 +125,9 @@ export function ProjectWorkspace({
       <main className="workspace">
         <header className="workspace-header">
           <div>
-            <p className="eyebrow">Local source · {project.manifest?.version ?? "unknown version"}</p>
+            <p className="eyebrow">
+              Local source · {project.manifest?.version ?? "unknown version"}
+            </p>
             <h1>{project.manifest?.title ?? "Your Rack"}</h1>
             <p className="lede">
               {project.manifest?.description ||
@@ -151,7 +162,11 @@ export function ProjectWorkspace({
                 <span>blocking problems</span>
               </div>
               <div className="summary-path">
-                <span>{errors.length === 0 ? "Source is ready to build" : "Source needs attention"}</span>
+                <span>
+                  {errors.length === 0
+                    ? "Source is ready to build"
+                    : "Source needs attention"}
+                </span>
               </div>
             </section>
 
@@ -168,7 +183,10 @@ export function ProjectWorkspace({
                 </div>
                 <div className="diagnostic-list">
                   {project.diagnostics.map((item, index) => (
-                    <article className="diagnostic-card" key={`${item.code}-${index}`}>
+                    <article
+                      className="diagnostic-card"
+                      key={`${item.code}-${index}`}
+                    >
                       <code>{item.code}</code>
                       <h3>{item.title}</h3>
                       <p>{item.message}</p>
@@ -184,7 +202,9 @@ export function ProjectWorkspace({
                   <p className="eyebrow">Canonical source</p>
                   <h2 id="instructions-heading">Instructions in this Rack</h2>
                 </div>
-                <span className="muted-copy">Direct editing arrives later in Iteration 2.</span>
+                <span className="muted-copy">
+                  Source editing is advanced in this iteration; guided editors follow.
+                </span>
               </div>
 
               <div className="instruction-groups">
@@ -193,7 +213,10 @@ export function ProjectWorkspace({
                     <h3>{typeLabels[type] ?? type}</h3>
                     <div className="card-grid">
                       {modules.map((module) => (
-                        <article className="instruction-card" key={module.harness.id}>
+                        <article
+                          className="instruction-card"
+                          key={module.harness.id}
+                        >
                           <div className="card-meta">
                             <span>{module.harness.criticality}</span>
                             <code>{module.harness.id}</code>
@@ -204,7 +227,21 @@ export function ProjectWorkspace({
                               module.body.split("\n").find(Boolean) ||
                               "No description yet."}
                           </p>
-                          <span className="source-label">Yours · local</span>
+                          <div className="card-footer">
+                            <span className="source-label">Yours · local</span>
+                            <button
+                              className="source-edit-button"
+                              type="button"
+                              onClick={() =>
+                                setEditing({
+                                  path: module.path,
+                                  title: module.title,
+                                })
+                              }
+                            >
+                              Edit source
+                            </button>
+                          </div>
                         </article>
                       ))}
                     </div>
@@ -224,12 +261,15 @@ export function ProjectWorkspace({
               </div>
             </div>
             <p className="section-intro">
-              A Set-up selects the instructions needed for a particular kind of work. Destinations are chosen separately.
+              A Set-up selects the instructions needed for a particular kind of
+              work. Destinations are chosen separately.
             </p>
             <div className="setup-grid">
               {project.profiles.map((profile) => {
                 const build = buildPrompt(project, profile.id);
-                const blocked = build.diagnostics.some((item) => item.severity === "error");
+                const blocked = build.diagnostics.some(
+                  (item) => item.severity === "error",
+                );
                 return (
                   <article
                     className={`setup-card ${selectedProfile === profile.id ? "setup-card--selected" : ""}`}
@@ -302,7 +342,9 @@ export function ProjectWorkspace({
               <div className="preview-layout">
                 <aside className="contribution-panel">
                   <p className="eyebrow">What is carried across</p>
-                  <h3>{promptBuild.compiled?.modules.length ?? 0} instructions</h3>
+                  <h3>
+                    {promptBuild.compiled?.modules.length ?? 0} instructions
+                  </h3>
                   <ol>
                     {promptBuild.compiled?.modules.map((module) => (
                       <li key={module.harness.id}>
@@ -316,24 +358,50 @@ export function ProjectWorkspace({
                   <div className="prompt-toolbar">
                     <div>
                       <span>system-prompt.md</span>
-                      <small>{promptBuild.artifact.content.length.toLocaleString()} characters</small>
+                      <small>
+                        {promptBuild.artifact.content.length.toLocaleString()} characters
+                      </small>
                     </div>
                     <div className="button-row">
-                      <button className="quiet-action" type="button" onClick={copyPrompt}>
+                      <button
+                        className="quiet-action"
+                        type="button"
+                        onClick={copyPrompt}
+                      >
                         Copy prompt
                       </button>
-                      <button className="primary-action" type="button" onClick={exportPrompt}>
+                      <button
+                        className="primary-action"
+                        type="button"
+                        onClick={exportPrompt}
+                      >
                         Export Markdown
                       </button>
                     </div>
                   </div>
-                  <pre className="prompt-preview"><code>{promptBuild.artifact.content}</code></pre>
+                  <pre className="prompt-preview">
+                    <code>{promptBuild.artifact.content}</code>
+                  </pre>
                 </div>
               </div>
             )}
           </section>
         ) : null}
       </main>
+
+      {editing ? (
+        <SourceEditor
+          projectRoot={project.root}
+          path={editing.path}
+          title={editing.title}
+          onClose={() => setEditing(null)}
+          onSaved={(snapshot) => {
+            setEditing(null);
+            setActionStatus(`${editing.title} was saved and rechecked.`);
+            onProjectChanged(snapshot);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

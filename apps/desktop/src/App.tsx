@@ -58,6 +58,7 @@ export function App() {
         onOpenAnother={() => {
           void chooseRack();
         }}
+        onProjectChanged={applySnapshot}
       />
     );
   }
@@ -92,7 +93,8 @@ export function App() {
           <p className="eyebrow">Local-first · implementation preview</p>
           <h1>Carry the useful parts of how you work.</h1>
           <p className="lede">
-            Create one inspectable source for your context, voice, methods, boundaries and repeatable tasks—then build it for different AI tools.
+            Create one inspectable source for your context, voice, methods,
+            boundaries and repeatable tasks—then build it for different AI tools.
           </p>
           <div className="button-row button-row--large">
             <button
@@ -116,7 +118,8 @@ export function App() {
           <p className="eyebrow">First guided route</p>
           <h2>Writing and communications</h2>
           <p>
-            Capture organisation and audience context, choose a voice, add an evidence boundary and make one repeatable task.
+            Capture organisation and audience context, choose a voice, add an
+            evidence boundary and make one repeatable task.
           </p>
           <ul>
             <li>No account</li>
