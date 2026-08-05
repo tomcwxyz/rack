@@ -6,8 +6,8 @@ import {
   type ContextModuleDraft,
   type ProjectSnapshot,
   type RackProject,
-  type SourceDiffLine,
 } from "@rack/core";
+import { SourceDiffReview } from "./SourceDiffReview.js";
 
 type ContextModule = Extract<
   RackProject["modules"][number],
@@ -21,9 +21,6 @@ type GuidedContextEditorProps = {
   onAdvanced: () => void;
   onSaved: (snapshot: ProjectSnapshot) => void;
 };
-
-const changeCount = (diff: SourceDiffLine[]): number =>
-  diff.filter((line) => line.kind !== "same").length;
 
 export function GuidedContextEditor({
   projectRoot,
@@ -236,52 +233,12 @@ export function GuidedContextEditor({
             </footer>
           </form>
         ) : draft && proposal && !(proposal instanceof Error) ? (
-          <div className="guided-review">
-            <div className="change-summary">
-              <strong>{changeCount(proposal.diff)} changed lines</strong>
-              <span>
-                The file has not been written. Unchanged lines are shown for context.
-              </span>
-            </div>
-
-            <div className="source-diff" aria-label="Proposed source diff">
-              {proposal.diff.map((line, index) => (
-                <div
-                  className={`source-diff-line source-diff-line--${line.kind}`}
-                  key={`${line.kind}-${line.oldLine}-${line.newLine}-${index}`}
-                >
-                  <span className="source-diff-marker" aria-hidden="true">
-                    {line.kind === "add" ? "+" : line.kind === "remove" ? "−" : " "}
-                  </span>
-                  <span className="source-diff-number">
-                    {line.oldLine ?? ""}
-                  </span>
-                  <span className="source-diff-number">
-                    {line.newLine ?? ""}
-                  </span>
-                  <code>{line.text || " "}</code>
-                </div>
-              ))}
-            </div>
-
-            <footer className="source-editor-actions">
-              <button
-                className="quiet-action"
-                type="button"
-                onClick={() => setStep("edit")}
-              >
-                Back to the form
-              </button>
-              <button
-                className="primary-action"
-                type="button"
-                onClick={save}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : "Accept and save change"}
-              </button>
-            </footer>
-          </div>
+          <SourceDiffReview
+            diff={proposal.diff}
+            saving={saving}
+            onBack={() => setStep("edit")}
+            onSave={save}
+          />
         ) : (
           <div className="notice notice--error" role="alert">
             <strong>Guided editing is not available for this source.</strong>

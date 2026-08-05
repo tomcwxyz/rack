@@ -1,14 +1,14 @@
 import { useMemo } from "react";
 import type { RackProject } from "@rack/core";
 
-type ContextModule = Extract<
+type GuidedModule = Extract<
   RackProject["modules"][number],
-  { type: "context" }
+  { type: "context" | "voice" }
 >;
 
 type RackSectionProps = {
   project: RackProject;
-  onGuidedContextEdit: (module: ContextModule) => void;
+  onGuidedEdit: (module: GuidedModule) => void;
   onSourceEdit: (path: string, title: string) => void;
 };
 
@@ -24,7 +24,7 @@ const typeLabels: Record<string, string> = {
 
 export function RackSection({
   project,
-  onGuidedContextEdit,
+  onGuidedEdit,
   onSourceEdit,
 }: RackSectionProps) {
   const groupedModules = useMemo(() => {
@@ -77,7 +77,7 @@ export function RackSection({
             <h2 id="instructions-heading">Instructions in this Rack</h2>
           </div>
           <span className="muted-copy">
-            Context instructions now have guided maintenance. Advanced source editing remains available.
+            Context and voice instructions have guided maintenance. Advanced source editing remains available.
           </span>
         </div>
 
@@ -101,11 +101,11 @@ export function RackSection({
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">
-                        {module.type === "context" ? (
+                        {module.type === "context" || module.type === "voice" ? (
                           <button
                             className="source-edit-button"
                             type="button"
-                            onClick={() => onGuidedContextEdit(module)}
+                            onClick={() => onGuidedEdit(module)}
                           >
                             Edit details
                           </button>

@@ -48,7 +48,7 @@
 .source-editor,
 .guided-editor {
   width: min(980px, 100%);
-  height: min(780px, calc(100vh - 64px));
+  height: min(820px, calc(100vh - 64px));
   padding: 24px;
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
@@ -121,14 +121,73 @@
   overflow: hidden;
 }
 
-.guided-editor-form .form-grid {
+.guided-editor-form .form-grid,
+.guided-form-scroll {
   min-height: 0;
   overflow: auto;
   padding-right: 4px;
 }
 
+.guided-form-scroll .form-grid {
+  overflow: visible;
+  padding-right: 0;
+}
+
 .guided-review {
   grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.repeatable-editor {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.repeatable-editor-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repeatable-editor-heading h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.repeatable-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.repeatable-row {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.2fr) auto;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 253 247 / 64%);
+}
+
+.remove-row-action {
+  padding: 10px 4px;
+  border: 0;
+  color: var(--danger);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-editor-state {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
 }
 
 .change-summary {
@@ -211,8 +270,14 @@
   }
 
   .card-footer,
-  .change-summary {
+  .change-summary,
+  .repeatable-editor-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .repeatable-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 }
