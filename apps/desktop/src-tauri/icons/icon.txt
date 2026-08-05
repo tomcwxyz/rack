@@ -1,1 +1,0 @@
-Provisional icon placeholder. Binary icon.png is added separately for Tauri builds.
