@@ -1,3 +1,5 @@
+mod generated;
+
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
@@ -345,7 +347,9 @@ pub fn run() {
             create_rack_project,
             read_project_file,
             write_project_file,
-            write_generated_file
+            write_generated_file,
+            generated::read_generated_prompt_build,
+            generated::install_generated_prompt_build
         ])
         .run(tauri::generate_context!())
         .expect("error while running Rack");

@@ -4,8 +4,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { Command } from "commander";
-import { buildPrompt } from "@rack/core";
-import { openProject } from "@rack/core/node";
+import {
+  inspectPromptBuild,
+  preparePromptBuild,
+} from "@rack/core/build";
+import {
+  installPromptBuild,
+  openProject,
+  readInstalledPromptBuild,
+} from "@rack/core/node";
 
 const program = new Command()
   .name("rack")
@@ -78,7 +85,8 @@ program
   .argument("[path]", "Rack project folder", ".")
   .requiredOption("--profile <id>", "Set-up ID to build")
   .option("--target <id>", "Destination to build", "prompt")
-  .option("--output <path>", "Write the generated file to this path")
+  .option("--output <path>", "Write only the generated prompt to this path")
+  .option("--install", "Install prompt and manifest into the Rack generated folder")
   .option("--json", "Print machine-readable JSON")
   .action(
     async (
@@ -87,6 +95,7 @@ program
         profile: string;
         target: string;
         output?: string;
+        install?: boolean;
         json?: boolean;
       },
     ) => {
@@ -98,14 +107,21 @@ program
           process.exitCode = 2;
           return;
         }
+        if (options.output && options.install) {
+          process.stderr.write(
+            "Choose either --output for one file or --install for a managed Rack build, not both.\n",
+          );
+          process.exitCode = 2;
+          return;
+        }
 
         const project = await openProject(projectPath);
-        const build = buildPrompt(project, options.profile);
+        const build = await preparePromptBuild(project, options.profile);
         const hasErrors = build.diagnostics.some(
           (item) => item.severity === "error",
         );
 
-        if (hasErrors || !build.artifact) {
+        if (hasErrors || !build.promptBuild.artifact || !build.manifest) {
           if (options.json) {
             process.stdout.write(
               `${JSON.stringify(
@@ -113,6 +129,7 @@ program
                   built: false,
                   profile: options.profile,
                   target: options.target,
+                  estimatedTokens: build.estimatedTokens,
                   diagnostics: build.diagnostics,
                 },
                 null,
@@ -126,10 +143,17 @@ program
           return;
         }
 
-        if (options.output) {
+        let installed: Awaited<ReturnType<typeof installPromptBuild>> | null = null;
+        if (options.install) {
+          installed = await installPromptBuild(projectPath, build);
+        } else if (options.output) {
           const destination = path.resolve(options.output);
           await fs.mkdir(path.dirname(destination), { recursive: true });
-          await fs.writeFile(destination, build.artifact.content, "utf8");
+          await fs.writeFile(
+            destination,
+            build.promptBuild.artifact.content,
+            "utf8",
+          );
         }
 
         if (options.json) {
@@ -138,36 +162,124 @@ program
               {
                 built: true,
                 profile: options.profile,
-                target: build.artifact.target,
+                target: build.promptBuild.artifact.target,
+                estimatedTokens: build.estimatedTokens,
+                installed,
                 output: options.output ? path.resolve(options.output) : null,
-                artifact: options.output
-                  ? {
-                      path: build.artifact.path,
-                      mediaType: build.artifact.mediaType,
-                      moduleIds: build.artifact.moduleIds,
-                    }
-                  : build.artifact,
+                manifest: build.manifest,
+                artifact:
+                  options.output || options.install
+                    ? {
+                        path: build.promptBuild.artifact.path,
+                        mediaType: build.promptBuild.artifact.mediaType,
+                        moduleIds: build.promptBuild.artifact.moduleIds,
+                      }
+                    : build.promptBuild.artifact,
                 diagnostics: build.diagnostics,
               },
               null,
               2,
             )}\n`,
           );
+        } else if (installed) {
+          process.stdout.write(
+            `Built ${options.profile} for prompt → ${installed.directory}\n`,
+          );
+          if (installed.backupDirectory) {
+            process.stdout.write(
+              `Previous generated output retained at ${installed.backupDirectory}\n`,
+            );
+          }
+          printDiagnostics(build.diagnostics);
         } else if (options.output) {
           process.stdout.write(
             `Built ${options.profile} for prompt → ${path.resolve(options.output)}\n`,
           );
-          if (build.diagnostics.length > 0) {
-            printDiagnostics(build.diagnostics);
-          }
+          printDiagnostics(build.diagnostics);
         } else {
-          process.stdout.write(build.artifact.content);
+          process.stdout.write(build.promptBuild.artifact.content);
         }
 
         process.exitCode = 0;
       } catch (error) {
         process.stderr.write(
           `${error instanceof Error ? error.message : "Unable to build Rack."}\n`,
+        );
+        process.exitCode = 3;
+      }
+    },
+  );
+
+program
+  .command("check")
+  .description("Check whether a managed generated build is current.")
+  .argument("[path]", "Rack project folder", ".")
+  .option("--profile <id>", "Set-up ID to inspect")
+  .option("--target <id>", "Destination to inspect", "prompt")
+  .option("--json", "Print machine-readable JSON")
+  .action(
+    async (
+      projectPath: string,
+      options: { profile?: string; target: string; json?: boolean },
+    ) => {
+      try {
+        if (options.target !== "prompt") {
+          process.stderr.write(
+            `RACK-TARGET-001 Destination is not available yet\n${options.target} is not implemented in this iteration. Use --target prompt.\n`,
+          );
+          process.exitCode = 2;
+          return;
+        }
+
+        const project = await openProject(projectPath);
+        const profileId =
+          options.profile ?? project.manifest?.default_profile ?? "";
+        if (!profileId) {
+          process.stderr.write("No Set-up was supplied and the Rack has no default Set-up.\n");
+          process.exitCode = 2;
+          return;
+        }
+
+        const inspection = await inspectPromptBuild(
+          project,
+          profileId,
+          await readInstalledPromptBuild(projectPath, profileId),
+        );
+
+        if (options.json) {
+          process.stdout.write(
+            `${JSON.stringify(
+              {
+                profile: profileId,
+                target: options.target,
+                status: inspection.status,
+                sourceChanged: inspection.sourceChanged,
+                rendererChanged: inspection.rendererChanged,
+                outputModified: inspection.outputModified,
+                diagnostics: inspection.diagnostics,
+              },
+              null,
+              2,
+            )}\n`,
+          );
+        } else {
+          const messages: Record<typeof inspection.status, string> = {
+            missing: "No managed prompt build exists yet.",
+            current: "The generated prompt is current.",
+            stale: "The Rack source or renderer changed after the prompt was built.",
+            modified: "The generated prompt was edited outside Rack.",
+            "stale-and-modified":
+              "The Rack changed and the generated prompt was also edited outside Rack.",
+            invalid: "The generated build cannot be verified.",
+          };
+          process.stdout.write(`${messages[inspection.status]}\n`);
+          printDiagnostics(inspection.diagnostics);
+        }
+
+        process.exitCode = inspection.status === "current" ? 0 : 7;
+      } catch (error) {
+        process.stderr.write(
+          `${error instanceof Error ? error.message : "Unable to check Rack."}\n`,
         );
         process.exitCode = 3;
       }
