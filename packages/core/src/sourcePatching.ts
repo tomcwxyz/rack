@@ -1,4 +1,4 @@
-import { isMap, parseDocument } from "yaml";
+import { isMap, isScalar, parseDocument } from "yaml";
 import type { RackModule } from "@rack/schemas";
 
 export type ContextKind = Extract<
@@ -254,12 +254,26 @@ export const patchContextModuleSource = (
     );
   }
 
-  document.set("title", draft.title.trim());
-  document.set(
-    "description",
+  const setScalarValue = (path: [string] | [string, string], value: unknown) => {
+    const existing =
+      path.length === 1
+        ? document.get(path[0], true)
+        : document.getIn(path, true);
+    if (isScalar(existing)) {
+      existing.value = value;
+    } else if (path.length === 1) {
+      document.set(path[0], value);
+    } else {
+      document.setIn(path, value);
+    }
+  };
+
+  setScalarValue(["title"], draft.title.trim());
+  setScalarValue(
+    ["description"],
     draft.description.trim() ? draft.description.trim() : null,
   );
-  document.setIn(["harness", "context_kind"], draft.contextKind);
+  setScalarValue(["harness", "context_kind"], draft.contextKind);
 
   const yaml = document.toString({ lineWidth: 0 }).trimEnd();
   const normalised = [
