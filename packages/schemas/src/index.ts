@@ -16,6 +16,15 @@ export const moduleTypeSchema = z.enum([
 export const destinationIdSchema = z.enum([
   "prompt", "agents-md", "claude-code", "opencode", "codex", "hermes-agent", "openclaw",
 ]);
+export const adapterCapabilityIdSchema = z.enum([
+  "commands",
+  "skills",
+  "tools",
+  "bootstrapContext",
+  "hostPolicies",
+  "multipleFiles",
+  "onDemandModules",
+]);
 
 const dependencySchema = z.object({ id: moduleIdSchema, version: z.string().optional() }).strict();
 const sourceSchema = z.object({
@@ -27,6 +36,9 @@ const emitSchema = z.object({
   priority: z.number().int().min(0).max(1000).default(50),
   targets: z.union([z.literal("all"), z.array(slugSchema)]).default("all"),
 }).strict();
+const capabilitiesSchema = z.object({
+  required: z.array(adapterCapabilityIdSchema).default([]),
+}).strict();
 const commonHarness = {
   schema_version: schemaVersionSchema,
   id: moduleIdSchema,
@@ -37,6 +49,7 @@ const commonHarness = {
   enforcement: z.array(z.enum([
     "instruction", "output_check", "rubric_eval", "adversarial_eval", "host_policy",
   ])).min(1).default(["instruction"]),
+  capabilities: capabilitiesSchema.default({ required: [] }),
   emit: emitSchema.default({ priority: 50, targets: "all" }),
   source: sourceSchema.default({ origin: "local", license: null }),
 };
@@ -189,3 +202,4 @@ export type RackProfile = z.infer<typeof profileSchema>;
 export type RackModuleFrontmatter = z.infer<typeof moduleFrontmatterSchema>;
 export type RackModule = RackModuleFrontmatter & { path: string; body: string };
 export type DestinationId = z.infer<typeof destinationIdSchema>;
+export type AdapterCapabilityId = z.infer<typeof adapterCapabilityIdSchema>;

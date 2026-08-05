@@ -6,23 +6,82 @@ Rack is a local-first desktop application for authoring, assembling, compiling a
 
 ## Status
 
-Rack is at the implementation-foundation stage. The accepted v0.1 specification, Architecture Decision Records and implementation backlog live in [`docs/`](docs/).
+Rack is in active pre-release development. The repository now contains a working local vertical slice rather than only a scaffold.
 
-## Initial product shape
+A user can:
 
-Rack will provide three guided starting routes:
+- create a Writing and communications Rack through a guided desktop flow;
+- keep canonical instructions and Set-ups as inspectable Markdown and YAML;
+- edit source files with external-change protection;
+- compile a Set-up deterministically;
+- preview, copy and export generated instructions;
+- install managed local builds with provenance manifests, retained backups and drift detection;
+- build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
+- perform the same build and check operations through the CLI.
 
-- Writing and communications
-- Research and knowledge work
-- Coding and technical work
+The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
 
-The canonical Rack project is stored locally as inspectable Markdown and YAML. Initial supported destinations are generic prompts, `AGENTS.md`, Claude Code, OpenCode and Codex. Hermes Agent and OpenClaw begin as Preview destinations.
+## Product shape
+
+Rack has three planned guided starting routes:
+
+- Writing and communications — implemented first;
+- Research and knowledge work;
+- Coding and technical work.
+
+The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
+
+Supported destinations are:
+
+- generic prompt;
+- portable `AGENTS.md`;
+- Claude Code;
+- OpenCode;
+- Codex.
+
+Hermes Agent and OpenClaw remain planned Preview destinations.
+
+## Repository
+
+This is a pnpm/Turborepo monorepo.
+
+- `apps/desktop` — Tauri and React desktop application;
+- `packages/schemas` — source and generated-manifest schemas;
+- `packages/core` — project parsing, compilation, adapters, build state and Node integration;
+- `packages/cli` — `rack validate`, `rack build` and `rack check`;
+- `test-fixtures` — accepted source and golden destination packages;
+- `docs` — specification, ADRs and iteration notes.
 
 ## Development
 
-The repository is a pnpm/Turborepo monorepo. The desktop application uses Tauri, React and TypeScript. Shared packages own the schemas, project model, compiler, renderers, adapters, checks and CLI.
+The repository requires Node.js 22.12 or newer, pnpm 10.15 and a Rust/Tauri development environment for desktop work.
 
-The initial scaffold is being added now. See [`CONTRIBUTING.md`](CONTRIBUTING.md) once it lands.
+```bash
+pnpm install
+pnpm check
+pnpm build
+```
+
+Run the desktop application in development:
+
+```bash
+pnpm dev:desktop
+```
+
+Build and inspect a fixture through the CLI:
+
+```bash
+pnpm --filter @rack/cli dev -- build test-fixtures/coding-basic \
+  --profile coding \
+  --target claude-code \
+  --install
+
+pnpm --filter @rack/cli dev -- check test-fixtures/coding-basic \
+  --profile coding \
+  --target claude-code
+```
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-request checks.
 
 ## Licence
 

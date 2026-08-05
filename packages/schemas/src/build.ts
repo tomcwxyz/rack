@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { destinationIdSchema } from "./index.js";
+import {
+  adapterCapabilityIdSchema,
+  destinationIdSchema,
+} from "./index.js";
 
 const semanticVersionSchema = z.string().regex(
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
@@ -81,15 +84,7 @@ export const buildManifestSchema = z
       .array(
         z
           .object({
-            capability: z.enum([
-              "commands",
-              "skills",
-              "tools",
-              "bootstrapContext",
-              "hostPolicies",
-              "multipleFiles",
-              "onDemandModules",
-            ]),
+            capability: adapterCapabilityIdSchema,
             title: z.string().min(1),
             module_ids: z.array(z.string()).default([]),
           })
