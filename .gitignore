@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+coverage/
+.next/
+out/
+target/
+.turbo/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local Rack state
+.rack/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Tauri and platform
+src-tauri/target/
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+pnpm-debug.log*
