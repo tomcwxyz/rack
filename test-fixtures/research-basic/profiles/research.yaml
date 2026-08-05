@@ -1,0 +1,18 @@
+schema_version: "0.1"
+id: research
+title: Research and review
+description: Question-centred research with evidence traceability.
+domains: [research]
+include:
+  - context.research-project
+  - method.question-centred
+  - guardrail.traceability
+  - task.review-proposal
+exclude: []
+overrides:
+  emit_priority: {}
+  target_waivers: {}
+budgets:
+  prompt:
+    recommended_tokens: 10000
+    maximum_tokens: 16000

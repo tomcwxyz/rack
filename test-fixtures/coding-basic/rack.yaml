@@ -1,0 +1,19 @@
+schema_version: "0.1"
+name: coding-basic
+version: 0.1.0
+title: Coding basics
+description: A small Rack for careful, componentised implementation.
+author:
+  name: The Good Ship
+  organisation: The Good Ship
+license: CC-BY-4.0
+okf_root: modules
+default_profile: coding
+profiles: [coding]
+targets:
+  agents-md: { enabled: true }
+  claude-code: { enabled: true }
+  opencode: { enabled: true }
+  codex: { enabled: true }
+evaluation:
+  config: eval/config.yaml
