@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -50,14 +50,51 @@ fn safe_slug(value: &str, label: &str) -> Result<(), String> {
     }
 }
 
-fn target_artifacts(target: &str) -> Result<Vec<&'static str>, String> {
+fn supported_target(target: &str) -> Result<(), String> {
     match target {
-        "prompt" => Ok(vec!["system-prompt.md"]),
-        "agents-md" => Ok(vec!["AGENTS.md"]),
+        "prompt" | "agents-md" | "claude-code" | "opencode" | "codex" => Ok(()),
         _ => Err(format!(
-            "{target} does not yet have a desktop build adapter."
+            "{target} does not yet have a supported desktop build adapter."
         )),
     }
+}
+
+fn safe_relative_path(value: &str) -> Result<PathBuf, String> {
+    let path = Path::new(value);
+    if value.trim().is_empty() || path.is_absolute() {
+        return Err(format!("Generated path is not safe: {value}"));
+    }
+
+    for component in path.components() {
+        if !matches!(component, Component::Normal(_)) {
+            return Err(format!("Generated path is not safe: {value}"));
+        }
+    }
+
+    Ok(path.to_path_buf())
+}
+
+fn normalised_relative_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+fn validated_artifact_paths(paths: Vec<String>) -> Result<Vec<PathBuf>, String> {
+    let mut output = Vec::new();
+    let mut seen = HashSet::new();
+
+    for value in paths {
+        let path = safe_relative_path(&value)?;
+        let normalised = normalised_relative_path(&path);
+        if normalised == "build.json" {
+            return Err("build.json is reserved for Rack's generated manifest.".to_string());
+        }
+        if !seen.insert(normalised.clone()) {
+            return Err(format!("Generated artifact appears more than once: {normalised}"));
+        }
+        output.push(path);
+    }
+
+    Ok(output)
 }
 
 fn target_directory(
@@ -67,7 +104,7 @@ fn target_directory(
 ) -> Result<PathBuf, String> {
     safe_slug(target, "destination ID")?;
     safe_slug(profile_id, "Set-up ID")?;
-    target_artifacts(target)?;
+    supported_target(target)?;
     Ok(root
         .join(".rack")
         .join("generated")
@@ -94,22 +131,24 @@ fn read_optional_file(path: &Path) -> Result<Option<String>, String> {
 }
 
 // The command names retain their Iteration 3 prompt wording for IPC compatibility.
-// Passing `target` selects the destination-neutral implementation.
+// Passing `target` and artifact paths selects the destination-neutral implementation.
 #[tauri::command]
 pub fn read_generated_prompt_build(
     root: String,
     profile_id: String,
     target: Option<String>,
+    artifact_paths: Vec<String>,
 ) -> Result<InstalledTargetBuild, String> {
     let target = target.unwrap_or_else(|| "prompt".to_string());
     let canonical_root = canonical_rack_root(root)?;
     let directory = target_directory(&canonical_root, &target, &profile_id)?;
+    let paths = validated_artifact_paths(artifact_paths)?;
     let mut artifact_contents = HashMap::new();
 
-    for artifact in target_artifacts(&target)? {
+    for relative in paths {
         artifact_contents.insert(
-            artifact.to_string(),
-            read_optional_file(&directory.join(artifact))?,
+            normalised_relative_path(&relative),
+            read_optional_file(&directory.join(relative))?,
         );
     }
 
@@ -125,6 +164,7 @@ pub fn install_generated_prompt_build(
     profile_id: String,
     files: Vec<GeneratedFile>,
     target: Option<String>,
+    artifact_paths: Vec<String>,
 ) -> Result<GeneratedBuildInstallResult, String> {
     let target = target.unwrap_or_else(|| "prompt".to_string());
     let canonical_root = canonical_rack_root(root)?;
@@ -133,15 +173,29 @@ pub fn install_generated_prompt_build(
         .parent()
         .ok_or_else(|| "Generated destination folder has no parent.".to_string())?;
 
-    let expected: HashSet<String> = target_artifacts(&target)?
-        .into_iter()
-        .map(str::to_string)
-        .chain(std::iter::once("build.json".to_string()))
+    let artifact_paths = validated_artifact_paths(artifact_paths)?;
+    if artifact_paths.is_empty() {
+        return Err("A managed build must contain at least one artifact.".to_string());
+    }
+
+    let mut expected: HashSet<String> = artifact_paths
+        .iter()
+        .map(|path| normalised_relative_path(path))
         .collect();
-    let supplied: HashSet<String> = files.iter().map(|file| file.path.clone()).collect();
+    expected.insert("build.json".to_string());
+
+    let mut supplied = HashSet::new();
+    for file in &files {
+        let relative = safe_relative_path(&file.path)?;
+        let normalised = normalised_relative_path(&relative);
+        if !supplied.insert(normalised.clone()) {
+            return Err(format!("Generated file appears more than once: {normalised}"));
+        }
+    }
+
     if supplied != expected || files.len() != expected.len() {
         return Err(format!(
-            "A managed {target} build contains an unexpected or duplicate file."
+            "A managed {target} build does not match the adapter's declared artifact paths."
         ));
     }
 
@@ -160,7 +214,14 @@ pub fn install_generated_prompt_build(
 
     let result = (|| -> Result<GeneratedBuildInstallResult, String> {
         for file in &files {
-            fs::write(staging.join(&file.path), file.content.as_bytes()).map_err(|error| {
+            let relative = safe_relative_path(&file.path)?;
+            let destination = staging.join(relative);
+            if let Some(parent) = destination.parent() {
+                fs::create_dir_all(parent).map_err(|error| {
+                    format!("Could not create generated folder {}: {error}", parent.display())
+                })?;
+            }
+            fs::write(&destination, file.content.as_bytes()).map_err(|error| {
                 format!("Could not write generated file {}: {error}", file.path)
             })?;
         }

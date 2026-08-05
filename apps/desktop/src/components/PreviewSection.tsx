@@ -39,6 +39,8 @@ const destinations = listTargetAdapters().filter(
   (adapter) => adapter.status === "supported",
 );
 
+const fileName = (path: string): string => path.split("/").at(-1) ?? path;
+
 export function PreviewSection({
   project,
   selectedProfile,
@@ -54,19 +56,35 @@ export function PreviewSection({
     () => destinations.find((candidate) => candidate.id === target),
     [target],
   );
-  const primaryArtifact = targetBuild.artifacts[0] ?? null;
+  const [selectedArtifactPath, setSelectedArtifactPath] = useState<string | null>(
+    null,
+  );
+  const selectedArtifact =
+    targetBuild.artifacts.find(
+      (artifact) => artifact.path === selectedArtifactPath,
+    ) ?? targetBuild.artifacts[0] ?? null;
   const [inspection, setInspection] = useState<TargetBuildInspection | null>(null);
   const [checking, setChecking] = useState(true);
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSelectedArtifactPath(targetBuild.artifacts[0]?.path ?? null);
+  }, [targetBuild]);
+
   const refreshBuildState = useCallback(async () => {
     setChecking(true);
     setBuildError(null);
     try {
+      const artifactPaths = targetBuild.artifacts.map((artifact) => artifact.path);
       const installed = await invoke<InstalledTargetBuild>(
         "read_generated_prompt_build",
-        { root: project.root, profileId: selectedProfile, target },
+        {
+          root: project.root,
+          profileId: selectedProfile,
+          target,
+          artifactPaths,
+        },
       );
       setInspection(
         await inspectTargetBuild(project, selectedProfile, target, installed),
@@ -83,32 +101,32 @@ export function PreviewSection({
     } finally {
       setChecking(false);
     }
-  }, [project, selectedProfile, target]);
+  }, [project, selectedProfile, target, targetBuild.artifacts]);
 
   useEffect(() => {
     void refreshBuildState();
   }, [refreshBuildState]);
 
   const copyArtifact = async () => {
-    if (!primaryArtifact) return;
-    await navigator.clipboard.writeText(primaryArtifact.content);
-    onStatus(`${adapter?.displayName ?? target} copied to the clipboard.`);
+    if (!selectedArtifact) return;
+    await navigator.clipboard.writeText(selectedArtifact.content);
+    onStatus(`${selectedArtifact.path} copied to the clipboard.`);
   };
 
   const exportArtifact = async () => {
-    if (!primaryArtifact) return;
+    if (!selectedArtifact) return;
     const selected = await save({
-      title: `Export ${adapter?.displayName ?? target}`,
-      defaultPath: primaryArtifact.path,
+      title: `Export ${selectedArtifact.path}`,
+      defaultPath: fileName(selectedArtifact.path),
       filters: [{ name: "Markdown", extensions: ["md"] }],
     });
     if (!selected) return;
 
     await invoke("write_generated_file", {
       path: selected,
-      content: primaryArtifact.content,
+      content: selectedArtifact.content,
     });
-    onStatus(`${adapter?.displayName ?? target} exported to ${selected}.`);
+    onStatus(`${selectedArtifact.path} exported to ${selected}.`);
   };
 
   const installBuild = async () => {
@@ -128,12 +146,16 @@ export function PreviewSection({
         throw new Error(message || "This Set-up cannot be built yet.");
       }
 
+      const artifactPaths = prepared.targetBuild.artifacts.map(
+        (artifact) => artifact.path,
+      );
       const result = await invoke<InstallResult>(
         "install_generated_prompt_build",
         {
           root: project.root,
           profileId: selectedProfile,
           target,
+          artifactPaths,
           files: prepared.outputFiles,
         },
       );
@@ -209,7 +231,7 @@ export function PreviewSection({
         </div>
       ) : null}
 
-      {buildErrors.length > 0 || !primaryArtifact ? (
+      {buildErrors.length > 0 || !selectedArtifact ? (
         <div className="notice notice--error" role="alert">
           <strong>This Set-up cannot be built for this destination yet.</strong>
           {buildErrors.map((item) => (
@@ -237,8 +259,8 @@ export function PreviewSection({
                 </span>
                 <span className="build-meta">
                   {inspection?.current.estimatedTokens != null
-                    ? `About ${inspection.current.estimatedTokens.toLocaleString()} tokens`
-                    : "Token estimate pending"}
+                    ? `About ${inspection.current.estimatedTokens.toLocaleString()} tokens · ${targetBuild.artifacts.length} ${targetBuild.artifacts.length === 1 ? "file" : "files"}`
+                    : "Package estimate pending"}
                 </span>
               </div>
             </div>
@@ -280,6 +302,20 @@ export function PreviewSection({
             </div>
           ) : null}
 
+          <div className="package-files" aria-label="Generated package files">
+            {targetBuild.artifacts.map((artifact) => (
+              <button
+                className={`package-file ${selectedArtifact.path === artifact.path ? "package-file--active" : ""}`}
+                type="button"
+                key={artifact.path}
+                onClick={() => setSelectedArtifactPath(artifact.path)}
+              >
+                <span>{fileName(artifact.path)}</span>
+                <code>{artifact.path}</code>
+              </button>
+            ))}
+          </div>
+
           <div className="preview-layout">
             <aside className="contribution-panel">
               <p className="eyebrow">What is carried across</p>
@@ -296,22 +332,22 @@ export function PreviewSection({
             <div className="prompt-panel">
               <div className="prompt-toolbar">
                 <div>
-                  <span>{primaryArtifact.path}</span>
+                  <span>{selectedArtifact.path}</span>
                   <small>
-                    {primaryArtifact.content.length.toLocaleString()} characters
+                    {selectedArtifact.content.length.toLocaleString()} characters
                   </small>
                 </div>
                 <div className="button-row">
                   <button className="quiet-action" type="button" onClick={copyArtifact}>
-                    Copy
+                    Copy file
                   </button>
                   <button className="primary-action" type="button" onClick={exportArtifact}>
-                    Export Markdown
+                    Export file
                   </button>
                 </div>
               </div>
               <pre className="prompt-preview">
-                <code>{primaryArtifact.content}</code>
+                <code>{selectedArtifact.content}</code>
               </pre>
             </div>
           </div>

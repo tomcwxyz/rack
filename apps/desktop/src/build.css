@@ -78,6 +78,45 @@
   margin-bottom: 0;
 }
 
+.package-files {
+  margin-bottom: 14px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.package-file {
+  min-width: 190px;
+  padding: 11px 13px;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: rgb(255 253 247 / 64%);
+  cursor: pointer;
+}
+
+.package-file span {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.package-file code {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+}
+
+.package-file--active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--paper);
+}
+
 @media (max-width: 980px) {
   .managed-build-row {
     align-items: flex-start;

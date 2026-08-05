@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import type { DestinationId } from "../src/index.js";
 import {
   inspectPromptBuild,
   inspectTargetBuild,
@@ -67,40 +68,49 @@ describe("installed destination builds", () => {
     expect(secondInstall.backupDirectory).not.toBeNull();
   });
 
-  it("keeps prompt and AGENTS.md builds separate and current", async () => {
+  it("keeps all supported destinations separate and current", async () => {
     const projectRoot = await copyFixture();
     const project = await openProject(projectRoot);
-    const prompt = await prepareTargetBuild(project, "writing", "prompt");
-    const agents = await prepareTargetBuild(project, "writing", "agents-md");
+    const targets: DestinationId[] = [
+      "prompt",
+      "agents-md",
+      "claude-code",
+      "opencode",
+      "codex",
+    ];
+    const directories = new Set<string>();
 
-    const promptInstall = await installTargetBuild(projectRoot, prompt);
-    const agentsInstall = await installTargetBuild(projectRoot, agents);
+    for (const target of targets) {
+      const prepared = await prepareTargetBuild(project, "writing", target);
+      const installed = await installTargetBuild(projectRoot, prepared);
+      directories.add(installed.directory);
+      const inspection = await inspectTargetBuild(
+        project,
+        "writing",
+        target,
+        await readInstalledTargetBuild(projectRoot, target, "writing"),
+      );
+      expect(inspection.status, target).toBe("current");
+    }
 
-    expect(promptInstall.directory).not.toBe(agentsInstall.directory);
-    expect(await readFile(path.join(promptInstall.directory, "system-prompt.md"), "utf8"))
-      .toContain("# Writing");
-    expect(await readFile(path.join(agentsInstall.directory, "AGENTS.md"), "utf8"))
-      .toContain("# AGENTS.md");
-
+    expect(directories.size).toBe(targets.length);
     expect(
-      (
-        await inspectTargetBuild(
-          project,
-          "writing",
-          "prompt",
-          await readInstalledTargetBuild(projectRoot, "prompt", "writing"),
-        )
-      ).status,
-    ).toBe("current");
+      await readFile(
+        path.join(
+          projectRoot,
+          ".rack/generated/claude-code/writing/.claude/skills/project-update/SKILL.md",
+        ),
+        "utf8",
+      ),
+    ).toContain("disable-model-invocation: true");
     expect(
-      (
-        await inspectTargetBuild(
-          project,
-          "writing",
-          "agents-md",
-          await readInstalledTargetBuild(projectRoot, "agents-md", "writing"),
-        )
-      ).status,
-    ).toBe("current");
+      await readFile(
+        path.join(
+          projectRoot,
+          ".rack/generated/opencode/writing/.opencode/commands/project-update.md",
+        ),
+        "utf8",
+      ),
+    ).toContain("$ARGUMENTS");
   });
 });
