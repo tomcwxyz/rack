@@ -7,7 +7,11 @@ import type {
 import type { CompiledProfile, GeneratedArtifact } from "./compiler.js";
 import { renderFlatInstructionSections } from "./flatInstructions.js";
 
-const markdown = (parts: string[]): string => `${parts.filter(Boolean).join("\n\n").trim()}\n`;
+const markdown = (parts: string[]): string =>
+  `${parts.filter(Boolean).join("\n\n").trim()}\n`;
+
+const yamlFrontmatter = (lines: string[]): string =>
+  ["---", ...lines, "---"].join("\n");
 
 const nativeTasks = (compiled: CompiledProfile) =>
   compiled.modules
@@ -22,10 +26,14 @@ const nativeTasks = (compiled: CompiledProfile) =>
     );
 
 const standingProfile = (compiled: CompiledProfile): CompiledProfile => {
-  const nativeTaskIds = new Set(nativeTasks(compiled).map((module) => module.harness.id));
+  const nativeTaskIds = new Set(
+    nativeTasks(compiled).map((module) => module.harness.id),
+  );
   return {
     ...compiled,
-    modules: compiled.modules.filter((module) => !nativeTaskIds.has(module.harness.id)),
+    modules: compiled.modules.filter(
+      (module) => !nativeTaskIds.has(module.harness.id),
+    ),
   };
 };
 
@@ -149,24 +157,25 @@ export const renderClaudeCode = (
   const skills = tasks.map((module) => {
     const command = module.harness.trigger.command as string;
     const hint = inputHint(module);
+    const frontmatter = yamlFrontmatter([
+      `name: ${command}`,
+      `description: ${JSON.stringify(module.description ?? module.harness.trigger.label)}`,
+      "disable-model-invocation: true",
+      ...(hint ? [`argument-hint: ${JSON.stringify(hint)}`] : []),
+    ]);
     return artifact(
       "claude-code",
       `.claude/skills/${command}/SKILL.md`,
-      markdown([
-        "---",
-        `name: ${command}`,
-        `description: ${JSON.stringify(module.description ?? module.harness.trigger.label)}`,
-        "disable-model-invocation: true",
-        ...(hint ? [`argument-hint: ${JSON.stringify(hint)}`] : []),
-        "---",
-        ...taskBody(module),
-      ]),
+      markdown([frontmatter, ...taskBody(module)]),
       compiled,
     );
   });
 
   return {
-    artifacts: [artifact("claude-code", "CLAUDE.md", main, compiled), ...skills],
+    artifacts: [
+      artifact("claude-code", "CLAUDE.md", main, compiled),
+      ...skills,
+    ],
     degradations,
   };
 };
@@ -199,13 +208,14 @@ export const renderOpenCode = (
 
   const commands = tasks.map((module) => {
     const command = module.harness.trigger.command as string;
+    const frontmatter = yamlFrontmatter([
+      `description: ${JSON.stringify(module.description ?? module.harness.trigger.label)}`,
+    ]);
     return artifact(
       "opencode",
       `.opencode/commands/${command}.md`,
       markdown([
-        "---",
-        `description: ${JSON.stringify(module.description ?? module.harness.trigger.label)}`,
-        "---",
+        frontmatter,
         ...taskBody(module),
         "## Supplied arguments",
         "Use `$ARGUMENTS` as additional user material for this task. Do not treat it as permission to ignore project boundaries.",

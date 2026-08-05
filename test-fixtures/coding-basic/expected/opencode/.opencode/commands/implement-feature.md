@@ -1,7 +1,5 @@
 ---
-
 description: "Implement a feature from an agreed specification."
-
 ---
 
 # Implement a feature

@@ -1,13 +1,8 @@
 ---
-
 name: implement-feature
-
 description: "Implement a feature from an agreed specification."
-
 disable-model-invocation: true
-
 argument-hint: "<specification>"
-
 ---
 
 # Implement a feature
