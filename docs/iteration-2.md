@@ -2,7 +2,9 @@
 
 Issue: #3
 
-The first implementation step is the deterministic local compiler thread:
+Iteration 2 now has two coherent local threads.
+
+## Compiler thread
 
 ```text
 parsed Rack project
@@ -14,9 +16,7 @@ parsed Rack project
 → CLI output
 ```
 
-This slice deliberately reuses `@rack/core` so the desktop and CLI can call the same behaviour without adding a new dependency graph. The compiler API can move into the planned `@rack/compiler` package when destination adapters are introduced, without changing its public data contracts.
-
-## Included in the first compiler slice
+Included:
 
 - deterministic dependency closure;
 - missing, excluded, cyclic and exact-version diagnostics;
@@ -26,11 +26,28 @@ This slice deliberately reuses `@rack/core` so the desktop and CLI can call the 
 - `rack build --profile <id> --target prompt`;
 - package tests for dependency closure, exclusion and reproducibility.
 
-## Next within Iteration 2
+## Guided desktop thread
 
-- expose Set-ups and prompt preview in the desktop UI;
-- add local project-writing commands;
-- build the no-model Writing route;
-- review proposed instructions before writing;
-- add copy and export actions;
-- add golden prompt fixtures.
+```text
+choose Writing and communications
+→ answer a short local guide
+→ review the proposed instructions
+→ choose a parent folder
+→ atomically create the Rack
+→ select a Set-up
+→ preview, copy or export the prompt
+```
+
+Included:
+
+- no-model Writing route;
+- organisation and audience context;
+- voice guidance and avoided language;
+- evidence boundary;
+- one progressively structured task;
+- review before canonical files are written;
+- safe staged project creation in Rust;
+- Set-up selection and contribution preview;
+- copy and Markdown export actions.
+
+The visual treatment remains provisional until the Good Ship product-family audit. Direct editing of existing source files and golden prompt fixtures remain before the Iteration 2 PR leaves draft.
