@@ -1,8 +1,15 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import {
+  destinationIdSchema,
+  type DestinationId,
+} from "@rack/schemas";
+import { buildManifestSchema } from "@rack/schemas/build";
 import type {
   InstalledPromptBuild,
+  InstalledTargetBuild,
   PreparedPromptBuild,
+  PreparedTargetBuild,
 } from "./build.js";
 import {
   parseProjectSnapshot,
@@ -17,14 +24,11 @@ const collect = async (
   extension: string,
 ): Promise<ProjectSourceFile[]> => {
   const absolute = path.join(root, directory);
-
   try {
     const entries = await fs.readdir(absolute, { withFileTypes: true });
     const files: ProjectSourceFile[] = [];
-
     for (const entry of entries) {
       const relative = path.posix.join(directory, entry.name);
-
       if (entry.isDirectory()) {
         files.push(...(await collect(root, relative, extension)));
       } else if (entry.isFile() && entry.name.endsWith(extension)) {
@@ -34,13 +38,11 @@ const collect = async (
         });
       }
     }
-
     return files.sort((a, b) => a.path.localeCompare(b.path));
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
       return [];
     }
-
     throw error;
   }
 };
@@ -49,7 +51,6 @@ export const readProjectSnapshot = async (
   projectPath: string,
 ): Promise<ProjectSnapshot> => {
   const root = await fs.realpath(projectPath);
-
   return {
     root,
     manifest: {
@@ -72,6 +73,21 @@ const assertProfileId = (profileId: string): void => {
   }
 };
 
+const assertTarget = (target: DestinationId): void => {
+  destinationIdSchema.parse(target);
+};
+
+const safeRelativePath = (value: string): string => {
+  if (
+    !value ||
+    path.isAbsolute(value) ||
+    value.split(/[\\/]/).some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new Error(`Unsafe generated path: ${value}`);
+  }
+  return value;
+};
+
 const readOptionalFile = async (filePath: string): Promise<string | null> => {
   try {
     const metadata = await fs.lstat(filePath);
@@ -85,59 +101,99 @@ const readOptionalFile = async (filePath: string): Promise<string | null> => {
   }
 };
 
+export const managedBuildDirectory = (
+  projectRoot: string,
+  target: DestinationId,
+  profileId: string,
+): string => {
+  assertTarget(target);
+  assertProfileId(profileId);
+  return path.join(projectRoot, ".rack", "generated", target, profileId);
+};
+
 export const promptBuildDirectory = (
   projectRoot: string,
   profileId: string,
-): string => {
-  assertProfileId(profileId);
-  return path.join(projectRoot, ".rack", "generated", "prompt", profileId);
+): string => managedBuildDirectory(projectRoot, "prompt", profileId);
+
+export const readInstalledTargetBuild = async (
+  projectPath: string,
+  target: DestinationId,
+  profileId: string,
+): Promise<InstalledTargetBuild> => {
+  const root = await fs.realpath(projectPath);
+  const directory = managedBuildDirectory(root, target, profileId);
+  const manifestContent = await readOptionalFile(path.join(directory, "build.json"));
+  const artifactContents: Record<string, string | null> = {};
+
+  if (manifestContent) {
+    try {
+      const parsed = buildManifestSchema.safeParse(JSON.parse(manifestContent));
+      if (parsed.success) {
+        for (const artifact of parsed.data.artifacts) {
+          artifactContents[artifact.path] = await readOptionalFile(
+            path.join(directory, safeRelativePath(artifact.path)),
+          );
+        }
+      }
+    } catch {
+      // Inspection reports the invalid manifest using the original content.
+    }
+  }
+
+  return { artifactContents, manifestContent };
 };
 
 export const readInstalledPromptBuild = async (
   projectPath: string,
   profileId: string,
 ): Promise<InstalledPromptBuild> => {
-  const root = await fs.realpath(projectPath);
-  const directory = promptBuildDirectory(root, profileId);
-
+  const installed = await readInstalledTargetBuild(
+    projectPath,
+    "prompt",
+    profileId,
+  );
   return {
-    artifactContent: await readOptionalFile(
-      path.join(directory, "system-prompt.md"),
-    ),
-    manifestContent: await readOptionalFile(path.join(directory, "build.json")),
+    artifactContent: installed.artifactContents["system-prompt.md"] ?? null,
+    manifestContent: installed.manifestContent,
   };
 };
 
-export type PromptBuildInstallResult = {
+export type TargetBuildInstallResult = {
   directory: string;
   backupDirectory: string | null;
 };
+export type PromptBuildInstallResult = TargetBuildInstallResult;
 
-export const installPromptBuild = async (
+export const installTargetBuild = async (
   projectPath: string,
-  build: PreparedPromptBuild,
-): Promise<PromptBuildInstallResult> => {
+  build: PreparedTargetBuild,
+): Promise<TargetBuildInstallResult> => {
   if (
     !build.manifest ||
     !build.manifestContent ||
     !build.outputDirectory ||
     build.outputFiles.length === 0
   ) {
-    throw new Error("This prompt build is blocked and cannot be installed.");
+    throw new Error("This build is blocked and cannot be installed.");
   }
 
   const root = await fs.realpath(projectPath);
   const expectedDirectory = path.join(
     ".rack",
     "generated",
-    "prompt",
+    build.target,
     build.manifest.profile.id,
   );
   if (path.normalize(build.outputDirectory) !== path.normalize(expectedDirectory)) {
-    throw new Error("The generated output directory does not match the Set-up.");
+    throw new Error("The generated output directory does not match its destination and Set-up.");
   }
 
-  const finalDirectory = promptBuildDirectory(root, build.manifest.profile.id);
+  const finalDirectory = managedBuildDirectory(
+    root,
+    build.target,
+    build.manifest.profile.id,
+  );
   const generatedRoot = path.dirname(finalDirectory);
   const stagingDirectory = path.join(
     generatedRoot,
@@ -147,10 +203,22 @@ export const installPromptBuild = async (
     root,
     ".rack",
     "backups",
-    "prompt",
+    build.target,
     build.manifest.profile.id,
     `${Date.now()}-${process.pid}`,
   );
+
+  const expectedFiles = new Set([
+    ...build.manifest.artifacts.map((artifact) => artifact.path),
+    "build.json",
+  ]);
+  const actualFiles = new Set(build.outputFiles.map((file) => file.path));
+  if (
+    expectedFiles.size !== actualFiles.size ||
+    [...expectedFiles].some((file) => !actualFiles.has(file))
+  ) {
+    throw new Error("The generated files do not match the build manifest.");
+  }
 
   await fs.mkdir(generatedRoot, { recursive: true });
   await fs.rm(stagingDirectory, { recursive: true, force: true });
@@ -158,10 +226,10 @@ export const installPromptBuild = async (
 
   try {
     for (const file of build.outputFiles) {
-      if (!/^[a-z0-9][a-z0-9.-]*$/.test(file.path)) {
-        throw new Error(`Unsafe generated filename: ${file.path}`);
-      }
-      await fs.writeFile(path.join(stagingDirectory, file.path), file.content, "utf8");
+      const relative = safeRelativePath(file.path);
+      const destination = path.join(stagingDirectory, relative);
+      await fs.mkdir(path.dirname(destination), { recursive: true });
+      await fs.writeFile(destination, file.content, "utf8");
     }
 
     let retainedBackup: string | null = null;
@@ -196,3 +264,8 @@ export const installPromptBuild = async (
     throw error;
   }
 };
+
+export const installPromptBuild = async (
+  projectPath: string,
+  build: PreparedPromptBuild,
+): Promise<PromptBuildInstallResult> => installTargetBuild(projectPath, build);

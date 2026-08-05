@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
-import { buildPrompt, type RackProject } from "@rack/core";
 import {
-  inspectPromptBuild,
-  preparePromptBuild,
-  type InstalledPromptBuild,
-  type PromptBuildInspection,
+  buildTarget,
+  listTargetAdapters,
+  type DestinationId,
+  type RackProject,
+} from "@rack/core";
+import {
+  inspectTargetBuild,
+  prepareTargetBuild,
+  type InstalledTargetBuild,
+  type TargetBuildInspection,
 } from "@rack/core/build";
 
 type PreviewSectionProps = {
@@ -21,7 +26,7 @@ type InstallResult = {
   backupDirectory: string | null;
 };
 
-const stateLabels: Record<PromptBuildInspection["status"], string> = {
+const stateLabels: Record<TargetBuildInspection["status"], string> = {
   missing: "Not built",
   current: "Current",
   stale: "Rebuild needed",
@@ -30,17 +35,27 @@ const stateLabels: Record<PromptBuildInspection["status"], string> = {
   invalid: "Cannot verify",
 };
 
+const destinations = listTargetAdapters().filter(
+  (adapter) => adapter.status === "supported",
+);
+
 export function PreviewSection({
   project,
   selectedProfile,
   onProfileChange,
   onStatus,
 }: PreviewSectionProps) {
-  const promptBuild = useMemo(
-    () => buildPrompt(project, selectedProfile),
-    [project, selectedProfile],
+  const [target, setTarget] = useState<DestinationId>("prompt");
+  const targetBuild = useMemo(
+    () => buildTarget(project, selectedProfile, target),
+    [project, selectedProfile, target],
   );
-  const [inspection, setInspection] = useState<PromptBuildInspection | null>(null);
+  const adapter = useMemo(
+    () => destinations.find((candidate) => candidate.id === target),
+    [target],
+  );
+  const primaryArtifact = targetBuild.artifacts[0] ?? null;
+  const [inspection, setInspection] = useState<TargetBuildInspection | null>(null);
   const [checking, setChecking] = useState(true);
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
@@ -49,12 +64,12 @@ export function PreviewSection({
     setChecking(true);
     setBuildError(null);
     try {
-      const installed = await invoke<InstalledPromptBuild>(
+      const installed = await invoke<InstalledTargetBuild>(
         "read_generated_prompt_build",
-        { root: project.root, profileId: selectedProfile },
+        { root: project.root, profileId: selectedProfile, target },
       );
       setInspection(
-        await inspectPromptBuild(project, selectedProfile, installed),
+        await inspectTargetBuild(project, selectedProfile, target, installed),
       );
     } catch (reason) {
       setInspection(null);
@@ -68,39 +83,43 @@ export function PreviewSection({
     } finally {
       setChecking(false);
     }
-  }, [project, selectedProfile]);
+  }, [project, selectedProfile, target]);
 
   useEffect(() => {
     void refreshBuildState();
   }, [refreshBuildState]);
 
-  const copyPrompt = async () => {
-    if (!promptBuild.artifact) return;
-    await navigator.clipboard.writeText(promptBuild.artifact.content);
-    onStatus("Prompt copied to the clipboard.");
+  const copyArtifact = async () => {
+    if (!primaryArtifact) return;
+    await navigator.clipboard.writeText(primaryArtifact.content);
+    onStatus(`${adapter?.displayName ?? target} copied to the clipboard.`);
   };
 
-  const exportPrompt = async () => {
-    if (!promptBuild.artifact) return;
+  const exportArtifact = async () => {
+    if (!primaryArtifact) return;
     const selected = await save({
-      title: "Export generic prompt",
-      defaultPath: promptBuild.artifact.path,
+      title: `Export ${adapter?.displayName ?? target}`,
+      defaultPath: primaryArtifact.path,
       filters: [{ name: "Markdown", extensions: ["md"] }],
     });
     if (!selected) return;
 
     await invoke("write_generated_file", {
       path: selected,
-      content: promptBuild.artifact.content,
+      content: primaryArtifact.content,
     });
-    onStatus(`Prompt exported to ${selected}.`);
+    onStatus(`${adapter?.displayName ?? target} exported to ${selected}.`);
   };
 
   const installBuild = async () => {
     setBuilding(true);
     setBuildError(null);
     try {
-      const prepared = await preparePromptBuild(project, selectedProfile);
+      const prepared = await prepareTargetBuild(
+        project,
+        selectedProfile,
+        target,
+      );
       if (!prepared.manifest || prepared.outputFiles.length === 0) {
         const message = prepared.diagnostics
           .filter((item) => item.severity === "error")
@@ -114,12 +133,13 @@ export function PreviewSection({
         {
           root: project.root,
           profileId: selectedProfile,
+          target,
           files: prepared.outputFiles,
         },
       );
       onStatus(
         result.backupDirectory
-          ? `Build installed. The previous generated output was retained at ${result.backupDirectory}.`
+          ? `Build installed. The previous ${adapter?.displayName ?? target} output was retained at ${result.backupDirectory}.`
           : `Build installed at ${result.directory}.`,
       );
       await refreshBuildState();
@@ -136,7 +156,7 @@ export function PreviewSection({
     }
   };
 
-  const buildErrors = promptBuild.diagnostics.filter(
+  const buildErrors = targetBuild.diagnostics.filter(
     (item) => item.severity === "error",
   );
   const preparedErrors =
@@ -147,22 +167,39 @@ export function PreviewSection({
     <section aria-labelledby="preview-heading">
       <div className="section-heading section-heading--top preview-heading">
         <div>
-          <p className="eyebrow">Generic prompt destination</p>
+          <p className="eyebrow">Destination preview</p>
           <h2 id="preview-heading">Preview and export</h2>
         </div>
-        <label className="compact-field">
-          <span>Set-up</span>
-          <select
-            value={selectedProfile}
-            onChange={(event) => onProfileChange(event.target.value)}
-          >
-            {project.profiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="preview-controls">
+          <label className="compact-field">
+            <span>Set-up</span>
+            <select
+              value={selectedProfile}
+              onChange={(event) => onProfileChange(event.target.value)}
+            >
+              {project.profiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="compact-field">
+            <span>Destination</span>
+            <select
+              value={target}
+              onChange={(event) =>
+                setTarget(event.target.value as DestinationId)
+              }
+            >
+              {destinations.map((destination) => (
+                <option key={destination.id} value={destination.id}>
+                  {destination.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {buildError ? (
@@ -172,9 +209,9 @@ export function PreviewSection({
         </div>
       ) : null}
 
-      {buildErrors.length > 0 || !promptBuild.artifact ? (
+      {buildErrors.length > 0 || !primaryArtifact ? (
         <div className="notice notice--error" role="alert">
-          <strong>This Set-up cannot be built yet.</strong>
+          <strong>This Set-up cannot be built for this destination yet.</strong>
           {buildErrors.map((item) => (
             <span key={`${item.code}-${item.message}`}>
               {item.code}: {item.message}
@@ -185,7 +222,9 @@ export function PreviewSection({
         <>
           <div className="managed-build-row">
             <div>
-              <p className="eyebrow">Managed local build</p>
+              <p className="eyebrow">
+                Managed local build · {adapter?.displayName ?? target}
+              </p>
               <div className="build-state-line">
                 <span
                   className={`build-state build-state--${inspection?.status ?? "checking"}`}
@@ -217,6 +256,20 @@ export function PreviewSection({
             </button>
           </div>
 
+          {targetBuild.degradations.length > 0 ? (
+            <aside className="degradation-panel" aria-label="Destination changes">
+              <p className="eyebrow">What changes for this destination</p>
+              <ul>
+                {targetBuild.degradations.map((degradation) => (
+                  <li key={`${degradation.capability}-${degradation.title}`}>
+                    <strong>{degradation.title}.</strong>{" "}
+                    {degradation.explanation}
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          ) : null}
+
           {preparedErrors.length > 0 ? (
             <div className="notice notice--error" role="alert">
               {preparedErrors.map((item) => (
@@ -230,9 +283,9 @@ export function PreviewSection({
           <div className="preview-layout">
             <aside className="contribution-panel">
               <p className="eyebrow">What is carried across</p>
-              <h3>{promptBuild.compiled?.modules.length ?? 0} instructions</h3>
+              <h3>{targetBuild.compiled?.modules.length ?? 0} instructions</h3>
               <ol>
-                {promptBuild.compiled?.modules.map((module) => (
+                {targetBuild.compiled?.modules.map((module) => (
                   <li key={module.harness.id}>
                     <strong>{module.title}</strong>
                     <code>{module.harness.id}</code>
@@ -243,22 +296,22 @@ export function PreviewSection({
             <div className="prompt-panel">
               <div className="prompt-toolbar">
                 <div>
-                  <span>system-prompt.md</span>
+                  <span>{primaryArtifact.path}</span>
                   <small>
-                    {promptBuild.artifact.content.length.toLocaleString()} characters
+                    {primaryArtifact.content.length.toLocaleString()} characters
                   </small>
                 </div>
                 <div className="button-row">
-                  <button className="quiet-action" type="button" onClick={copyPrompt}>
-                    Copy prompt
+                  <button className="quiet-action" type="button" onClick={copyArtifact}>
+                    Copy
                   </button>
-                  <button className="primary-action" type="button" onClick={exportPrompt}>
+                  <button className="primary-action" type="button" onClick={exportArtifact}>
                     Export Markdown
                   </button>
                 </div>
               </div>
               <pre className="prompt-preview">
-                <code>{promptBuild.artifact.content}</code>
+                <code>{primaryArtifact.content}</code>
               </pre>
             </div>
           </div>

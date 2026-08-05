@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
@@ -15,8 +15,8 @@ pub struct GeneratedFile {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct InstalledPromptBuild {
-    artifact_content: Option<String>,
+pub struct InstalledTargetBuild {
+    artifact_contents: HashMap<String, Option<String>>,
     manifest_content: Option<String>,
 }
 
@@ -37,22 +37,41 @@ fn canonical_rack_root(root: String) -> Result<PathBuf, String> {
     Ok(canonical)
 }
 
-fn safe_profile_id(value: &str) -> bool {
+fn safe_slug(value: &str, label: &str) -> Result<(), String> {
     let mut characters = value.chars();
-    matches!(characters.next(), Some(first) if first.is_ascii_lowercase())
+    let valid = matches!(characters.next(), Some(first) if first.is_ascii_lowercase())
         && characters.all(|character| {
             character.is_ascii_lowercase() || character.is_ascii_digit() || character == '-'
-        })
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(format!("The {label} is not safe for a generated folder."))
+    }
 }
 
-fn prompt_directory(root: &Path, profile_id: &str) -> Result<PathBuf, String> {
-    if !safe_profile_id(profile_id) {
-        return Err("The Set-up ID is not safe for a generated folder.".to_string());
+fn target_artifacts(target: &str) -> Result<Vec<&'static str>, String> {
+    match target {
+        "prompt" => Ok(vec!["system-prompt.md"]),
+        "agents-md" => Ok(vec!["AGENTS.md"]),
+        _ => Err(format!(
+            "{target} does not yet have a desktop build adapter."
+        )),
     }
+}
+
+fn target_directory(
+    root: &Path,
+    target: &str,
+    profile_id: &str,
+) -> Result<PathBuf, String> {
+    safe_slug(target, "destination ID")?;
+    safe_slug(profile_id, "Set-up ID")?;
+    target_artifacts(target)?;
     Ok(root
         .join(".rack")
         .join("generated")
-        .join("prompt")
+        .join(target)
         .join(profile_id))
 }
 
@@ -74,16 +93,28 @@ fn read_optional_file(path: &Path) -> Result<Option<String>, String> {
     }
 }
 
+// The command names retain their Iteration 3 prompt wording for IPC compatibility.
+// Passing `target` selects the destination-neutral implementation.
 #[tauri::command]
 pub fn read_generated_prompt_build(
     root: String,
     profile_id: String,
-) -> Result<InstalledPromptBuild, String> {
+    target: Option<String>,
+) -> Result<InstalledTargetBuild, String> {
+    let target = target.unwrap_or_else(|| "prompt".to_string());
     let canonical_root = canonical_rack_root(root)?;
-    let directory = prompt_directory(&canonical_root, &profile_id)?;
+    let directory = target_directory(&canonical_root, &target, &profile_id)?;
+    let mut artifact_contents = HashMap::new();
 
-    Ok(InstalledPromptBuild {
-        artifact_content: read_optional_file(&directory.join("system-prompt.md"))?,
+    for artifact in target_artifacts(&target)? {
+        artifact_contents.insert(
+            artifact.to_string(),
+            read_optional_file(&directory.join(artifact))?,
+        );
+    }
+
+    Ok(InstalledTargetBuild {
+        artifact_contents,
         manifest_content: read_optional_file(&directory.join("build.json"))?,
     })
 }
@@ -93,20 +124,25 @@ pub fn install_generated_prompt_build(
     root: String,
     profile_id: String,
     files: Vec<GeneratedFile>,
+    target: Option<String>,
 ) -> Result<GeneratedBuildInstallResult, String> {
+    let target = target.unwrap_or_else(|| "prompt".to_string());
     let canonical_root = canonical_rack_root(root)?;
-    let final_directory = prompt_directory(&canonical_root, &profile_id)?;
+    let final_directory = target_directory(&canonical_root, &target, &profile_id)?;
     let generated_root = final_directory
         .parent()
-        .ok_or_else(|| "Generated prompt folder has no parent.".to_string())?;
+        .ok_or_else(|| "Generated destination folder has no parent.".to_string())?;
 
-    let allowed: HashSet<&str> = ["system-prompt.md", "build.json"].into_iter().collect();
-    let supplied: HashSet<&str> = files.iter().map(|file| file.path.as_str()).collect();
-    if supplied != allowed || files.len() != allowed.len() {
-        return Err(
-            "A managed prompt build must contain system-prompt.md and build.json exactly once."
-                .to_string(),
-        );
+    let expected: HashSet<String> = target_artifacts(&target)?
+        .into_iter()
+        .map(str::to_string)
+        .chain(std::iter::once("build.json".to_string()))
+        .collect();
+    let supplied: HashSet<String> = files.iter().map(|file| file.path.clone()).collect();
+    if supplied != expected || files.len() != expected.len() {
+        return Err(format!(
+            "A managed {target} build contains an unexpected or duplicate file."
+        ));
     }
 
     fs::create_dir_all(generated_root)
@@ -147,7 +183,7 @@ pub fn install_generated_prompt_build(
             let backup = canonical_root
                 .join(".rack")
                 .join("backups")
-                .join("prompt")
+                .join(&target)
                 .join(&profile_id)
                 .join(format!("{timestamp}-{}", std::process::id()));
             if let Some(parent) = backup.parent() {

@@ -1,15 +1,37 @@
 import { z } from "zod";
+import { destinationIdSchema } from "./index.js";
 
 const semanticVersionSchema = z.string().regex(
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
   "Expected a semantic version.",
 );
 
+const relativeArtifactPathSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      !value.startsWith("/") &&
+      !value.includes("\\") &&
+      value.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
+    "Expected a safe relative artifact path.",
+  );
+
 export const sha256DigestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/);
+
+const artifactSchema = z
+  .object({
+    path: relativeArtifactPathSchema,
+    media_type: z.enum(["text/markdown", "text/plain", "application/json"]),
+    digest: sha256DigestSchema,
+    bytes: z.number().int().nonnegative(),
+    estimated_tokens: z.number().int().nonnegative(),
+  })
+  .strict();
 
 export const buildManifestSchema = z
   .object({
-    schema_version: z.literal("0.1"),
+    schema_version: z.literal("0.2"),
     compiler: z
       .object({
         name: z.literal("rack"),
@@ -18,8 +40,9 @@ export const buildManifestSchema = z
       .strict(),
     adapter: z
       .object({
-        id: z.literal("prompt"),
+        id: destinationIdSchema,
         version: semanticVersionSchema,
+        status: z.enum(["supported", "preview", "community", "deprecated"]),
       })
       .strict(),
     project: z
@@ -40,16 +63,39 @@ export const buildManifestSchema = z
         module_ids: z.array(z.string()).default([]),
       })
       .strict(),
-    artifact: z
+    artifacts: z
+      .array(artifactSchema)
+      .min(1)
+      .refine(
+        (artifacts) =>
+          new Set(artifacts.map((artifact) => artifact.path)).size === artifacts.length,
+        "Artifact paths must be unique.",
+      ),
+    package: z
       .object({
-        path: z.literal("system-prompt.md"),
-        media_type: z.literal("text/markdown"),
-        digest: sha256DigestSchema,
-        bytes: z.number().int().nonnegative(),
         estimated_tokens: z.number().int().nonnegative(),
         token_estimator: z.literal("utf8-bytes-divided-by-4"),
       })
       .strict(),
+    degradations: z
+      .array(
+        z
+          .object({
+            capability: z.enum([
+              "commands",
+              "skills",
+              "tools",
+              "bootstrapContext",
+              "hostPolicies",
+              "multipleFiles",
+              "onDemandModules",
+            ]),
+            title: z.string().min(1),
+            module_ids: z.array(z.string()).default([]),
+          })
+          .strict(),
+      )
+      .default([]),
     modules: z
       .array(
         z
