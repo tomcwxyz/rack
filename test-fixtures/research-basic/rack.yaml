@@ -1,0 +1,16 @@
+schema_version: "0.1"
+name: research-basic
+version: 0.1.0
+title: Research basics
+description: A small Rack for evidence-conscious research and review.
+author:
+  name: The Good Ship
+  organisation: The Good Ship
+license: CC-BY-4.0
+okf_root: modules
+default_profile: research
+profiles: [research]
+targets:
+  prompt: { enabled: true }
+evaluation:
+  config: eval/config.yaml

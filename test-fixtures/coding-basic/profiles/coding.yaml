@@ -1,0 +1,18 @@
+schema_version: "0.1"
+id: coding
+title: Coding
+description: Repository context, code craft and safe implementation.
+domains: [code]
+include:
+  - context.repository
+  - craft.code
+  - guardrail.code-safety
+  - task.implement-feature
+exclude: []
+overrides:
+  emit_priority: {}
+  target_waivers: {}
+budgets:
+  agents-md:
+    recommended_tokens: 10000
+    maximum_tokens: 16000

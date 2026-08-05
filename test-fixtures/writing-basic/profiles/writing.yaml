@@ -1,0 +1,18 @@
+schema_version: "0.1"
+id: writing
+title: Writing
+description: Voice, context, evidence boundaries and a project-update task.
+domains: [writing]
+include:
+  - context.organisation
+  - voice.tone
+  - guardrail.evidence
+  - task.project-update
+exclude: []
+overrides:
+  emit_priority: {}
+  target_waivers: {}
+budgets:
+  prompt:
+    recommended_tokens: 10000
+    maximum_tokens: 16000
