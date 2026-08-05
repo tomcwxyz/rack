@@ -1,0 +1,14 @@
+schema_version: "0.1"
+defaults:
+  mode: agentic
+  repetitions:
+    quick: 1
+    reliable: 5
+  baseline: true
+  temperature: 0.2
+  timeout_seconds: 120
+models: []
+gate:
+  required_rules: must_hold
+  minimum_pass_rate: 0.8
+  regression_threshold: 0.10
