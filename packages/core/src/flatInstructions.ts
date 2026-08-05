@@ -4,11 +4,7 @@ import type { CompiledProfile } from "./compiler.js";
 export type FlatInstructionRenderOptions = {
   taskCommands: "commands" | "procedures";
   tools: "declared" | "expectations";
-};
-
-const defaultOptions: FlatInstructionRenderOptions = {
-  taskCommands: "commands",
-  tools: "declared",
+  includeTypes: RackModule["type"][];
 };
 
 const typeOrder: RackModule["type"][] = [
@@ -20,6 +16,12 @@ const typeOrder: RackModule["type"][] = [
   "task",
   "tools",
 ];
+
+const defaultOptions: FlatInstructionRenderOptions = {
+  taskCommands: "commands",
+  tools: "declared",
+  includeTypes: typeOrder,
+};
 
 const typeLabels: Record<RackModule["type"], string> = {
   context: "Context",
@@ -141,6 +143,7 @@ export const renderFlatInstructionSections = (
   const sections: string[] = [];
 
   for (const type of typeOrder) {
+    if (!resolved.includeTypes.includes(type)) continue;
     const modules = compiled.modules
       .filter((module) => module.type === type)
       .sort(

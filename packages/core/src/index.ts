@@ -183,4 +183,5 @@ export * from "./adapters.js";
 export * from "./agentsMd.js";
 export * from "./compiler.js";
 export * from "./flatInstructions.js";
+export * from "./hostAdapters.js";
 export * from "./targetRegistry.js";

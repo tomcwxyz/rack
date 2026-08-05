@@ -1,4 +1,7 @@
-import type { DestinationId } from "@rack/schemas";
+import type {
+  AdapterCapabilityId,
+  DestinationId,
+} from "@rack/schemas";
 import type { CompiledProfile, GeneratedArtifact } from "./compiler.js";
 
 export type AdapterStatus =
@@ -7,18 +10,10 @@ export type AdapterStatus =
   | "community"
   | "deprecated";
 
-export type AdapterCapabilities = {
-  commands: boolean;
-  skills: boolean;
-  tools: boolean;
-  bootstrapContext: boolean;
-  hostPolicies: boolean;
-  multipleFiles: boolean;
-  onDemandModules: boolean;
-};
+export type AdapterCapabilities = Record<AdapterCapabilityId, boolean>;
 
 export type AdapterDegradation = {
-  capability: keyof AdapterCapabilities;
+  capability: AdapterCapabilityId;
   title: string;
   explanation: string;
   moduleIds: string[];
