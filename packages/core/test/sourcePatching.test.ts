@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   diffSourceLines,
   patchContextModuleSource,
+  patchVoiceModuleSource,
   readContextModuleDraft,
+  readVoiceModuleDraft,
   SourcePatchError,
 } from "../src/sourcePatching.js";
 
-const source = `---
+const contextSource = `---
 # Keep this module comment
 type: context
 title: Old title # Keep this title note
@@ -24,9 +26,34 @@ harness:
 Old context body.
 `;
 
-describe("guided source patching", () => {
+const voiceSource = `---
+type: voice
+title: Existing voice # Keep voice comment
+description: Existing description
+harness:
+  schema_version: "0.1"
+  id: voice.tone
+  version: 0.1.0
+  applies_to: [writing]
+  lexicon:
+    never:
+      - term: forbidden phrase
+    prefer:
+      - use: social purpose organisations
+        instead_of: [charities]
+    avoid:
+      - term: leverage
+        reason: It sounds like consultancy language.
+    rules:
+      - Use British English.
+    future_lexicon_setting: keep-me
+---
+Write as a thoughtful practitioner.
+`;
+
+describe("guided context source patching", () => {
   it("reads a supported context instruction", () => {
-    expect(readContextModuleDraft(source)).toEqual({
+    expect(readContextModuleDraft(contextSource)).toEqual({
       title: "Old title",
       description: "Old description",
       contextKind: "organisation",
@@ -35,7 +62,7 @@ describe("guided source patching", () => {
   });
 
   it("changes supported fields without discarding comments or unknown fields", () => {
-    const result = patchContextModuleSource(source, {
+    const result = patchContextModuleSource(contextSource, {
       title: "Organisation and work",
       description: "What the assistant should understand about the work.",
       contextKind: "organisation",
@@ -59,7 +86,7 @@ describe("guided source patching", () => {
   });
 
   it("preserves the original line-ending convention", () => {
-    const windowsSource = source.replace(/\n/g, "\r\n");
+    const windowsSource = contextSource.replace(/\n/g, "\r\n");
     const result = patchContextModuleSource(windowsSource, {
       ...readContextModuleDraft(windowsSource),
       body: "Changed on Windows.",
@@ -70,10 +97,58 @@ describe("guided source patching", () => {
   });
 
   it("refuses an unsupported module rather than rewriting it", () => {
-    const voiceSource = source.replace("type: context", "type: voice");
-    expect(() => readContextModuleDraft(voiceSource)).toThrowError(
+    const unsupported = contextSource.replace("type: context", "type: voice");
+    expect(() => readContextModuleDraft(unsupported)).toThrowError(
       SourcePatchError,
     );
+  });
+});
+
+describe("guided voice source patching", () => {
+  it("reads voice guidance, rules and avoided terms", () => {
+    expect(readVoiceModuleDraft(voiceSource)).toEqual({
+      title: "Existing voice",
+      description: "Existing description",
+      body: "Write as a thoughtful practitioner.",
+      rules: ["Use British English."],
+      avoid: [
+        {
+          term: "leverage",
+          reason: "It sounds like consultancy language.",
+        },
+      ],
+    });
+  });
+
+  it("updates supported voice fields while preserving other lexicon data", () => {
+    const result = patchVoiceModuleSource(voiceSource, {
+      title: "Plain and warm voice",
+      description: "How authored prose should sound.",
+      body: "Write clearly and make the important point early.",
+      rules: ["Use British English.", "Prefer ordinary words."],
+      avoid: [
+        { term: "leverage", reason: "Use a precise verb instead." },
+        { term: "stakeholders", reason: "Name the people involved." },
+      ],
+    });
+
+    expect(result.content).toContain("# Keep voice comment");
+    expect(result.content).toContain("future_lexicon_setting: keep-me");
+    expect(result.content).toContain("never:");
+    expect(result.content).toContain("term: forbidden phrase");
+    expect(result.content).toContain("prefer:");
+    expect(result.content).toContain("use: social purpose organisations");
+    expect(result.content).toContain("id: voice.tone");
+    expect(result.content).toContain("version: 0.1.0");
+    expect(readVoiceModuleDraft(result.content)).toMatchObject({
+      title: "Plain and warm voice",
+      body: "Write clearly and make the important point early.",
+      rules: ["Use British English.", "Prefer ordinary words."],
+      avoid: [
+        { term: "leverage", reason: "Use a precise verb instead." },
+        { term: "stakeholders", reason: "Name the people involved." },
+      ],
+    });
   });
 });
 
