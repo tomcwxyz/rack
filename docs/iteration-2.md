@@ -1,25 +1,36 @@
 # Iteration 2 — Writing vertical slice
 
-Iteration 2 turns the read-only foundation into the first complete guided product journey.
+Issue: #3
+
+The first implementation step is the deterministic local compiler thread:
 
 ```text
-choose Writing and communications
-→ answer a short guided set-up
-→ review the proposed instructions
-→ save a local Rack
-→ assemble a Writing Set-up
-→ preview and copy a generic prompt
+parsed Rack project
+→ Set-up resolution
+→ dependency closure
+→ blocking diagnostics
+→ compiled profile
+→ generic prompt
+→ CLI output
 ```
 
-## Intended scope
+This slice deliberately reuses `@rack/core` so the desktop and CLI can call the same behaviour without adding a new dependency graph. The compiler API can move into the planned `@rack/compiler` package when destination adapters are introduced, without changing its public data contracts.
 
-- Writing starting-route selection;
-- guided context, voice, boundary and task creation;
-- local project scaffolding and safe writes;
-- simple editors for the four initial instruction types;
-- Set-up creation and dependency explanation;
-- canonical intermediate representation;
-- deterministic generic prompt renderer;
-- prompt preview, contribution list and token estimate.
+## Included in the first compiler slice
 
-AI assistance remains optional. It may propose content only after the user explicitly chooses a managed, direct-provider or local connection, and it must never mutate canonical files without review.
+- deterministic dependency closure;
+- missing, excluded, cyclic and exact-version diagnostics;
+- domain compatibility checks for explicitly included instructions;
+- target-neutral compiled profile;
+- deterministic generic Markdown prompt;
+- `rack build --profile <id> --target prompt`;
+- package tests for dependency closure, exclusion and reproducibility.
+
+## Next within Iteration 2
+
+- expose Set-ups and prompt preview in the desktop UI;
+- add local project-writing commands;
+- build the no-model Writing route;
+- review proposed instructions before writing;
+- add copy and export actions;
+- add golden prompt fixtures.

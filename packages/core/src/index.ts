@@ -39,7 +39,9 @@ const parseMarkdown = (content: string): ParsedMarkdown => {
   const lines = normalised.split("\n");
 
   if (lines[0]?.trim() !== "---") {
-    throw new Error("Instruction files must begin with YAML frontmatter marked by ---. ");
+    throw new Error(
+      "Instruction files must begin with YAML frontmatter marked by ---.",
+    );
   }
 
   const closingIndex = lines.findIndex(
@@ -175,3 +177,5 @@ export const parseProjectSnapshot = (snapshot: ProjectSnapshot): RackProject => 
     diagnostics,
   };
 };
+
+export * from "./compiler.js";
