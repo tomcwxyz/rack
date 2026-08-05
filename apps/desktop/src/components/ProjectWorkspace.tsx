@@ -1,12 +1,19 @@
 import { useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
+import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 
 type WorkspaceSection = "rack" | "setups" | "preview";
-type EditingSource = { path: string; title: string };
+type ContextModule = Extract<
+  RackProject["modules"][number],
+  { type: "context" }
+>;
+type EditingSource =
+  | { kind: "source"; path: string; title: string }
+  | { kind: "context"; module: ContextModule };
 
 type ProjectWorkspaceProps = {
   project: RackProject;
@@ -25,6 +32,9 @@ export function ProjectWorkspace({
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditingSource | null>(null);
+
+  const sourceEdit = (path: string, title: string) =>
+    setEditing({ kind: "source", path, title });
 
   return (
     <div className="app-shell">
@@ -97,7 +107,10 @@ export function ProjectWorkspace({
         {section === "rack" ? (
           <RackSection
             project={project}
-            onEdit={(path, title) => setEditing({ path, title })}
+            onGuidedContextEdit={(module) =>
+              setEditing({ kind: "context", module })
+            }
+            onSourceEdit={sourceEdit}
           />
         ) : null}
 
@@ -105,7 +118,7 @@ export function ProjectWorkspace({
           <SetupsSection
             project={project}
             selectedProfile={selectedProfile}
-            onEdit={(path, title) => setEditing({ path, title })}
+            onEdit={sourceEdit}
             onPreview={(profileId) => {
               setSelectedProfile(profileId);
               setSection("preview");
@@ -123,15 +136,37 @@ export function ProjectWorkspace({
         ) : null}
       </main>
 
-      {editing ? (
+      {editing?.kind === "source" ? (
         <SourceEditor
           projectRoot={project.root}
           path={editing.path}
           title={editing.title}
           onClose={() => setEditing(null)}
           onSaved={(snapshot) => {
+            const title = editing.title;
             setEditing(null);
-            setActionStatus(`${editing.title} was saved and rechecked.`);
+            setActionStatus(`${title} was saved and rechecked.`);
+            onProjectChanged(snapshot);
+          }}
+        />
+      ) : null}
+
+      {editing?.kind === "context" ? (
+        <GuidedContextEditor
+          projectRoot={project.root}
+          module={editing.module}
+          onClose={() => setEditing(null)}
+          onAdvanced={() =>
+            setEditing({
+              kind: "source",
+              path: editing.module.path,
+              title: editing.module.title,
+            })
+          }
+          onSaved={(snapshot) => {
+            const title = editing.module.title;
+            setEditing(null);
+            setActionStatus(`${title} was saved and rechecked.`);
             onProjectChanged(snapshot);
           }}
         />

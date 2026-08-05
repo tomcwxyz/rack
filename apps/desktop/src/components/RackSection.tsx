@@ -1,9 +1,15 @@
 import { useMemo } from "react";
 import type { RackProject } from "@rack/core";
 
+type ContextModule = Extract<
+  RackProject["modules"][number],
+  { type: "context" }
+>;
+
 type RackSectionProps = {
   project: RackProject;
-  onEdit: (path: string, title: string) => void;
+  onGuidedContextEdit: (module: ContextModule) => void;
+  onSourceEdit: (path: string, title: string) => void;
 };
 
 const typeLabels: Record<string, string> = {
@@ -16,7 +22,11 @@ const typeLabels: Record<string, string> = {
   tools: "Tools expected",
 };
 
-export function RackSection({ project, onEdit }: RackSectionProps) {
+export function RackSection({
+  project,
+  onGuidedContextEdit,
+  onSourceEdit,
+}: RackSectionProps) {
   const groupedModules = useMemo(() => {
     const groups = new Map<string, RackProject["modules"]>();
     for (const module of project.modules) {
@@ -67,7 +77,7 @@ export function RackSection({ project, onEdit }: RackSectionProps) {
             <h2 id="instructions-heading">Instructions in this Rack</h2>
           </div>
           <span className="muted-copy">
-            Source editing is advanced in this iteration; guided editors follow.
+            Context instructions now have guided maintenance. Advanced source editing remains available.
           </span>
         </div>
 
@@ -90,13 +100,24 @@ export function RackSection({ project, onEdit }: RackSectionProps) {
                     </p>
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
-                      <button
-                        className="source-edit-button"
-                        type="button"
-                        onClick={() => onEdit(module.path, module.title)}
-                      >
-                        Edit source
-                      </button>
+                      <div className="card-actions">
+                        {module.type === "context" ? (
+                          <button
+                            className="source-edit-button"
+                            type="button"
+                            onClick={() => onGuidedContextEdit(module)}
+                          >
+                            Edit details
+                          </button>
+                        ) : null}
+                        <button
+                          className="source-edit-button source-edit-button--muted"
+                          type="button"
+                          onClick={() => onSourceEdit(module.path, module.title)}
+                        >
+                          Edit source
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))}
