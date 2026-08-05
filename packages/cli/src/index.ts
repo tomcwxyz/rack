@@ -5,13 +5,17 @@ import path from "node:path";
 import process from "node:process";
 import { Command } from "commander";
 import {
-  inspectPromptBuild,
-  preparePromptBuild,
+  parseTargetId,
+  type DestinationId,
+} from "@rack/core";
+import {
+  inspectTargetBuild,
+  prepareTargetBuild,
 } from "@rack/core/build";
 import {
-  installPromptBuild,
+  installTargetBuild,
   openProject,
-  readInstalledPromptBuild,
+  readInstalledTargetBuild,
 } from "@rack/core/node";
 
 const program = new Command()
@@ -44,7 +48,6 @@ program
       const hasErrors = project.diagnostics.some(
         (item) => item.severity === "error",
       );
-
       if (options.json) {
         process.stdout.write(
           `${JSON.stringify(
@@ -69,7 +72,6 @@ program
           `${project.modules.length} instructions · ${project.profiles.length} set-ups\n`,
         );
       }
-
       process.exitCode = hasErrors ? 1 : 0;
     } catch (error) {
       process.stderr.write(
@@ -85,8 +87,8 @@ program
   .argument("[path]", "Rack project folder", ".")
   .requiredOption("--profile <id>", "Set-up ID to build")
   .option("--target <id>", "Destination to build", "prompt")
-  .option("--output <path>", "Write only the generated prompt to this path")
-  .option("--install", "Install prompt and manifest into the Rack generated folder")
+  .option("--output <path>", "Write a one-file destination to this path")
+  .option("--install", "Install a managed build into the Rack generated folder")
   .option("--json", "Print machine-readable JSON")
   .action(
     async (
@@ -100,13 +102,6 @@ program
       },
     ) => {
       try {
-        if (options.target !== "prompt") {
-          process.stderr.write(
-            `RACK-TARGET-001 Destination is not available yet\n${options.target} is not implemented in this iteration. Use --target prompt.\n`,
-          );
-          process.exitCode = 2;
-          return;
-        }
         if (options.output && options.install) {
           process.stderr.write(
             "Choose either --output for one file or --install for a managed Rack build, not both.\n",
@@ -115,21 +110,22 @@ program
           return;
         }
 
+        const target: DestinationId = parseTargetId(options.target);
         const project = await openProject(projectPath);
-        const build = await preparePromptBuild(project, options.profile);
+        const build = await prepareTargetBuild(project, options.profile, target);
         const hasErrors = build.diagnostics.some(
           (item) => item.severity === "error",
         );
-
-        if (hasErrors || !build.promptBuild.artifact || !build.manifest) {
+        if (hasErrors || !build.manifest || build.targetBuild.artifacts.length === 0) {
           if (options.json) {
             process.stdout.write(
               `${JSON.stringify(
                 {
                   built: false,
                   profile: options.profile,
-                  target: options.target,
+                  target,
                   estimatedTokens: build.estimatedTokens,
+                  degradations: build.degradations,
                   diagnostics: build.diagnostics,
                 },
                 null,
@@ -143,17 +139,24 @@ program
           return;
         }
 
-        let installed: Awaited<ReturnType<typeof installPromptBuild>> | null = null;
+        if (options.output && build.targetBuild.artifacts.length !== 1) {
+          process.stderr.write(
+            "--output can only be used with a destination that produces one file. Use --install for packages.\n",
+          );
+          process.exitCode = 2;
+          return;
+        }
+
+        let installed: Awaited<ReturnType<typeof installTargetBuild>> | null = null;
+        const primaryArtifact = build.targetBuild.artifacts[0];
+        if (!primaryArtifact) throw new Error("The destination produced no files.");
+
         if (options.install) {
-          installed = await installPromptBuild(projectPath, build);
+          installed = await installTargetBuild(projectPath, build);
         } else if (options.output) {
           const destination = path.resolve(options.output);
           await fs.mkdir(path.dirname(destination), { recursive: true });
-          await fs.writeFile(
-            destination,
-            build.promptBuild.artifact.content,
-            "utf8",
-          );
+          await fs.writeFile(destination, primaryArtifact.content, "utf8");
         }
 
         if (options.json) {
@@ -162,19 +165,20 @@ program
               {
                 built: true,
                 profile: options.profile,
-                target: build.promptBuild.artifact.target,
+                target,
                 estimatedTokens: build.estimatedTokens,
+                degradations: build.degradations,
                 installed,
                 output: options.output ? path.resolve(options.output) : null,
                 manifest: build.manifest,
-                artifact:
+                artifacts:
                   options.output || options.install
-                    ? {
-                        path: build.promptBuild.artifact.path,
-                        mediaType: build.promptBuild.artifact.mediaType,
-                        moduleIds: build.promptBuild.artifact.moduleIds,
-                      }
-                    : build.promptBuild.artifact,
+                    ? build.targetBuild.artifacts.map((artifact) => ({
+                        path: artifact.path,
+                        mediaType: artifact.mediaType,
+                        moduleIds: artifact.moduleIds,
+                      }))
+                    : build.targetBuild.artifacts,
                 diagnostics: build.diagnostics,
               },
               null,
@@ -183,7 +187,7 @@ program
           );
         } else if (installed) {
           process.stdout.write(
-            `Built ${options.profile} for prompt → ${installed.directory}\n`,
+            `Built ${options.profile} for ${target} → ${installed.directory}\n`,
           );
           if (installed.backupDirectory) {
             process.stdout.write(
@@ -193,11 +197,17 @@ program
           printDiagnostics(build.diagnostics);
         } else if (options.output) {
           process.stdout.write(
-            `Built ${options.profile} for prompt → ${path.resolve(options.output)}\n`,
+            `Built ${options.profile} for ${target} → ${path.resolve(options.output)}\n`,
           );
           printDiagnostics(build.diagnostics);
+        } else if (build.targetBuild.artifacts.length === 1) {
+          process.stdout.write(primaryArtifact.content);
         } else {
-          process.stdout.write(build.promptBuild.artifact.content);
+          process.stderr.write(
+            "This destination produces multiple files. Use --install or --json.\n",
+          );
+          process.exitCode = 2;
+          return;
         }
 
         process.exitCode = 0;
@@ -223,14 +233,7 @@ program
       options: { profile?: string; target: string; json?: boolean },
     ) => {
       try {
-        if (options.target !== "prompt") {
-          process.stderr.write(
-            `RACK-TARGET-001 Destination is not available yet\n${options.target} is not implemented in this iteration. Use --target prompt.\n`,
-          );
-          process.exitCode = 2;
-          return;
-        }
-
+        const target: DestinationId = parseTargetId(options.target);
         const project = await openProject(projectPath);
         const profileId =
           options.profile ?? project.manifest?.default_profile ?? "";
@@ -240,18 +243,18 @@ program
           return;
         }
 
-        const inspection = await inspectPromptBuild(
+        const inspection = await inspectTargetBuild(
           project,
           profileId,
-          await readInstalledPromptBuild(projectPath, profileId),
+          target,
+          await readInstalledTargetBuild(projectPath, target, profileId),
         );
-
         if (options.json) {
           process.stdout.write(
             `${JSON.stringify(
               {
                 profile: profileId,
-                target: options.target,
+                target,
                 status: inspection.status,
                 sourceChanged: inspection.sourceChanged,
                 rendererChanged: inspection.rendererChanged,
@@ -264,18 +267,17 @@ program
           );
         } else {
           const messages: Record<typeof inspection.status, string> = {
-            missing: "No managed prompt build exists yet.",
-            current: "The generated prompt is current.",
-            stale: "The Rack source or renderer changed after the prompt was built.",
-            modified: "The generated prompt was edited outside Rack.",
+            missing: `No managed ${target} build exists yet.`,
+            current: `The generated ${target} package is current.`,
+            stale: `The Rack source or ${target} adapter changed after the package was built.`,
+            modified: `The generated ${target} package was edited outside Rack.`,
             "stale-and-modified":
-              "The Rack changed and the generated prompt was also edited outside Rack.",
-            invalid: "The generated build cannot be verified.",
+              `The Rack changed and the generated ${target} package was also edited outside Rack.`,
+            invalid: `The generated ${target} build cannot be verified.`,
           };
           process.stdout.write(`${messages[inspection.status]}\n`);
           printDiagnostics(inspection.diagnostics);
         }
-
         process.exitCode = inspection.status === "current" ? 0 : 7;
       } catch (error) {
         process.stderr.write(

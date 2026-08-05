@@ -1,15 +1,9 @@
-import type { RackProject } from "./index.js";
 import type {
   AdapterDegradation,
   AdapterRenderResult,
   TargetAdapter,
 } from "./adapters.js";
-import {
-  resolveProfile,
-  type CompiledProfile,
-  type GeneratedArtifact,
-  type TargetBuild,
-} from "./compiler.js";
+import type { CompiledProfile, GeneratedArtifact } from "./compiler.js";
 import { renderFlatInstructionSections } from "./flatInstructions.js";
 
 const degradationsFor = (compiled: CompiledProfile): AdapterDegradation[] => {
@@ -104,27 +98,4 @@ export const agentsMdAdapter: TargetAdapter = {
     onDemandModules: false,
   },
   render: renderAgentsMd,
-};
-
-export const buildAgentsMd = (
-  project: RackProject,
-  profileId: string,
-): TargetBuild => {
-  const resolution = resolveProfile(project, profileId);
-  if (!resolution.compiled) {
-    return {
-      artifacts: [],
-      compiled: null,
-      diagnostics: resolution.diagnostics,
-      degradations: [],
-    };
-  }
-
-  const rendered = agentsMdAdapter.render(resolution.compiled);
-  return {
-    artifacts: rendered.artifacts,
-    compiled: resolution.compiled,
-    diagnostics: resolution.diagnostics,
-    degradations: rendered.degradations,
-  };
 };
