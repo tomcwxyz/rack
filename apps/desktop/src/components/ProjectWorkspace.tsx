@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
@@ -37,6 +37,51 @@ export function ProjectWorkspace({
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditingSource | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const editingOpen = editing !== null;
+  const editingIdentity = editing
+    ? editing.kind === "source"
+      ? `source:${editing.path}`
+      : editing.kind === "guided"
+        ? `guided:${editing.module.path}`
+        : `setup:${editing.profile.path}`
+    : "closed";
+
+  useEffect(() => {
+    if (!editingOpen) return;
+
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setEditing(null);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      const target = previouslyFocused.current;
+      previouslyFocused.current = null;
+      window.requestAnimationFrame(() => {
+        if (target?.isConnected) target.focus();
+      });
+    };
+  }, [editingOpen]);
+
+  useEffect(() => {
+    if (!editingOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(
+        '[role="dialog"] input:not([disabled]), [role="dialog"] textarea:not([disabled]), [role="dialog"] select:not([disabled]), [role="dialog"] button:not([disabled])',
+      );
+      target?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editingIdentity, editingOpen]);
 
   const sourceEdit = (path: string, title: string) =>
     setEditing({ kind: "source", path, title });
