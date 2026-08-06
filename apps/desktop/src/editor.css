@@ -6,6 +6,12 @@
   gap: 14px;
 }
 
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .source-edit-button {
   padding: 0;
   border: 0;
@@ -14,6 +20,10 @@
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.source-edit-button--muted {
+  color: var(--muted);
 }
 
 .setup-actions {
@@ -35,17 +45,23 @@
   backdrop-filter: blur(8px);
 }
 
-.source-editor {
+.source-editor,
+.guided-editor {
   width: min(980px, 100%);
-  height: min(780px, calc(100vh - 64px));
+  height: min(820px, calc(100vh - 64px));
   padding: 24px;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 16px;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 24px;
   background: var(--paper);
   box-shadow: 0 30px 90px rgb(18 16 13 / 28%);
+}
+
+.source-editor {
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
 }
 
 .source-editor-header,
@@ -96,6 +112,162 @@
   tab-size: 2;
 }
 
+.guided-editor-form,
+.guided-review {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.guided-editor-form .form-grid,
+.guided-form-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.guided-form-scroll .form-grid {
+  overflow: visible;
+  padding-right: 0;
+}
+
+.guided-review {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.repeatable-editor {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.repeatable-editor-heading {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repeatable-editor-heading h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.repeatable-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.repeatable-row {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.2fr) auto;
+  align-items: end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 253 247 / 64%);
+}
+
+.repeatable-row--stacked {
+  grid-template-columns: minmax(150px, 0.45fr) minmax(260px, 1fr) minmax(260px, 1fr) auto;
+}
+
+.repeatable-row--input {
+  grid-template-columns: minmax(145px, 0.6fr) minmax(180px, 1fr) minmax(130px, 0.55fr) auto auto;
+}
+
+.field--checkbox {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field--checkbox input {
+  width: auto;
+}
+
+.remove-row-action {
+  padding: 10px 4px;
+  border: 0;
+  color: var(--danger);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-editor-state {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+}
+
+.change-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.change-summary span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.source-diff {
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfaf5;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.source-diff-line {
+  min-width: max-content;
+  display: grid;
+  grid-template-columns: 24px 42px 42px minmax(520px, 1fr);
+}
+
+.source-diff-line code {
+  padding: 1px 12px;
+  white-space: pre;
+}
+
+.source-diff-marker,
+.source-diff-number {
+  padding: 1px 7px;
+  text-align: right;
+  color: #998f80;
+  border-right: 1px solid rgb(211 204 190 / 55%);
+  user-select: none;
+}
+
+.source-diff-line--add {
+  background: #e8f1df;
+}
+
+.source-diff-line--remove {
+  background: #f7e3df;
+}
+
+.source-diff-line--add .source-diff-marker {
+  color: var(--moss);
+}
+
+.source-diff-line--remove .source-diff-marker {
+  color: var(--danger);
+}
+
 .source-editor-actions {
   padding-top: 16px;
   border-top: 1px solid var(--line);
@@ -106,12 +278,34 @@
   font-size: 0.82rem;
 }
 
+@media (max-width: 1180px) {
+  .repeatable-row--stacked,
+  .repeatable-row--input {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 980px) {
   .editor-backdrop {
     padding: 16px;
   }
 
-  .source-editor {
+  .source-editor,
+  .guided-editor {
     height: calc(100vh - 32px);
+  }
+
+  .card-footer,
+  .change-summary,
+  .repeatable-editor-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .repeatable-row,
+  .repeatable-row--stacked,
+  .repeatable-row--input {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 }

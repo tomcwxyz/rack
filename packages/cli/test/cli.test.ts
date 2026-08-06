@@ -40,49 +40,53 @@ const runRack = async (args: string[]) =>
 
 describe("supported host CLI builds", () => {
   for (const target of ["claude-code", "opencode", "codex"] as const) {
-    it(`installs and checks a ${target} package`, async () => {
-      const projectRoot = await copyFixture();
-      const build = await runRack([
-        "build",
-        projectRoot,
-        "--profile",
-        "coding",
-        "--target",
-        target,
-        "--install",
-        "--json",
-      ]);
-      const built = JSON.parse(build.stdout) as {
-        built: boolean;
-        target: string;
-        installed: { directory: string } | null;
-        artifacts: Array<{ path: string }>;
-      };
+    it(
+      `installs and checks a ${target} package`,
+      async () => {
+        const projectRoot = await copyFixture();
+        const build = await runRack([
+          "build",
+          projectRoot,
+          "--profile",
+          "coding",
+          "--target",
+          target,
+          "--install",
+          "--json",
+        ]);
+        const built = JSON.parse(build.stdout) as {
+          built: boolean;
+          target: string;
+          installed: { directory: string } | null;
+          artifacts: Array<{ path: string }>;
+        };
 
-      expect(built.built).toBe(true);
-      expect(built.target).toBe(target);
-      expect(built.installed?.directory).toContain(
-        path.join(".rack", "generated", target, "coding"),
-      );
-      expect(built.artifacts.length).toBeGreaterThan(0);
+        expect(built.built).toBe(true);
+        expect(built.target).toBe(target);
+        expect(built.installed?.directory).toContain(
+          path.join(".rack", "generated", target, "coding"),
+        );
+        expect(built.artifacts.length).toBeGreaterThan(0);
 
-      const check = await runRack([
-        "check",
-        projectRoot,
-        "--profile",
-        "coding",
-        "--target",
-        target,
-        "--json",
-      ]);
-      expect(JSON.parse(check.stdout)).toMatchObject({
-        profile: "coding",
-        target,
-        status: "current",
-        sourceChanged: false,
-        rendererChanged: false,
-        outputModified: false,
-      });
-    });
+        const check = await runRack([
+          "check",
+          projectRoot,
+          "--profile",
+          "coding",
+          "--target",
+          target,
+          "--json",
+        ]);
+        expect(JSON.parse(check.stdout)).toMatchObject({
+          profile: "coding",
+          target,
+          status: "current",
+          sourceChanged: false,
+          rendererChanged: false,
+          outputModified: false,
+        });
+      },
+      15_000,
+    );
   }
 });

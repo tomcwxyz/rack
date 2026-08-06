@@ -184,4 +184,7 @@ export * from "./agentsMd.js";
 export * from "./compiler.js";
 export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
+export * from "./profilePatching.js";
+export * from "./sourcePatching.js";
+export * from "./structuredPatching.js";
 export * from "./targetRegistry.js";

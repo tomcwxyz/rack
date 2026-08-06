@@ -1,16 +1,20 @@
 import { buildPrompt, type RackProject } from "@rack/core";
 
+type RackProfile = RackProject["profiles"][number];
+
 type SetupsSectionProps = {
   project: RackProject;
   selectedProfile: string;
-  onEdit: (path: string, title: string) => void;
+  onGuidedEdit: (profile: RackProfile) => void;
+  onSourceEdit: (path: string, title: string) => void;
   onPreview: (profileId: string) => void;
 };
 
 export function SetupsSection({
   project,
   selectedProfile,
-  onEdit,
+  onGuidedEdit,
+  onSourceEdit,
   onPreview,
 }: SetupsSectionProps) {
   return (
@@ -47,18 +51,33 @@ export function SetupsSection({
                   <dd>{build.compiled?.modules.length ?? 0}</dd>
                 </div>
                 <div>
+                  <dt>Token budgets</dt>
+                  <dd>{Object.keys(profile.budgets).length}</dd>
+                </div>
+                <div>
                   <dt>Status</dt>
                   <dd>{blocked ? "Blocked" : "Ready"}</dd>
                 </div>
               </dl>
               <div className="setup-actions">
-                <button
-                  className="quiet-action"
-                  type="button"
-                  onClick={() => onEdit(profile.path, `${profile.title} Set-up`)}
-                >
-                  Edit Set-up source
-                </button>
+                <div className="card-actions">
+                  <button
+                    className="source-edit-button"
+                    type="button"
+                    onClick={() => onGuidedEdit(profile)}
+                  >
+                    Edit Set-up
+                  </button>
+                  <button
+                    className="source-edit-button source-edit-button--muted"
+                    type="button"
+                    onClick={() =>
+                      onSourceEdit(profile.path, `${profile.title} Set-up`)
+                    }
+                  >
+                    Edit source
+                  </button>
+                </div>
                 <button
                   className="secondary-action"
                   type="button"
