@@ -6,11 +6,12 @@ Rack is a local-first desktop application for authoring, assembling, compiling a
 
 ## Status
 
-Rack is in active pre-release development. The repository contains a working local vertical slice rather than only a scaffold.
+Rack is in active pre-release development. The repository contains a working local application rather than only a scaffold.
 
 A user can:
 
-- create a Writing and communications Rack through a guided desktop flow;
+- choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
+- review every proposed instruction before Rack writes local files;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
 - maintain Set-up domains, instruction selection and destination token budgets through a guided form;
@@ -26,15 +27,17 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iteration 6 has implemented the guided-maintenance feature set for context, voice, boundaries, repeatable tasks and Set-ups. Guided changes preserve advanced source fields, show an exact diff, refuse stale writes and have a representative project round-trip test. Editor dialogs support Escape and restore focus to the control that opened them. Final cross-platform verification remains before the iteration is merged.
+Iterations 1–6 established the local source format, compiler, managed builds, portable destinations, coding-host packages and loss-aware guided maintenance. Iteration 7 adds complete local creation routes for Research and Coding alongside the existing, more polished Writing route. The route builders are deterministic and are tested by parsing and compiling their proposed source before it reaches review.
 
 ## Product shape
 
-Rack has three planned guided starting routes:
+Rack has three guided starting routes:
 
-- Writing and communications — implemented first;
+- Writing and communications — the most polished pilot route;
 - Research and knowledge work;
 - Coding and technical work.
+
+Every route works without an account or model connection. It creates a small starting assembly rather than a locked template: the resulting Markdown and YAML source remains editable through guided or advanced maintenance.
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
@@ -52,7 +55,7 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 
 This is a pnpm/Turborepo monorepo.
 
-- `apps/desktop` — Tauri and React desktop application;
+- `apps/desktop` — Tauri and React desktop application, guided creation and maintenance;
 - `packages/schemas` — source and generated-manifest schemas;
 - `packages/core` — project parsing, source patching, compilation, adapters and build state;
 - `packages/cli` — `rack validate`, `rack build` and `rack check`;
@@ -89,6 +92,10 @@ pnpm --filter @rack/cli dev -- check test-fixtures/coding-basic \
 ```
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-request checks.
+
+## Continuous integration
+
+Linux type checks, tests and builds run on pull requests. Windows desktop smoke checks run only when desktop-related paths change. macOS smoke checks run after merge to `main` or through a deliberate manual full-suite run. Work should be prepared locally and pushed as a coherent review batch rather than as a series of small CI-triggering commits.
 
 ## Licence
 

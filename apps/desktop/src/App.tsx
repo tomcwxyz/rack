@@ -6,18 +6,26 @@ import {
   type ProjectSnapshot,
   type RackProject,
 } from "@rack/core";
+import { CodingRoute } from "./components/CodingRoute.js";
 import { ProjectWorkspace } from "./components/ProjectWorkspace.js";
+import { ResearchRoute } from "./components/ResearchRoute.js";
+import {
+  RouteChooser,
+  type CreationRouteId,
+} from "./components/RouteChooser.js";
 import { WritingRoute } from "./components/WritingRoute.js";
+
+type CreationState = "choose" | CreationRouteId | null;
 
 export function App() {
   const [project, setProject] = useState<RackProject | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<CreationState>(null);
   const [loading, setLoading] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
 
   const applySnapshot = (snapshot: ProjectSnapshot) => {
     setProject(parseProjectSnapshot(snapshot));
-    setCreating(false);
+    setCreating(null);
     setOpenError(null);
   };
 
@@ -64,12 +72,22 @@ export function App() {
   }
 
   if (creating) {
+    const routeProps = {
+      onCancel: () => setCreating("choose" as const),
+      onCreated: applySnapshot,
+    };
+
     return (
       <main className="standalone-workspace">
-        <WritingRoute
-          onCancel={() => setCreating(false)}
-          onCreated={applySnapshot}
-        />
+        {creating === "choose" ? (
+          <RouteChooser
+            onCancel={() => setCreating(null)}
+            onSelect={setCreating}
+          />
+        ) : null}
+        {creating === "writing" ? <WritingRoute {...routeProps} /> : null}
+        {creating === "research" ? <ResearchRoute {...routeProps} /> : null}
+        {creating === "coding" ? <CodingRoute {...routeProps} /> : null}
       </main>
     );
   }
@@ -90,19 +108,19 @@ export function App() {
 
       <section className="welcome-hero">
         <div>
-          <p className="eyebrow">Local-first · implementation preview</p>
+          <p className="eyebrow">Local-first · working pre-release</p>
           <h1>Carry the useful parts of how you work.</h1>
           <p className="lede">
-            Create one inspectable source for your context, voice, methods,
-            boundaries and repeatable tasks—then build it for different AI tools.
+            Create one inspectable source for your context, methods, boundaries
+            and repeatable tasks—then build it for different AI tools.
           </p>
           <div className="button-row button-row--large">
             <button
               className="primary-action"
               type="button"
-              onClick={() => setCreating(true)}
+              onClick={() => setCreating("choose")}
             >
-              Create a Writing Rack
+              Create a Rack
             </button>
             <button
               className="secondary-action secondary-action--light"
@@ -115,16 +133,16 @@ export function App() {
           </div>
         </div>
         <aside className="welcome-card">
-          <p className="eyebrow">First guided route</p>
-          <h2>Writing and communications</h2>
+          <p className="eyebrow">Three guided starting routes</p>
+          <h2>Writing, research or coding</h2>
           <p>
-            Capture organisation and audience context, choose a voice, add an
-            evidence boundary and make one repeatable task.
+            Start with the work you need to support. Review every proposed
+            instruction before Rack writes local files.
           </p>
           <ul>
-            <li>No account</li>
-            <li>No model connection</li>
-            <li>Review before files are written</li>
+            <li>No account or model connection</li>
+            <li>Plain-language guided questions</li>
+            <li>Editable Markdown and YAML source</li>
           </ul>
         </aside>
       </section>

@@ -5,6 +5,7 @@ import "./styles.css";
 import "./editor.css";
 import "./setup-editor.css";
 import "./build.css";
+import "./creation-routes.css";
 
 const root = document.getElementById("root");
 

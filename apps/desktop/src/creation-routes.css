@@ -1,0 +1,90 @@
+.route-chooser {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 48px clamp(22px, 5vw, 64px) 64px;
+}
+
+.route-choice-grid {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.route-choice-card {
+  min-height: 410px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgb(255 253 247 / 82%);
+  box-shadow: 0 16px 44px rgb(32 29 24 / 7%);
+}
+
+.route-choice-card--pilot {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--paper) 90%, var(--accent) 10%);
+}
+
+.route-choice-card h2 {
+  margin: 8px 0 12px;
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+}
+
+.route-choice-card > div > p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.route-choice-card ul {
+  margin: 22px 0 0;
+  padding-left: 20px;
+  color: var(--ink);
+}
+
+.route-choice-card li {
+  margin-bottom: 9px;
+  line-height: 1.4;
+}
+
+.route-choice-card button {
+  width: 100%;
+}
+
+.route-chooser-note {
+  margin-top: 22px;
+  padding: 18px 20px;
+  display: flex;
+  gap: 10px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  background: rgb(255 253 247 / 56%);
+}
+
+.route-chooser-note strong {
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .route-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .route-choice-card {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .route-chooser {
+    padding: 28px 18px 42px;
+  }
+
+  .route-chooser-note {
+    flex-direction: column;
+  }
+}
