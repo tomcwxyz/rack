@@ -297,7 +297,7 @@ export const readTaskModuleDraft = (source: string): TaskModuleDraft => {
     );
   }
 
-  const inputs = rawInputs.map((entry) => {
+  const inputs: TaskInputDraft[] = rawInputs.map((entry) => {
     const item = recordValue(
       entry,
       "A task input is not structured correctly. Use the advanced source editor for this file.",
