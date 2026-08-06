@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -16,8 +17,48 @@ jobs:
   quality:
     name: Type checks and tests
     runs-on: ubuntu-latest
+    outputs:
+      desktop_changed: ${{ steps.desktop-changes.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect desktop-related changes
+        id: desktop-changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+            head="$PR_HEAD_SHA"
+          else
+            base="$BEFORE_SHA"
+            head="$GITHUB_SHA"
+          fi
+
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git rev-list --max-parents=0 "$head")"
+          fi
+
+          changed_files="$(git diff --name-only "$base" "$head")"
+          printf '%s\n' "$changed_files"
+
+          if grep -Eq '^(apps/desktop/|packages/|scripts/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig\.base\.json$|turbo\.json$)' <<< "$changed_files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10.15.0
@@ -29,13 +70,38 @@ jobs:
       - run: pnpm check
       - run: pnpm build
 
-  desktop-smoke:
-    name: Desktop smoke (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+  desktop-windows:
+    name: Desktop smoke (Windows)
+    needs: quality
+    if: >-
+      needs.quality.result == 'success' &&
+      needs.quality.outputs.desktop_changed == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @rack/desktop... build
+      - run: cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+  desktop-macos:
+    name: Desktop smoke (macOS)
+    needs: quality
+    if: >-
+      needs.quality.result == 'success' &&
+      needs.quality.outputs.desktop_changed == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
