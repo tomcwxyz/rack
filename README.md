@@ -13,6 +13,7 @@ A user can:
 - create a Writing and communications Rack through a guided desktop flow;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
+- maintain Set-up domains, instruction selection and destination token budgets through a guided form;
 - review the exact source diff before a guided change is saved;
 - fall back to advanced source editing, with external-change protection;
 - compile a Set-up deterministically;
@@ -25,7 +26,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iteration 6 is adding structured maintenance to the desktop application. Context, voice, boundary and task editing are implemented on the active development branch. Set-up maintenance, stronger round-trip fixtures and final keyboard/focus work remain before that iteration is complete.
+Iteration 6 is adding structured maintenance to the desktop application. Context, voice, boundary, task and Set-up editing are implemented on the active development branch. Stronger round-trip fixtures, final keyboard/focus work and cross-platform verification remain before that iteration is complete.
 
 ## Product shape
 

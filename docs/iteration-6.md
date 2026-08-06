@@ -14,12 +14,13 @@ Make the first Writing Rack maintainable without requiring ordinary users to edi
 - guided voice maintenance for prose guidance, explicit rules and avoided terms;
 - guided boundary maintenance for rule statements and refusal guidance;
 - guided repeatable-task design for task purpose, command, inputs and ordered stages;
+- guided Set-up maintenance for work domains, root instruction selection, explicit exclusions and destination token budgets;
 - advanced source editing retained as an explicit fallback;
-- unit coverage for context, voice, boundary, task, preservation, refusal behaviour and stable line diffs.
+- unit coverage for context, voice, boundary, task, Set-up, preservation, refusal behaviour and stable line diffs.
 
 ## Safety rules
 
-Guided editing changes only the fields owned by the relevant form. It does not rename module IDs or paths, alter versions, change acceptance suites or remove unknown advanced settings. A file that cannot be interpreted safely is refused and can only be opened in the advanced editor.
+Guided editing changes only the fields owned by the relevant form. It does not rename module or Set-up IDs or paths, alter versions, change acceptance suites, modify Set-up overrides or remove unknown advanced settings. A file that cannot be interpreted safely is refused and can only be opened in the advanced editor.
 
 Every save is a two-step action:
 
@@ -30,7 +31,6 @@ After a successful write, the project snapshot is parsed again, diagnostics are 
 
 ## Remaining before Iteration 6 completes
 
-- guided Set-up maintenance for included instructions, exclusions, domains and token budgets;
 - stronger round-trip fixtures using representative project files rather than isolated strings alone;
 - explicit focus return, escape handling and keyboard checks across all editor dialogs;
 - final copy and spacing pass for smaller desktop windows;

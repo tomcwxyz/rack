@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
+import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
 import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
 import { GuidedVoiceEditor } from "./GuidedVoiceEditor.js";
 import { PreviewSection } from "./PreviewSection.js";
@@ -13,9 +14,11 @@ type GuidedModule = Extract<
   RackProject["modules"][number],
   { type: "context" | "voice" | "guardrail" | "task" }
 >;
+type RackProfile = RackProject["profiles"][number];
 type EditingSource =
   | { kind: "source"; path: string; title: string }
-  | { kind: "guided"; module: GuidedModule };
+  | { kind: "guided"; module: GuidedModule }
+  | { kind: "setup"; profile: RackProfile };
 
 type ProjectWorkspaceProps = {
   project: RackProject;
@@ -137,7 +140,8 @@ export function ProjectWorkspace({
           <SetupsSection
             project={project}
             selectedProfile={selectedProfile}
-            onEdit={sourceEdit}
+            onGuidedEdit={(profile) => setEditing({ kind: "setup", profile })}
+            onSourceEdit={sourceEdit}
             onPreview={(profileId) => {
               setSelectedProfile(profileId);
               setSection("preview");
@@ -182,6 +186,28 @@ export function ProjectWorkspace({
       (editing.module.type === "guardrail" || editing.module.type === "task") &&
       guidedProps ? (
         <GuidedStructuredEditor module={editing.module} {...guidedProps} />
+      ) : null}
+
+      {editing?.kind === "setup" ? (
+        <GuidedSetupEditor
+          projectRoot={project.root}
+          profile={editing.profile}
+          modules={project.modules}
+          onClose={() => setEditing(null)}
+          onAdvanced={() =>
+            setEditing({
+              kind: "source",
+              path: editing.profile.path,
+              title: `${editing.profile.title} Set-up`,
+            })
+          }
+          onSaved={(snapshot) => {
+            const title = editing.profile.title;
+            setEditing(null);
+            setActionStatus(`${title} Set-up was saved and rechecked.`);
+            onProjectChanged(snapshot);
+          }}
+        />
       ) : null}
     </div>
   );
