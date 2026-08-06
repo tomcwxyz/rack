@@ -6,13 +6,15 @@ Rack is a local-first desktop application for authoring, assembling, compiling a
 
 ## Status
 
-Rack is in active pre-release development. The repository now contains a working local vertical slice rather than only a scaffold.
+Rack is in active pre-release development. The repository contains a working local vertical slice rather than only a scaffold.
 
 A user can:
 
 - create a Writing and communications Rack through a guided desktop flow;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
-- edit source files with external-change protection;
+- maintain context, voice, boundary and repeatable-task instructions through guided forms;
+- review the exact source diff before a guided change is saved;
+- fall back to advanced source editing, with external-change protection;
 - compile a Set-up deterministically;
 - preview, copy and export generated instructions;
 - install managed local builds with provenance manifests, retained backups and drift detection;
@@ -20,6 +22,10 @@ A user can:
 - perform the same build and check operations through the CLI.
 
 The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
+
+### Current development focus
+
+Iteration 6 is adding structured maintenance to the desktop application. Context, voice, boundary and task editing are implemented on the active development branch. Set-up maintenance, stronger round-trip fixtures and final keyboard/focus work remain before that iteration is complete.
 
 ## Product shape
 
@@ -47,7 +53,7 @@ This is a pnpm/Turborepo monorepo.
 
 - `apps/desktop` — Tauri and React desktop application;
 - `packages/schemas` — source and generated-manifest schemas;
-- `packages/core` — project parsing, compilation, adapters, build state and Node integration;
+- `packages/core` — project parsing, source patching, compilation, adapters and build state;
 - `packages/cli` — `rack validate`, `rack build` and `rack check`;
 - `test-fixtures` — accepted source and golden destination packages;
 - `docs` — specification, ADRs and iteration notes.
