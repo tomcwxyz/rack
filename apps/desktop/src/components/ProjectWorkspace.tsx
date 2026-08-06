@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
+import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
 import { GuidedVoiceEditor } from "./GuidedVoiceEditor.js";
 import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
@@ -10,7 +11,7 @@ import { SourceEditor } from "./SourceEditor.js";
 type WorkspaceSection = "rack" | "setups" | "preview";
 type GuidedModule = Extract<
   RackProject["modules"][number],
-  { type: "context" | "voice" }
+  { type: "context" | "voice" | "guardrail" | "task" }
 >;
 type EditingSource =
   | { kind: "source"; path: string; title: string }
@@ -175,6 +176,12 @@ export function ProjectWorkspace({
 
       {editing?.kind === "guided" && editing.module.type === "voice" && guidedProps ? (
         <GuidedVoiceEditor module={editing.module} {...guidedProps} />
+      ) : null}
+
+      {editing?.kind === "guided" &&
+      (editing.module.type === "guardrail" || editing.module.type === "task") &&
+      guidedProps ? (
+        <GuidedStructuredEditor module={editing.module} {...guidedProps} />
       ) : null}
     </div>
   );

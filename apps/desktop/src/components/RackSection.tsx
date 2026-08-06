@@ -3,7 +3,7 @@ import type { RackProject } from "@rack/core";
 
 type GuidedModule = Extract<
   RackProject["modules"][number],
-  { type: "context" | "voice" }
+  { type: "context" | "voice" | "guardrail" | "task" }
 >;
 
 type RackSectionProps = {
@@ -21,6 +21,8 @@ const typeLabels: Record<string, string> = {
   task: "Repeatable tasks",
   tools: "Tools expected",
 };
+
+const guidedTypes = new Set(["context", "voice", "guardrail", "task"]);
 
 export function RackSection({
   project,
@@ -77,7 +79,7 @@ export function RackSection({
             <h2 id="instructions-heading">Instructions in this Rack</h2>
           </div>
           <span className="muted-copy">
-            Context and voice instructions have guided maintenance. Advanced source editing remains available.
+            Context, voice, boundary and task instructions have guided maintenance. Advanced source editing remains available.
           </span>
         </div>
 
@@ -101,13 +103,13 @@ export function RackSection({
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">
-                        {module.type === "context" || module.type === "voice" ? (
+                        {guidedTypes.has(module.type) ? (
                           <button
                             className="source-edit-button"
                             type="button"
-                            onClick={() => onGuidedEdit(module)}
+                            onClick={() => onGuidedEdit(module as GuidedModule)}
                           >
-                            Edit details
+                            {module.type === "task" ? "Design task" : "Edit details"}
                           </button>
                         ) : null}
                         <button
