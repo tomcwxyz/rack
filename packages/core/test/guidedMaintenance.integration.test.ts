@@ -216,6 +216,6 @@ describe("guided maintenance project round trip", () => {
     expect(build.compiled?.modules).toHaveLength(4);
     expect(build.artifact?.content).toContain("small charities");
     expect(build.artifact?.content).toContain("Mark uncertainty explicitly");
-    expect(build.artifact?.content).toContain("Prepare a briefing");
+    expect(build.artifact?.content).toContain("**Command:** /prepare-briefing");
   });
 });
