@@ -46,6 +46,7 @@ export type ResearchRackProposal = RackProposal;
 export type CodingRackProposal = RackProposal;
 
 const yamlString = (value: string): string => JSON.stringify(value.trim());
+const authorName = (value: string): string => value.trim() || "Rack author";
 
 export const slugify = (value: string, fallback = "rack"): string => {
   const slug = value
@@ -116,7 +117,7 @@ version: 0.1.0
 title: ${yamlString(draft.rackTitle)}
 description: "A local Rack for repeatable writing and communications work."
 author:
-  name: ${yamlString(draft.authorName || "Rack author")}
+  name: ${yamlString(authorName(draft.authorName))}
 license: null
 okf_root: modules
 default_profile: writing
@@ -302,7 +303,7 @@ version: 0.1.0
 title: ${yamlString(draft.rackTitle)}
 description: "A local Rack for careful research and knowledge work."
 author:
-  name: ${yamlString(draft.authorName || "Rack author")}
+  name: ${yamlString(authorName(draft.authorName))}
 license: null
 okf_root: modules
 default_profile: research
@@ -520,7 +521,7 @@ version: 0.1.0
 title: ${yamlString(draft.rackTitle)}
 description: "A local Rack for careful coding and technical work."
 author:
-  name: ${yamlString(draft.authorName || "Rack author")}
+  name: ${yamlString(authorName(draft.authorName))}
 license: null
 okf_root: modules
 default_profile: coding
