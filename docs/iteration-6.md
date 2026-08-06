@@ -16,6 +16,8 @@ Make the first Writing Rack maintainable without requiring ordinary users to edi
 - guided repeatable-task design for task purpose, command, inputs and ordered stages;
 - guided Set-up maintenance for work domains, root instruction selection, explicit exclusions and destination token budgets;
 - advanced source editing retained as an explicit fallback;
+- representative project round-trip coverage that patches all guided source types, reparses the Rack and builds the resulting Set-up;
+- editor Escape handling, initial focus movement and focus return to the opening control;
 - unit coverage for context, voice, boundary, task, Set-up, preservation, refusal behaviour and stable line diffs.
 
 ## Safety rules
@@ -31,8 +33,7 @@ After a successful write, the project snapshot is parsed again, diagnostics are 
 
 ## Remaining before Iteration 6 completes
 
-- stronger round-trip fixtures using representative project files rather than isolated strings alone;
-- explicit focus return, escape handling and keyboard checks across all editor dialogs;
-- final copy and spacing pass for smaller desktop windows;
-- final `pnpm check`, Windows smoke and macOS smoke runs;
+- final copy and spacing review on smaller desktop windows;
+- final `pnpm check` and Windows desktop smoke run on the complete branch;
+- macOS smoke verification on the next scheduled cross-platform run;
 - update issue #11, mark PR #12 ready and merge after review.

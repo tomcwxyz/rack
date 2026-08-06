@@ -26,7 +26,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iteration 6 is adding structured maintenance to the desktop application. Context, voice, boundary, task and Set-up editing are implemented on the active development branch. Stronger round-trip fixtures, final keyboard/focus work and cross-platform verification remain before that iteration is complete.
+Iteration 6 has implemented the guided-maintenance feature set for context, voice, boundaries, repeatable tasks and Set-ups. Guided changes preserve advanced source fields, show an exact diff, refuse stale writes and have a representative project round-trip test. Editor dialogs support Escape and restore focus to the control that opened them. Final cross-platform verification remains before the iteration is merged.
 
 ## Product shape
 
