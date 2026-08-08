@@ -1,4 +1,5 @@
 mod generated;
+mod starter;
 
 use serde::{Deserialize, Serialize};
 use std::{
@@ -348,6 +349,7 @@ pub fn run() {
             read_project_file,
             write_project_file,
             write_generated_file,
+            starter::apply_starter_import,
             generated::read_generated_prompt_build,
             generated::install_generated_prompt_build
         ])

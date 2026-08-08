@@ -12,6 +12,8 @@ A user can:
 
 - choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
 - review every proposed instruction before Rack writes local files;
+- browse a bundled Starter library of reusable instructions and six starting templates;
+- inspect exact Starter source, licence and attribution before copying anything into a Rack;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
 - maintain Set-up domains, instruction selection and destination token budgets through a guided form;
@@ -21,13 +23,13 @@ A user can:
 - preview, copy and export generated instructions;
 - install managed local builds with provenance manifests, retained backups and drift detection;
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
-- perform the same build and check operations through the CLI.
+- perform the same build, check and Starter-library operations through the CLI.
 
 The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
 
 ### Current development focus
 
-Iterations 1–6 established the local source format, compiler, managed builds, portable destinations, coding-host packages and loss-aware guided maintenance. Iteration 7 adds complete local creation routes for Research and Coding alongside the existing, more polished Writing route. The route builders are deterministic and are tested by parsing and compiling their proposed source before it reaches review.
+Iterations 1–7 established the local source format, compiler, managed builds, portable destinations, coding-host packages, loss-aware guided maintenance and all three local creation routes. Iteration 8 adds the curated Starter library and a shared review-before-write import path for desktop and CLI. The first catalogue contains 35 schema-validated modules and six curated templates; it remains entirely bundled and offline in this iteration.
 
 ## Product shape
 
@@ -38,6 +40,8 @@ Rack has three guided starting routes:
 - Coding and technical work.
 
 Every route works without an account or model connection. It creates a small starting assembly rather than a locked template: the resulting Markdown and YAML source remains editable through guided or advanced maintenance.
+
+The bundled Starter library is another way into that same source model. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
@@ -55,10 +59,11 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 
 This is a pnpm/Turborepo monorepo.
 
-- `apps/desktop` — Tauri and React desktop application, guided creation and maintenance;
+- `apps/desktop` — Tauri and React desktop application, guided creation, maintenance and Starter library;
 - `packages/schemas` — source and generated-manifest schemas;
-- `packages/core` — project parsing, source patching, compilation, adapters and build state;
-- `packages/cli` — `rack validate`, `rack build` and `rack check`;
+- `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;
+- `packages/starter` — separately licensed bundled Starter catalogue, source, templates and deterministic metadata;
+- `packages/cli` — `rack validate`, `rack build`, `rack check` and `rack library`;
 - `test-fixtures` — accepted source and golden destination packages;
 - `docs` — specification, ADRs and iteration notes.
 
@@ -91,6 +96,16 @@ pnpm --filter @rack/cli dev -- check test-fixtures/coding-basic \
   --target claude-code
 ```
 
+Browse and review the Starter library through the CLI:
+
+```bash
+pnpm --filter @rack/cli dev -- library list --route research
+pnpm --filter @rack/cli dev -- library show @rack-starter/method.source-assessment
+pnpm --filter @rack/cli dev -- library add --template evidence-review \
+  --path test-fixtures/research-basic \
+  --profile research
+```
+
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-request checks.
 
 ## Continuous integration
@@ -99,6 +114,6 @@ Linux type checks, tests and builds run on pull requests. Windows desktop smoke 
 
 ## Licence
 
-Code is licensed under Apache-2.0. Starter modules and example knowledge content are licensed under CC BY 4.0 unless a file declares otherwise.
+Code is licensed under Apache-2.0. Starter modules and example knowledge content are licensed under CC BY 4.0 unless a file declares otherwise. The `@rack/starter` package carries the Starter content licence and attribution boundary explicitly.
 
 The Rack name and marks are retained by The Good Ship.

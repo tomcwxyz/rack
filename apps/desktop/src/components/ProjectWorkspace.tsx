@@ -4,12 +4,13 @@ import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
 import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
 import { GuidedVoiceEditor } from "./GuidedVoiceEditor.js";
+import { LibrarySection } from "./LibrarySection.js";
 import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 
-type WorkspaceSection = "rack" | "setups" | "preview";
+type WorkspaceSection = "rack" | "setups" | "preview" | "library";
 type GuidedModule = Extract<
   RackProject["modules"][number],
   { type: "context" | "voice" | "guardrail" | "task" }
@@ -139,7 +140,13 @@ export function ProjectWorkspace({
             Preview and export
           </button>
           <span className="nav-item nav-item--muted">Checks</span>
-          <span className="nav-item nav-item--muted">Library</span>
+          <button
+            className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => setSection("library")}
+          >
+            Library
+          </button>
         </nav>
         <div className="sidebar-footer">
           <p className="sidebar-note">Build your AI working practices.</p>
@@ -199,6 +206,14 @@ export function ProjectWorkspace({
             project={project}
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
+            onStatus={setActionStatus}
+          />
+        ) : null}
+
+        {section === "library" ? (
+          <LibrarySection
+            project={project}
+            onProjectChanged={onProjectChanged}
             onStatus={setActionStatus}
           />
         ) : null}
