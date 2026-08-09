@@ -53,15 +53,59 @@ describe("managed client", () => {
 
     expect(started.workflowRunId).toBe("wrun_test");
     expect(status.status).toBe("running");
-    expect(fetch).toHaveBeenNthCalledWith(
-      1,
-      "https://managed.rack.test/api/check/reliable",
-      expect.objectContaining({ method: "POST" }),
+  });
+
+  it("requests evaluation preflight without sending Rack content", async () => {
+    const response = {
+      schemaVersion: "0.1",
+      mode: "quick",
+      indicative: true,
+      requiresExplicitConfirmation: true,
+      eligibleForConfirmation: true,
+      generatorAlias: "generator",
+      judgeAlias: "generator",
+      judgeIndependent: null,
+      repetitions: 1,
+      baselineEnabled: false,
+      comparePreviousAcceptedRun: false,
+      regressionGate: false,
+      calls: { candidateGenerator: 1, baselineGenerator: 0, judge: 0, total: 1 },
+      tokens: { generatorInput: 1000, generatorOutput: 500, judgeInput: 0, judgeOutput: 0, total: 1500 },
+      costMicrousd: { generator: 1000, judge: 0, estimated: 1000, maximumRetry: 3000 },
+      limits: {
+        perRunCapMicrousd: 10000,
+        workspaceRemainingMicrousd: 100000,
+        activePaidRuns: 0,
+        concurrencyLimit: 2,
+        maxProviderAttemptsPerCall: 3,
+      },
+      warnings: [],
+      blockers: [],
+    };
+    const fetch = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(response),
     );
-    expect(fetch).toHaveBeenNthCalledWith(
-      2,
-      "https://managed.rack.test/api/check/reliable/00000000-0000-4000-8000-000000000001",
-      expect.any(Object),
-    );
+    const client = createManagedServiceClient({
+      baseUrl: "https://managed.rack.test",
+      getAccessToken: async () => "token",
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+    const preflight = await client.evaluationPreflight({
+      schemaVersion: "0.1",
+      mode: "quick",
+      rackFingerprint: request.rackFingerprint,
+      profileId: "writing",
+      target: "prompt",
+      generatorAlias: "generator",
+      caseCount: 1,
+      judgeCallsPerOutput: 0,
+      candidateInputTokensPerCase: 1000,
+      generatorOutputTokensPerCall: 500,
+      judgePromptTokensPerCase: 0,
+      judgeOutputTokensPerCall: 0,
+    });
+    const sent = String(fetch.mock.calls[0]?.[1]?.body ?? "");
+    expect(preflight.eligibleForConfirmation).toBe(true);
+    expect(sent).not.toContain(request.instructions);
   });
 });

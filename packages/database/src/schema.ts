@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { authenticatedRole } from "drizzle-orm/neon";
 import {
+  bigint,
   boolean,
   check,
   integer,
@@ -105,6 +106,38 @@ export const managedRuns = pgTable(
       to: workflowRole,
       using: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
       withCheck: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
+    }),
+  ],
+).enableRLS();
+
+export const workspaceEvaluationLimits = pgTable(
+  "rack_workspace_evaluation_limits",
+  {
+    workspaceId: uuid("workspace_id")
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    hardBudgetMicrousd: bigint("hard_budget_microusd", { mode: "number" }).notNull(),
+    spentMicrousd: bigint("spent_microusd", { mode: "number" }).notNull().default(0),
+    reservedMicrousd: bigint("reserved_microusd", { mode: "number" }).notNull().default(0),
+    perRunCapMicrousd: bigint("per_run_cap_microusd", { mode: "number" }).notNull(),
+    concurrencyLimit: integer("concurrency_limit").notNull(),
+    maxProviderAttemptsPerCall: integer("max_provider_attempts_per_call").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check("rack_eval_budget_nonnegative", sql`${table.hardBudgetMicrousd} >= 0 and ${table.spentMicrousd} >= 0 and ${table.reservedMicrousd} >= 0 and ${table.perRunCapMicrousd} >= 0`),
+    check("rack_eval_concurrency_positive", sql`${table.concurrencyLimit} > 0`),
+    check("rack_eval_attempts_range", sql`${table.maxProviderAttemptsPerCall} between 1 and 5`),
+    pgPolicy("rack_eval_limits_workspace_owner", {
+      for: "all",
+      to: authenticatedRole,
+      using: ownsWorkspace(table.workspaceId),
+      withCheck: ownsWorkspace(table.workspaceId),
     }),
   ],
 ).enableRLS();

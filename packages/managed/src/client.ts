@@ -1,4 +1,6 @@
 import {
+  evaluationPreflightRequestSchema,
+  evaluationPreflightResponseSchema,
   managedRunIdSchema,
   managedServiceErrorSchema,
   quickCheckRequestSchema,
@@ -6,6 +8,8 @@ import {
   reliableCheckRequestSchema,
   reliableCheckStartResponseSchema,
   reliableCheckStatusResponseSchema,
+  type EvaluationPreflightRequest,
+  type EvaluationPreflightResponse,
   type QuickCheckRequest,
   type QuickCheckResponse,
   type ReliableCheckRequest,
@@ -25,6 +29,9 @@ export type ManagedServiceClient = {
     request: ReliableCheckRequest,
   ) => Promise<ReliableCheckStartResponse>;
   getReliableCheckStatus: (runId: string) => Promise<ReliableCheckStatusResponse>;
+  evaluationPreflight: (
+    request: EvaluationPreflightRequest,
+  ) => Promise<EvaluationPreflightResponse>;
 };
 
 const normaliseBaseUrl = (value: string): string => value.replace(/\/+$/, "");
@@ -93,6 +100,22 @@ export const createManagedServiceClient = (
       const payload: unknown = await response.json();
       if (!response.ok) throw new Error(parseError(payload));
       return reliableCheckStatusResponseSchema.parse(payload);
+    },
+
+    async evaluationPreflight(input) {
+      const request = evaluationPreflightRequestSchema.parse(input);
+      const token = await accessToken();
+      const response = await fetchImpl(`${baseUrl}/api/evaluate/preflight`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(request),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) throw new Error(parseError(payload));
+      return evaluationPreflightResponseSchema.parse(payload);
     },
   };
 };
