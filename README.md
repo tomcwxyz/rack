@@ -29,7 +29,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–7 established the local source format, compiler, managed builds, portable destinations, coding-host packages, loss-aware guided maintenance and all three local creation routes. Iteration 8 adds the curated Starter library and a shared review-before-write import path for desktop and CLI. The first catalogue contains 35 schema-validated modules and six curated templates; it remains entirely bundled and offline in this iteration.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 establishes the optional managed-service boundary: shared contracts, Neon/Drizzle persistence, privacy-safe synchronous checks and enforced transient-content expiry. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -44,6 +44,8 @@ Every route works without an account or model connection. It creates a small sta
 The bundled Starter library is another way into that same source model. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
+
+The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation records are content-free summaries.
 
 Supported destinations are:
 
@@ -60,9 +62,12 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 This is a pnpm/Turborepo monorepo.
 
 - `apps/desktop` — Tauri and React desktop application, guided creation, maintenance and Starter library;
+- `apps/service` — optional Vercel managed-service functions and retention boundary;
 - `packages/schemas` — source and generated-manifest schemas;
 - `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;
 - `packages/starter` — separately licensed bundled Starter catalogue, source, templates and deterministic metadata;
+- `packages/managed` — managed-service contracts, quick checks, privacy-safe summaries and desktop-consumable client;
+- `packages/database` — Drizzle schema/migrations and Neon persistence with RLS boundaries;
 - `packages/cli` — `rack validate`, `rack build`, `rack check` and `rack library`;
 - `test-fixtures` — accepted source and golden destination packages;
 - `docs` — specification, ADRs and iteration notes.
@@ -105,6 +110,8 @@ pnpm --filter @rack/cli dev -- library add --template evidence-review \
   --path test-fixtures/research-basic \
   --profile research
 ```
+
+The managed service is optional. Its deployment/environment and privacy boundary are documented in [`apps/service/README.md`](apps/service/README.md) and [`docs/iteration-9.md`](docs/iteration-9.md).
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-request checks.
 
