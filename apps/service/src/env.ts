@@ -1,5 +1,6 @@
 export type ServiceEnvironment = {
   databaseUrl: string;
+  workflowDatabaseUrl: string;
   retentionDatabaseUrl: string;
   neonAuthJwksUrl: string;
   neonAuthIssuer?: string;
@@ -15,6 +16,7 @@ const required = (name: string): string => {
 
 export const readServiceEnvironment = (): ServiceEnvironment => ({
   databaseUrl: required("RACK_DATABASE_URL"),
+  workflowDatabaseUrl: required("RACK_WORKFLOW_DATABASE_URL"),
   retentionDatabaseUrl: required("RACK_RETENTION_DATABASE_URL"),
   neonAuthJwksUrl: required("NEON_AUTH_JWKS_URL"),
   neonAuthIssuer: process.env.NEON_AUTH_ISSUER?.trim() || undefined,

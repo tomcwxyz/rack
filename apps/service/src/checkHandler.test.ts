@@ -5,6 +5,7 @@ import { createCheckHandler } from "./checkHandler.js";
 
 const environment = {
   databaseUrl: "postgresql://example",
+  workflowDatabaseUrl: "postgresql://workflow",
   retentionDatabaseUrl: "postgresql://retention",
   neonAuthJwksUrl: "https://example.test/jwks.json",
   cronSecret: "test-secret-that-is-long-enough",
@@ -52,7 +53,7 @@ describe("managed check handler", () => {
 
   it("persists through the injected store and returns the summary", async () => {
     let persistedRequest: unknown;
-    const store: ManagedStore = {
+    const store: Pick<ManagedStore, "saveQuickCheck"> = {
       async saveQuickCheck(request, summary) {
         persistedRequest = request;
         return {
