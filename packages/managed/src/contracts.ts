@@ -126,6 +126,144 @@ export const reliableCheckStatusResponseSchema = z.union([
   reliableCheckFailedStatusSchema,
 ]);
 
+export const evaluationModeSchema = z.enum(["quick", "reliable"]);
+const tokenEstimateSchema = z.number().int().nonnegative().max(1_000_000);
+const moneySchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
+export const evaluationPreflightRequestSchema = z
+  .object({
+    schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    mode: evaluationModeSchema,
+    rackFingerprint: rackFingerprintSchema,
+    profileId: slugSchema,
+    target: destinationIdSchema,
+    generatorAlias: slugSchema,
+    judgeAlias: slugSchema.optional(),
+    caseCount: z.number().int().positive().max(100),
+    judgeCallsPerOutput: z.number().int().nonnegative().max(5),
+    candidateInputTokensPerCase: tokenEstimateSchema,
+    baselineInputTokensPerCase: tokenEstimateSchema.optional(),
+    generatorOutputTokensPerCall: tokenEstimateSchema,
+    judgePromptTokensPerCase: tokenEstimateSchema,
+    judgeOutputTokensPerCall: tokenEstimateSchema,
+  })
+  .strict()
+  .superRefine((request, context) => {
+    if (request.mode === "quick") {
+      if (request.judgeAlias !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["judgeAlias"],
+          message: "Quick evaluation uses the selected generator model for configured rubric judging.",
+        });
+      }
+      if (request.baselineInputTokensPerCase !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["baselineInputTokensPerCase"],
+          message: "Quick evaluation does not run a baseline.",
+        });
+      }
+    } else {
+      if (!request.judgeAlias) {
+        context.addIssue({
+          code: "custom",
+          path: ["judgeAlias"],
+          message: "Reliable evaluation requires a recorded judge alias.",
+        });
+      }
+      if (request.baselineInputTokensPerCase === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["baselineInputTokensPerCase"],
+          message: "Reliable evaluation requires a baseline input-token estimate.",
+        });
+      }
+      if (request.judgeCallsPerOutput < 1) {
+        context.addIssue({
+          code: "custom",
+          path: ["judgeCallsPerOutput"],
+          message: "Reliable evaluation requires at least one rubric judge call per output.",
+        });
+      }
+    }
+  });
+
+export const evaluationPreflightLimitsSchema = z
+  .object({
+    perRunCapMicrousd: moneySchema,
+    workspaceRemainingMicrousd: moneySchema,
+    activePaidRuns: z.number().int().nonnegative().max(1_000),
+    concurrencyLimit: z.number().int().positive().max(1_000),
+    maxProviderAttemptsPerCall: z.number().int().positive().max(5),
+  })
+  .strict();
+
+export const evaluationPreflightWarningSchema = z
+  .object({
+    code: z.enum(["judge-not-independent"]),
+    message: z.string().min(1).max(240),
+  })
+  .strict();
+
+export const evaluationPreflightBlockerSchema = z
+  .object({
+    code: z.enum([
+      "per-run-cap",
+      "workspace-budget",
+      "concurrency",
+      "generator-output-limit",
+      "judge-output-limit",
+    ]),
+    message: z.string().min(1).max(240),
+  })
+  .strict();
+
+export const evaluationPreflightResponseSchema = z
+  .object({
+    schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    mode: evaluationModeSchema,
+    indicative: z.boolean(),
+    requiresExplicitConfirmation: z.literal(true),
+    eligibleForConfirmation: z.boolean(),
+    generatorAlias: slugSchema,
+    judgeAlias: slugSchema,
+    judgeIndependent: z.boolean().nullable(),
+    repetitions: z.number().int().positive(),
+    baselineEnabled: z.boolean(),
+    comparePreviousAcceptedRun: z.boolean(),
+    regressionGate: z.boolean(),
+    calls: z
+      .object({
+        candidateGenerator: z.number().int().nonnegative(),
+        baselineGenerator: z.number().int().nonnegative(),
+        judge: z.number().int().nonnegative(),
+        total: z.number().int().nonnegative(),
+      })
+      .strict(),
+    tokens: z
+      .object({
+        generatorInput: z.number().int().nonnegative(),
+        generatorOutput: z.number().int().nonnegative(),
+        judgeInput: z.number().int().nonnegative(),
+        judgeOutput: z.number().int().nonnegative(),
+        total: z.number().int().nonnegative(),
+      })
+      .strict(),
+    costMicrousd: z
+      .object({
+        generator: moneySchema,
+        judge: moneySchema,
+        estimated: moneySchema,
+        maximumRetry: moneySchema,
+      })
+      .strict(),
+    limits: evaluationPreflightLimitsSchema,
+    warnings: z.array(evaluationPreflightWarningSchema),
+    blockers: z.array(evaluationPreflightBlockerSchema),
+  })
+  .strict();
+
 export const managedServiceErrorSchema = z
   .object({
     error: z.object({
@@ -156,4 +294,8 @@ export type ReliableCheckStartResponse = z.infer<
 export type ReliableCheckStatusResponse = z.infer<
   typeof reliableCheckStatusResponseSchema
 >;
+export type EvaluationMode = z.infer<typeof evaluationModeSchema>;
+export type EvaluationPreflightRequest = z.infer<typeof evaluationPreflightRequestSchema>;
+export type EvaluationPreflightLimits = z.infer<typeof evaluationPreflightLimitsSchema>;
+export type EvaluationPreflightResponse = z.infer<typeof evaluationPreflightResponseSchema>;
 export type ManagedServiceError = z.infer<typeof managedServiceErrorSchema>;

@@ -10,6 +10,10 @@ const reliableMigration = new URL(
   "../drizzle/0002_reliable_checks/migration.sql",
   import.meta.url,
 );
+const evaluationLimitsMigration = new URL(
+  "../drizzle/0003_evaluation_limits/migration.sql",
+  import.meta.url,
+);
 
 describe("managed database boundary", () => {
   it("keeps the 24-hour retention limit and row policies in the foundation migration", async () => {
@@ -32,5 +36,16 @@ describe("managed database boundary", () => {
     );
     expect(sql).not.toContain("GRANT INSERT ON rack_managed_payloads TO rack_workflow");
     expect(sql).not.toContain("BYPASSRLS");
+  });
+
+  it("keeps evaluation budgets as owner-scoped metadata without provider execution", async () => {
+    const sql = await readFile(fileURLToPath(evaluationLimitsMigration), "utf8");
+    expect(sql).toContain("rack_workspace_evaluation_limits");
+    expect(sql).toContain("hard_budget_microusd");
+    expect(sql).toContain("reserved_microusd");
+    expect(sql).toContain("ENABLE ROW LEVEL SECURITY");
+    expect(sql).toContain("workspace.owner_user_id = (SELECT auth.user_id())");
+    expect(sql).not.toContain("rack_workflow");
+    expect(sql).not.toContain("provider_call");
   });
 });

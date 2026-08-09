@@ -29,7 +29,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary, Neon/Drizzle persistence and privacy-safe synchronous checks. Iteration 10 adds reliable asynchronous checks through Vercel Workflows, with run-scoped RLS and content-free workflow inputs/outputs. Local Rack use remains account-free and does not depend on the service.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 adds the provider-neutral model registry and paid-evaluation preflight: model/call/token/cost visibility plus workspace hard limits before any provider call can exist. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -45,7 +45,7 @@ The bundled Starter library is another way into that same source model. Starter 
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
-The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation records and reliable-workflow data are content-free summaries/identifiers.
+The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation records and reliable-workflow data are content-free summaries/identifiers. Paid model evaluation requires a separate preflight that accepts metadata/token estimates only and exposes the maximum retry cost against hard workspace limits.
 
 Supported destinations are:
 
@@ -62,11 +62,13 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 This is a pnpm/Turborepo monorepo.
 
 - `apps/desktop` — Tauri and React desktop application, guided creation, maintenance and Starter library;
-- `apps/service` — optional Vercel managed-service functions, reliable Workflows and retention boundary;
+- `apps/service` — optional Vercel managed-service functions, evaluation preflight, reliable Workflows and retention boundary;
 - `packages/schemas` — source and generated-manifest schemas;
 - `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;
 - `packages/starter` — separately licensed bundled Starter catalogue, source, templates and deterministic metadata;
-- `packages/managed` — managed-service contracts, quick/reliable checks, privacy-safe summaries and desktop-consumable client;
+- `packages/registry` — provider-neutral stable model aliases, deployment mappings, capabilities and pricing metadata;
+- `packages/eval` — deterministic managed-evaluation planning and cost preflight;
+- `packages/managed` — managed-service contracts, quick/reliable checks, evaluation preflight and desktop-consumable client;
 - `packages/database` — Drizzle schema/migrations and Neon persistence with authenticated, workflow and retention RLS boundaries;
 - `packages/cli` — `rack validate`, `rack build`, `rack check` and `rack library`;
 - `test-fixtures` — accepted source and golden destination packages;
@@ -111,13 +113,13 @@ pnpm --filter @rack/cli dev -- library add --template evidence-review \
   --profile research
 ```
 
-The managed service is optional. Its deployment/environment and privacy boundary are documented in [`apps/service/README.md`](apps/service/README.md), [`docs/iteration-9.md`](docs/iteration-9.md) and [`docs/iteration-10.md`](docs/iteration-10.md).
+The managed service is optional. Its deployment/environment and privacy boundary are documented in [`apps/service/README.md`](apps/service/README.md) and the iteration notes under [`docs/`](docs/).
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-request checks.
 
 ## Continuous integration
 
-Linux type checks, tests and builds run on pull requests. Windows desktop smoke checks run only when desktop dependency paths change. macOS smoke checks run after merge to `main` or through a deliberate manual full-suite run. Server-only managed-service changes do not trigger paid desktop runners. Work should be prepared locally and pushed as a coherent review batch rather than as a series of small CI-triggering commits.
+Linux type checks, tests and builds run on pull requests and pushes. Windows desktop smoke checks run only when desktop dependency paths change. macOS smoke checks run after desktop-related changes reach `main` or through a deliberate manual full-suite run. Server-only managed-service changes do not trigger paid desktop runners. Work should be prepared locally and pushed as a coherent review batch rather than as a series of small CI-triggering commits.
 
 ## Licence
 

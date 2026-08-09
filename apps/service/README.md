@@ -1,67 +1,65 @@
 # Rack managed service
 
-This is the optional v0.1 managed-service boundary. Rack projects remain canonical local Markdown/YAML; this application receives only explicit managed-check requests.
+This is the optional v0.1 managed-service boundary. Rack projects remain canonical local Markdown/YAML; this application receives only explicit managed requests.
 
 ## Runtime shape
 
 The Vercel project root is `apps/service`. Plain TypeScript files under `api/` are deployed as Vercel Functions. The service uses Web `Request`/`Response` handlers rather than a web framework.
 
-`POST /api/check` verifies a Neon Auth JWT against the branch JWKS, runs a synchronous quick check, writes raw request content only to the transient payload table, and persists a separate content-free evaluation summary.
+`POST /api/check` verifies a Neon Auth JWT, runs a synchronous deterministic quick check, stores raw request material only in the transient payload table, and persists a separate content-free summary.
 
-`POST /api/check/reliable` verifies the same identity, creates one queued Rack run and transient payload, then starts `reliableCheckWorkflow` through Workflow SDK. The HTTP request returns `202` with the Rack run ID and Vercel workflow run ID; it does not wait for evaluation.
+`POST /api/check/reliable` creates a queued transient check and starts `reliableCheckWorkflow`. `GET /api/check/reliable/:runId` reads its owner-scoped status. Workflow inputs contain only the random Rack run UUID; raw content remains in the expiring Neon payload.
 
-`GET /api/check/reliable/:runId` is rewritten to the status function. RLS makes an unknown run and another user's run indistinguishable to the caller. Completed responses contain the same strict content-free summary schema as quick checks.
+`POST /api/evaluate/preflight` is a separate paid-evaluation planning boundary. It accepts only IDs, counts and token estimates, resolves deployment-owned model aliases/pricing, reads workspace cost/concurrency limits under RLS and returns call/token/cost metadata. It cannot start, reserve or bill a model run.
 
-`GET /api/retention` is invoked hourly by Vercel Cron. Vercel supplies `CRON_SECRET` as a bearer token. The endpoint connects with a dedicated database login that is granted membership in `rack_retention`; the database policy only permits deletion of payload rows whose `expires_at` has passed.
+`GET /api/retention` is invoked hourly by Vercel Cron and deletes only expired transient payload rows through a narrow retention database role.
 
-The hourly cron schedule requires a Vercel plan that supports sub-daily cron execution. If deployment is moved to a platform/plan without that guarantee, retention scheduling must be replaced before managed content is accepted.
+## Model registry and evaluation limits
+
+`RACK_MODEL_REGISTRY_JSON` defines stable aliases independently from provider/model mappings. Production parsing requires two distinct managed provider IDs. Registry entries may also represent BYOK and OpenAI-compatible/local endpoints; Rack does not require AI Gateway.
+
+Prices are supplied as integer micro-USD per million tokens. Provider prices are not compiled into the application.
+
+`RACK_EVALUATION_LIMITS_JSON` seeds each workspace's owner-scoped hard budget, per-run cap, concurrency limit and maximum provider attempts on first preflight use. Existing workspace values are not silently overwritten by later deployment-default changes.
+
+Preflight compares the maximum retry exposure — not just one-attempt estimated cost — with the hard limits.
 
 ## Reliable workflow privacy boundary
 
 Workflow SDK persists workflow inputs and step outputs so it can replay runs durably. Rack therefore never passes instructions, sample output or the authenticated user ID to Workflow SDK.
 
-The workflow input is only the random Rack run UUID. A step opens `RACK_WORKFLOW_DATABASE_URL`, sets that UUID transaction-locally as `rack.workflow_run_id`, and Postgres RLS limits the `rack_workflow` role to:
+The workflow input is only the random Rack run UUID. A step opens `RACK_WORKFLOW_DATABASE_URL`, sets that UUID transaction-locally as `rack.workflow_run_id`, and Postgres RLS limits the `rack_workflow` role to the single reliable-check run, its still-unexpired payload, and its content-free summary.
 
-- selecting/updating that one `reliable-check` run;
-- reading that run's payload only while `expires_at > now()`;
-- inserting/selecting that run's evaluation summary.
-
-The workflow step returns only `DurableEvaluationSummary`, which cannot contain prompt, instruction or generated-output fields. A retry first checks for an existing completed summary, and summary insertion uses the run ID primary key with `ON CONFLICT DO NOTHING`.
-
-The current `^4.6.2` Workflow SDK range resolves to 4.8.1 in Rack's lockfile. Workflow SDK 4.x uses Vercel's managed workflow backend in `iad1`. That is acceptable for this slice because Rack places only the random run UUID and content-free summary in the workflow event log; managed source/output content stays in the configured Neon database and its 24-hour transient boundary. Reassess Workflow SDK 5.x regional execution before the pilot if stricter workflow-metadata residency is required.
+The current `^4.6.2` Workflow SDK range resolves to 4.8.1 in Rack's lockfile. Stable 4.x Workflow metadata remains a separate residency boundary; only run identifiers/content-free summaries enter it.
 
 ## Database roles
 
-Use four separate connections/roles:
+Use separate connections/roles:
 
-1. `RACK_MIGRATION_DATABASE_URL`: owner/migration only, used outside the deployed service to apply migrations.
-2. `RACK_DATABASE_URL`: non-owner authenticated runtime role. It must not have `BYPASSRLS`; verified JWT claims are set transaction-locally before user-facing queries.
-3. `RACK_WORKFLOW_DATABASE_URL`: narrow login role with membership in `rack_workflow` only. Workflow steps set a single Rack run UUID transaction-locally; it has no workspace, membership or payload-write grant.
+1. `RACK_MIGRATION_DATABASE_URL`: owner/migration only; never deployed as an application runtime variable.
+2. `RACK_DATABASE_URL`: non-owner authenticated runtime role participating in Neon RLS.
+3. `RACK_WORKFLOW_DATABASE_URL`: narrow login role with membership in `rack_workflow` only.
 4. `RACK_RETENTION_DATABASE_URL`: narrow login role with membership in `rack_retention` only.
-
-Never deploy the migration/owner connection string as an application runtime variable.
 
 ## Auth
 
-Neon Auth is the identity provider. Configure email magic-link and Google/Microsoft providers in Neon, then expose the branch JWKS URL as `NEON_AUTH_JWKS_URL`. `NEON_AUTH_ISSUER` and `NEON_AUTH_AUDIENCE` can be set when those claims are fixed for the environment.
+Neon Auth is the identity provider. Configure email magic-link and Google/Microsoft providers in Neon, then expose the branch JWKS URL as `NEON_AUTH_JWKS_URL`. `NEON_AUTH_ISSUER` and `NEON_AUTH_AUDIENCE` can be set when fixed for the environment.
 
-The desktop/native sign-in UX is deliberately outside this service package. `@rack/managed/client` accepts an access-token callback so local-only Rack use does not depend on auth or network availability.
+Desktop/native sign-in remains outside this service package. `@rack/managed/client` accepts an access-token callback so local-only Rack use does not depend on auth or network availability.
 
 ## Local workflow development
 
-Workflow SDK's Local World is bundled and requires no separate queue/database. Run the service with Vercel's local development command, then inspect workflow runs from another terminal:
+Workflow SDK's Local World is bundled. Inspect local workflow runs with:
 
 ```bash
 pnpm --filter @rack/service workflow:web
 ```
 
-The local Workflow SDK store is development-only. Production Vercel deployments automatically use Vercel's managed Workflow backend and queue integration.
-
 ## Privacy boundary
 
-- request instructions and optional sample output are stored only in `rack_managed_payloads`;
-- payload expiry is capped at 24 hours in both application logic and a Postgres check constraint;
-- workflow retries never update `created_at` or `expires_at`;
-- durable summaries contain counts, finding codes/titles, score and fingerprints but no prompt/instruction/output text;
+- managed instruction/sample-output content lives only in `rack_managed_payloads` and is capped at 24 hours;
+- evaluation preflight accepts no raw managed content;
+- workflow retries never extend transient-content expiry;
+- durable quick/reliable summaries contain no prompt/instruction/output text;
 - the service does not upload or store a Rack project;
-- analytics are not part of this request path.
+- analytics are separate from managed content and are not part of these request paths.

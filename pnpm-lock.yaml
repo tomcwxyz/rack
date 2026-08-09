@@ -72,9 +72,15 @@ importers:
       '@rack/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@rack/eval':
+        specifier: workspace:*
+        version: link:../../packages/eval
       '@rack/managed':
         specifier: workspace:*
         version: link:../../packages/managed
+      '@rack/registry':
+        specifier: workspace:*
+        version: link:../../packages/registry
       jose:
         specifier: ^6.2.3
         version: 6.2.8
@@ -161,7 +167,39 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
 
+  packages/eval:
+    dependencies:
+      '@rack/managed':
+        specifier: workspace:*
+        version: link:../managed
+      '@rack/registry':
+        specifier: workspace:*
+        version: link:../registry
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   packages/managed:
+    dependencies:
+      '@rack/schemas':
+        specifier: workspace:*
+        version: link:../schemas
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
+  packages/registry:
     dependencies:
       '@rack/schemas':
         specifier: workspace:*
