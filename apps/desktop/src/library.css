@@ -1,0 +1,233 @@
+.library-section {
+  padding-bottom: 7rem;
+}
+
+.library-templates {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.template-card {
+  display: flex;
+  min-height: 9.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.template-card:hover,
+.template-card:focus-visible {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+}
+
+.template-card__route,
+.library-card__meta,
+.source-attribution {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.template-card small {
+  margin-top: auto;
+  color: var(--muted);
+}
+
+.library-toolbar,
+.library-review-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr);
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.library-search {
+  min-width: 0;
+}
+
+.library-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.library-card {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+}
+
+.library-card__select {
+  padding-top: 0.25rem;
+}
+
+.library-card__select input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.library-card h3,
+.library-card p {
+  margin: 0;
+}
+
+.library-card__body {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.library-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.9rem;
+  color: var(--muted);
+}
+
+.library-card__meta code {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tag-row span,
+.count-badge {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: var(--ground);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.source-inspection {
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.65rem;
+}
+
+.source-inspection summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.source-inspection pre {
+  max-height: 28rem;
+  overflow: auto;
+  margin: 0.75rem 0 0;
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  background: var(--ink);
+  color: var(--paper);
+  white-space: pre-wrap;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.source-attribution {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+}
+
+.library-review-bar {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 2;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.65fr) auto;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  box-shadow: 0 1rem 3rem rgb(26 24 20 / 10%);
+  backdrop-filter: blur(12px);
+}
+
+.library-review-bar p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.library-plan {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+}
+
+.library-plan__items {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.plan-item {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.6fr) 1fr;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.7rem;
+  background: var(--ground);
+}
+
+.plan-item--changed,
+.plan-item--conflict {
+  outline: 1px solid currentColor;
+}
+
+.library-diff {
+  display: grid;
+  margin-top: 0.65rem;
+  overflow: auto;
+  border-radius: 0.7rem;
+  background: var(--ground);
+}
+
+.diff-line {
+  padding: 0.15rem 0.6rem;
+  white-space: pre-wrap;
+}
+
+.diff-line--add::first-letter,
+.diff-line--remove::first-letter {
+  font-weight: 800;
+}
+
+.library-plan__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+@media (max-width: 900px) {
+  .library-templates,
+  .library-toolbar,
+  .library-review-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .library-review-bar {
+    position: static;
+  }
+
+  .plan-item {
+    grid-template-columns: 1fr;
+  }
+}

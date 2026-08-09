@@ -6,6 +6,7 @@ import "./editor.css";
 import "./setup-editor.css";
 import "./build.css";
 import "./creation-routes.css";
+import "./library.css";
 
 const root = document.getElementById("root");
 
