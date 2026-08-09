@@ -3,10 +3,7 @@ import {
   type ManagedStore,
   type VerifiedAuthClaims,
 } from "@rack/database";
-import {
-  quickCheckRequestSchema,
-  runQuickCheck,
-} from "@rack/managed";
+import { quickCheckRequestSchema, runQuickCheck } from "@rack/managed";
 import { ManagedAuthenticationError, verifyManagedRequest } from "./auth.js";
 import type { ServiceEnvironment } from "./env.js";
 import { json, serviceError } from "./http.js";
@@ -17,7 +14,7 @@ export type CheckHandlerDependencies = {
     request: Request,
     environment: ServiceEnvironment,
   ) => Promise<VerifiedAuthClaims>;
-  storeFor?: (claims: VerifiedAuthClaims) => ManagedStore;
+  storeFor?: (claims: VerifiedAuthClaims) => Pick<ManagedStore, "saveQuickCheck">;
   now?: () => Date;
 };
 

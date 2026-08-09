@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/check/reliable/:runId",
+      "destination": "/api/check/reliable-status?runId=:runId"
+    }
+  ],
   "crons": [
     {
       "path": "/api/retention",

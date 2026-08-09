@@ -3,6 +3,7 @@ import { createRetentionHandler } from "./retentionHandler.js";
 
 const environment = {
   databaseUrl: "postgresql://example",
+  workflowDatabaseUrl: "postgresql://workflow",
   retentionDatabaseUrl: "postgresql://retention",
   neonAuthJwksUrl: "https://example.test/jwks.json",
   cronSecret: "test-secret-that-is-long-enough",

@@ -18,6 +18,7 @@ import {
 import type { QuickCheckFinding } from "@rack/managed";
 
 export const retentionRole = pgRole("rack_retention").existing();
+export const workflowRole = pgRole("rack_workflow").existing();
 
 export const workspaces = pgTable(
   "rack_workspaces",
@@ -42,6 +43,14 @@ export const workspaces = pgTable(
   ],
 ).enableRLS();
 
+const ownsWorkspace = (workspaceId: AnyPgColumn) => sql`exists (
+  select 1 from rack_workspaces workspace
+  where workspace.id = ${workspaceId}
+    and workspace.owner_user_id = (select auth.user_id())
+)`;
+
+const currentWorkflowRunId = sql`nullif(current_setting('rack.workflow_run_id', true), '')::uuid`;
+
 export const workspaceMemberships = pgTable(
   "rack_workspace_memberships",
   {
@@ -60,17 +69,11 @@ export const workspaceMemberships = pgTable(
     pgPolicy("rack_memberships_self", {
       for: "all",
       to: authenticatedRole,
-      using: sql`${table.userId} = (select auth.user_id())`,
-      withCheck: sql`${table.userId} = (select auth.user_id())`,
+      using: sql`${table.userId} = (select auth.user_id()) and ${ownsWorkspace(table.workspaceId)}`,
+      withCheck: sql`${table.userId} = (select auth.user_id()) and ${ownsWorkspace(table.workspaceId)}`,
     }),
   ],
 ).enableRLS();
-
-const ownsWorkspace = (workspaceId: AnyPgColumn) => sql`exists (
-  select 1 from rack_workspaces workspace
-  where workspace.id = ${workspaceId}
-    and workspace.owner_user_id = (select auth.user_id())
-)`;
 
 export const managedRuns = pgTable(
   "rack_managed_runs",
@@ -96,6 +99,12 @@ export const managedRuns = pgTable(
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
       withCheck: sql`${ownsWorkspace(table.workspaceId)} and ${table.userId} = (select auth.user_id())`,
+    }),
+    pgPolicy("rack_runs_reliable_workflow", {
+      for: "all",
+      to: workflowRole,
+      using: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
+      withCheck: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
     }),
   ],
 ).enableRLS();
@@ -126,6 +135,11 @@ export const managedPayloads = pgTable(
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
       withCheck: ownsWorkspace(table.workspaceId),
+    }),
+    pgPolicy("rack_payload_reliable_workflow_read", {
+      for: "select",
+      to: workflowRole,
+      using: sql`${table.runId} = ${currentWorkflowRunId} and ${table.expiresAt} > now()`,
     }),
     pgPolicy("rack_payload_retention_delete", {
       for: "delete",
@@ -167,6 +181,17 @@ export const evaluationSummaries = pgTable(
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
       withCheck: ownsWorkspace(table.workspaceId),
+    }),
+    pgPolicy("rack_summary_reliable_workflow", {
+      for: "all",
+      to: workflowRole,
+      using: sql`${table.runId} = ${currentWorkflowRunId}`,
+      withCheck: sql`${table.runId} = ${currentWorkflowRunId} and exists (
+        select 1 from rack_managed_runs run
+        where run.id = ${table.runId}
+          and run.workspace_id = ${table.workspaceId}
+          and run.kind = 'reliable-check'
+      )`,
     }),
   ],
 ).enableRLS();
