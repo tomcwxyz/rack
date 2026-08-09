@@ -53,7 +53,7 @@ jobs:
           changed_files="$(git diff --name-only "$base" "$head")"
           printf '%s\n' "$changed_files"
 
-          if grep -Eq '^(apps/desktop/|packages/|scripts/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|tsconfig\.base\.json$|turbo\.json$)' <<< "$changed_files"; then
+          if grep -Eq '^(apps/desktop/|packages/(core|schemas|starter)/|scripts/|package\.json$|pnpm-workspace\.yaml$|tsconfig\.base\.json$|turbo\.json$)' <<< "$changed_files"; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
