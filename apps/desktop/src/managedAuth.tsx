@@ -1,5 +1,5 @@
 import { createInternalNeonAuth } from "@neondatabase/auth";
-import { NeonAuthUIProvider, SignInForm } from "@neondatabase/auth-ui";
+import { AuthView, NeonAuthUIProvider } from "@neondatabase/auth-ui";
 import {
   createContext,
   useCallback,
@@ -108,7 +108,7 @@ export function ManagedSignIn() {
   return (
     <div className="managed-sign-in">
       <div className="managed-sign-in__form">
-        <SignInForm />
+        <AuthView path="sign-in" />
       </div>
     </div>
   );
