@@ -40,6 +40,12 @@ const add = (left: number, right: number, label: string): number =>
 const multiply = (value: number, multiplier: number, label: string): number =>
   safeNumber(BigInt(value) * BigInt(multiplier), label);
 
+const identity = (model: ModelRegistryEntry) => ({
+  alias: model.alias,
+  providerId: model.providerId,
+  modelId: model.modelId,
+});
+
 export const buildEvaluationPreflight = (
   input: EvaluationPreflightRequest,
   registry: ModelRegistry,
@@ -158,6 +164,8 @@ export const buildEvaluationPreflight = (
     eligibleForConfirmation: blockers.length === 0,
     generatorAlias: generator.alias,
     judgeAlias: judge.alias,
+    generator: identity(generator),
+    judge: identity(judge),
     judgeIndependent,
     repetitions,
     baselineEnabled: reliable,

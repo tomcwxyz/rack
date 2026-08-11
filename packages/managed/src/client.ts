@@ -1,4 +1,6 @@
 import {
+  evaluationConfirmRequestSchema,
+  evaluationConfirmResponseSchema,
   evaluationPreflightRequestSchema,
   evaluationPreflightResponseSchema,
   managedRunIdSchema,
@@ -8,6 +10,8 @@ import {
   reliableCheckRequestSchema,
   reliableCheckStartResponseSchema,
   reliableCheckStatusResponseSchema,
+  type EvaluationConfirmRequest,
+  type EvaluationConfirmResponse,
   type EvaluationPreflightRequest,
   type EvaluationPreflightResponse,
   type QuickCheckRequest,
@@ -32,6 +36,9 @@ export type ManagedServiceClient = {
   evaluationPreflight: (
     request: EvaluationPreflightRequest,
   ) => Promise<EvaluationPreflightResponse>;
+  confirmEvaluation: (
+    request: EvaluationConfirmRequest,
+  ) => Promise<EvaluationConfirmResponse>;
 };
 
 const normaliseBaseUrl = (value: string): string => value.replace(/\/+$/, "");
@@ -116,6 +123,22 @@ export const createManagedServiceClient = (
       const payload: unknown = await response.json();
       if (!response.ok) throw new Error(parseError(payload));
       return evaluationPreflightResponseSchema.parse(payload);
+    },
+
+    async confirmEvaluation(input) {
+      const request = evaluationConfirmRequestSchema.parse(input);
+      const token = await accessToken();
+      const response = await fetchImpl(`${baseUrl}/api/evaluate/confirm`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(request),
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) throw new Error(parseError(payload));
+      return evaluationConfirmResponseSchema.parse(payload);
     },
   };
 };

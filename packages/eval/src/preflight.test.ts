@@ -76,6 +76,12 @@ describe("evaluation preflight", () => {
       judge: 2,
       total: 4,
     });
+    expect(result.generator).toEqual({
+      alias: "generator",
+      providerId: "provider-one",
+      modelId: "model-a",
+    });
+    expect(result.judge).toEqual(result.generator);
     expect(result.judgeAlias).toBe("generator");
     expect(result.judgeIndependent).toBeNull();
   });
@@ -92,6 +98,11 @@ describe("evaluation preflight", () => {
       baselineGenerator: 10,
       judge: 20,
       total: 40,
+    });
+    expect(result.judge).toEqual({
+      alias: "judge",
+      providerId: "provider-two",
+      modelId: "model-b",
     });
     expect(result.judgeIndependent).toBe(true);
     expect(result.warnings).toEqual([]);
