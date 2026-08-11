@@ -29,7 +29,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 added the first explicit confirmed paid Quick execution boundary with exact model/cost confirmation, atomic budget reservation, provider-call idempotency and conservative accounting. Iteration 13 adds one rubric-backed Quick judgement: a structured indicative pass/fail result that keeps provider/infrastructure failure distinct from behavioural failure. Local Rack use remains account-free and does not depend on the service.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 added the first explicit confirmed paid Quick execution boundary with exact model/cost confirmation, atomic budget reservation, provider-call idempotency and conservative accounting. Iteration 13 added one rubric-backed Quick judgement: a structured indicative pass/fail result that keeps provider/infrastructure failure distinct from behavioural failure. Iteration 14 brings that Quick path into the desktop through the optional Checks area: sign-in, one-case/rubric setup, metadata-only cost preflight, explicit paid confirmation and readable Pass/Fail/Incomplete results. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -63,7 +63,7 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 
 This is a pnpm/Turborepo monorepo.
 
-- `apps/desktop` — Tauri and React desktop application, guided creation, maintenance and Starter library;
+- `apps/desktop` — Tauri and React desktop application, guided creation, maintenance, Starter library and optional managed Checks UI;
 - `apps/service` — optional Vercel managed-service functions, evaluation preflight/confirmation, reliable Workflows and retention boundary;
 - `packages/schemas` — source and generated-manifest schemas;
 - `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;

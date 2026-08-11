@@ -13,7 +13,10 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@neondatabase/auth": "0.4.2-beta",
+    "@neondatabase/auth-ui": "0.2.1-beta",
     "@rack/core": "workspace:*",
+    "@rack/managed": "workspace:*",
     "@rack/starter": "workspace:*",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.4.0",
