@@ -12,7 +12,9 @@ The Vercel project root is `apps/service`. Plain TypeScript files under `api/` a
 
 `POST /api/evaluate/preflight` is the metadata-only paid-evaluation planning boundary. It accepts IDs, counts and token estimates, resolves deployment-owned model aliases/pricing, reads workspace cost/concurrency limits under RLS and returns call/token/cost metadata plus the exact resolved provider/model identities. It cannot start or reserve a model run.
 
-`POST /api/evaluate/confirm` is a separate explicit paid-work boundary. The first execution slice supports one Quick case and no rubric judge. It recomputes preflight against current model/pricing/limit configuration, requires the accepted resolved generator identity and maximum retry exposure to match, checks the supplied content against the accepted input allowance, then atomically reserves budget and claims a provider-call ledger row before any provider request can start.
+`POST /api/evaluate/confirm` is the separate explicit paid-work boundary. Confirmed Quick execution currently supports one case and zero or one rubric judge call. It recomputes preflight against current model/pricing/limit configuration, requires accepted resolved identities and maximum retry exposure to match, checks supplied content against the accepted input/judge allowances, then atomically reserves budget and claims each provider call before its network request can start.
+
+With zero judge calls, a successful generation remains an execution primitive with no behavioural verdict. With one judge call, the same selected Quick model applies a strict supplied rubric and returns a structured indicative pass/fail judgement.
 
 `GET /api/retention` is invoked hourly by Vercel Cron and deletes only expired transient payload rows through a narrow retention database role.
 
@@ -28,21 +30,36 @@ The managed confirmation endpoint currently executes only registry entries whose
 
 `RACK_EVALUATION_LIMITS_JSON` seeds each workspace's owner-scoped hard budget, per-run cap, concurrency limit and maximum provider attempts on first preflight use. Existing workspace values are not silently overwritten by later deployment-default changes.
 
-Preflight compares maximum retry exposure — not just one-attempt estimated cost — with the hard limits. Confirmation repeats those checks transactionally while the workspace limit row is locked. The accepted maximum retry exposure is reserved before the run and released into spent cost during settlement.
+Preflight compares maximum retry exposure — not just one-attempt estimated cost — with the hard limits. Confirmation repeats those checks transactionally while the workspace limit row is locked. The accepted maximum retry exposure for the whole Quick plan is reserved before candidate generation begins and is released into spent cost only when the run settles.
+
+## Quick rubric semantics
+
+Quick evaluation remains explicitly indicative. It uses one repetition, no baseline and no regression gate. If a rubric call is configured, the judge is the same resolved model as the candidate generator; Rack does not call this independent judging.
+
+The judge prompt is deterministic and owned by the service rather than supplied as arbitrary hidden instructions. It asks for strict JSON containing:
+
+- `verdict`: `pass` or `fail`;
+- `score`: integer 0–100;
+- `reason`: short explanation;
+- `evidence`: up to five short observations grounded in the candidate output.
+
+The response is parsed against the shared schema. Rack does not infer a pass/fail verdict from unstructured judge prose.
+
+`completed` means both required provider calls completed and a configured rubric produced a valid structured judgement. A valid rubric `fail` is still `completed`; it is a behavioural failure, not an infrastructure failure. Candidate/judge provider errors or an invalid judge response produce `incomplete` with `behaviouralVerdict: null`.
 
 ## Paid-call safety and idempotency
 
 Confirmed execution deliberately favours avoiding duplicate paid work over automatic recovery:
 
-- a `(run_id, call_key)` provider-call row is inserted with `claimed` status in the same reservation transaction that creates the model-evaluation run;
-- the provider network call happens only after that transaction succeeds;
+- a `candidate-0` provider-call row is inserted as `claimed` in the same reservation transaction that creates the model-evaluation run;
+- the candidate network call happens only after that transaction succeeds;
+- for rubric-backed Quick evaluation, candidate success is durably recorded while the run reservation remains held;
+- `judge-0` is inserted as `claimed` before the judge network call begins;
 - the Vercel AI SDK runner sets `maxRetries: 0`, so Rack owns retry/cost policy;
 - replaying the same workspace/idempotency key returns a settled result when one exists;
-- if the call is still `claimed`, Rack refuses to call the provider again automatically because the previous process may have reached the provider before failing;
+- if the run remains in progress with an ambiguous claimed provider call, Rack refuses to call the provider again automatically;
 - successful calls settle from provider usage when available, otherwise from the planned one-attempt allowance;
-- provider failure settles conservatively and produces an `incomplete` evaluation, never a behavioural failure or pass.
-
-A successful Iteration 12 generation also has `behaviouralVerdict: null`. Rubric judging is the next evaluation slice.
+- provider failure settles conservatively and produces an `incomplete` evaluation, never an accidental behavioural pass/fail.
 
 ## Reliable workflow privacy boundary
 
@@ -77,9 +94,10 @@ pnpm --filter @rack/service workflow:web
 
 ## Privacy boundary
 
-- managed instruction, case and generated-output content lives only in `rack_managed_payloads` and is capped at 24 hours;
+- managed instruction, case, rubric, candidate-output and judge-output content lives only in `rack_managed_payloads` and is capped at 24 hours;
 - evaluation preflight accepts no raw managed content;
-- durable model-evaluation and provider-call rows contain identifiers, model resolution, response/usage/cost metadata and status, not prompt/output text;
+- durable model-evaluation/provider-call rows contain identifiers, resolved model identity, nullable boolean behavioural verdict, status, response ID, usage and accounting metadata rather than prompt/output/judge-reason text;
+- detailed Quick score/reason/evidence is transient and disappears with the managed payload;
 - workflow retries never extend transient-content expiry;
 - durable quick/reliable summaries contain no prompt/instruction/output text;
 - the service does not upload or store a Rack project;
