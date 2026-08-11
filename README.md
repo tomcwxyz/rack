@@ -29,7 +29,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 adds the first explicit confirmed paid Quick execution boundary: exact resolved-model/cost confirmation, atomic workspace budget reservation, a pre-call provider ledger, provider-neutral Vercel AI SDK execution and conservative settlement. Successful generation is not yet a behavioural verdict; rubric-backed Quick evaluation is the next slice. Local Rack use remains account-free and does not depend on the service.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 added the first explicit confirmed paid Quick execution boundary with exact model/cost confirmation, atomic budget reservation, provider-call idempotency and conservative accounting. Iteration 13 adds one rubric-backed Quick judgement: a structured indicative pass/fail result that keeps provider/infrastructure failure distinct from behavioural failure. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -45,7 +45,9 @@ The bundled Starter library is another way into that same source model. Starter 
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
-The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation, provider-call and reliable-workflow records contain identifiers/status/accounting metadata rather than prompt/output text. Paid model evaluation starts with a metadata-only preflight and requires a separate explicit confirmation whose resolved model and maximum retry exposure still match current deployment configuration and workspace limits.
+The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output/judge content has a maximum 24-hour retention window; durable evaluation, provider-call and reliable-workflow records contain identifiers/status/accounting metadata and a nullable behavioural verdict rather than prompt/output text. Paid model evaluation starts with a metadata-only preflight and requires a separate explicit confirmation whose resolved model and maximum retry exposure still match current deployment configuration and workspace limits.
+
+Quick model-backed evaluation is explicitly indicative: one repetition, no baseline or regression gate, and the selected model judges its own candidate output when a rubric is configured. Reliable independent judging, repeated candidate/baseline runs and regression gating remain the next evaluation stage.
 
 Supported destinations are:
 

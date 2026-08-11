@@ -134,7 +134,10 @@ describe("managed client", () => {
       status: "completed",
       replayed: false,
       generator: preflightResponse.generator,
+      judge: null,
       behaviouralVerdict: null,
+      behaviouralScore: null,
+      judgement: null,
       output: "A clear update.",
       transientContentAvailable: true,
       transientContentExpiresAt: "2026-08-12T05:00:00.000Z",
@@ -146,6 +149,7 @@ describe("managed client", () => {
         costMicrousd: 40,
         costBasis: "provider-usage",
       },
+      judgeCall: null,
     };
     const fetch = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(response),
@@ -168,5 +172,72 @@ describe("managed client", () => {
     const [url, init] = fetch.mock.calls[0] ?? [];
     expect(String(url)).toContain("/api/evaluate/confirm");
     expect(String(init?.body)).toContain(request.instructions);
+  });
+
+  it("supports explicit rubric content and accepted judge identity only at confirmation", async () => {
+    const rubricPreflight = {
+      ...preflightRequest,
+      judgeCallsPerOutput: 1,
+      judgePromptTokensPerCase: 1000,
+      judgeOutputTokensPerCall: 100,
+    };
+    const response = {
+      schemaVersion: "0.1",
+      runId: "00000000-0000-4000-8000-000000000011",
+      workspaceId: "00000000-0000-4000-8000-000000000001",
+      status: "completed",
+      replayed: false,
+      generator: preflightResponse.generator,
+      judge: preflightResponse.generator,
+      behaviouralVerdict: true,
+      behaviouralScore: 90,
+      judgement: {
+        verdict: "pass",
+        score: 90,
+        reason: "Clear and grounded.",
+        evidence: ["Uses only supplied facts."],
+      },
+      output: "A clear update.",
+      transientContentAvailable: true,
+      transientContentExpiresAt: "2026-08-12T05:00:00.000Z",
+      providerCall: {
+        status: "completed",
+        responseId: "resp_candidate",
+        inputTokens: 20,
+        outputTokens: 10,
+        costMicrousd: 40,
+        costBasis: "provider-usage",
+      },
+      judgeCall: {
+        status: "completed",
+        responseId: "resp_judge",
+        inputTokens: 30,
+        outputTokens: 5,
+        costMicrousd: 40,
+        costBasis: "provider-usage",
+      },
+    };
+    const fetch = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(response),
+    );
+    const client = createManagedServiceClient({
+      baseUrl: "https://managed.rack.test",
+      getAccessToken: async () => "token",
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+    const result = await client.confirmEvaluation({
+      schemaVersion: "0.1",
+      preflight: rubricPreflight,
+      acceptedGenerator: preflightResponse.generator,
+      acceptedJudge: preflightResponse.generator,
+      acceptedMaximumRetryCostMicrousd: 7500,
+      idempotencyKey: "00000000-0000-4000-8000-000000000098",
+      instructions: request.instructions,
+      casePrompt: "Write an update.",
+      rubric: "Pass when the update is clear and grounded.",
+    });
+    expect(result.behaviouralVerdict).toBe(true);
+    expect(result.behaviouralScore).toBe(90);
+    expect(String(fetch.mock.calls[0]?.[1]?.body ?? "")).toContain("Pass when the update");
   });
 });

@@ -274,15 +274,26 @@ export const evaluationPreflightResponseSchema = z
   })
   .strict();
 
+export const quickRubricJudgementSchema = z
+  .object({
+    verdict: z.enum(["pass", "fail"]),
+    score: z.number().int().min(0).max(100),
+    reason: z.string().min(1).max(1_000),
+    evidence: z.array(z.string().min(1).max(500)).max(5),
+  })
+  .strict();
+
 export const evaluationConfirmRequestSchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
     preflight: evaluationPreflightRequestSchema,
     acceptedGenerator: resolvedModelIdentitySchema,
+    acceptedJudge: resolvedModelIdentitySchema.optional(),
     acceptedMaximumRetryCostMicrousd: moneySchema,
     idempotencyKey: z.uuid(),
     instructions: z.string().min(1).max(250_000),
     casePrompt: z.string().min(1).max(250_000),
+    rubric: z.string().min(1).max(50_000).optional(),
   })
   .strict()
   .superRefine((request, context) => {
@@ -300,12 +311,43 @@ export const evaluationConfirmRequestSchema = z
         message: "Confirmed Quick execution currently supports exactly one case.",
       });
     }
-    if (request.preflight.judgeCallsPerOutput !== 0) {
+    if (request.preflight.judgeCallsPerOutput > 1) {
       context.addIssue({
         code: "custom",
         path: ["preflight", "judgeCallsPerOutput"],
-        message: "Confirmed Quick execution does not run a rubric judge yet.",
+        message: "Confirmed Quick execution currently supports at most one rubric judge call.",
       });
+    }
+    if (request.preflight.judgeCallsPerOutput === 1) {
+      if (!request.acceptedJudge) {
+        context.addIssue({
+          code: "custom",
+          path: ["acceptedJudge"],
+          message: "Rubric-backed Quick evaluation requires the accepted resolved judge identity.",
+        });
+      }
+      if (!request.rubric) {
+        context.addIssue({
+          code: "custom",
+          path: ["rubric"],
+          message: "Rubric-backed Quick evaluation requires a rubric.",
+        });
+      }
+    } else {
+      if (request.acceptedJudge !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["acceptedJudge"],
+          message: "Generation-only Quick execution does not accept a judge identity.",
+        });
+      }
+      if (request.rubric !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["rubric"],
+          message: "Generation-only Quick execution does not accept a rubric.",
+        });
+      }
     }
   });
 
@@ -317,6 +359,17 @@ export const providerCallCostBasisSchema = z.enum([
   "failed-conservative",
 ]);
 
+const settledProviderCallSchema = z
+  .object({
+    status: providerCallStatusSchema,
+    responseId: z.string().min(1).max(500).nullable(),
+    inputTokens: z.number().int().nonnegative().nullable(),
+    outputTokens: z.number().int().nonnegative().nullable(),
+    costMicrousd: moneySchema,
+    costBasis: providerCallCostBasisSchema,
+  })
+  .strict();
+
 export const evaluationConfirmResponseSchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
@@ -325,20 +378,15 @@ export const evaluationConfirmResponseSchema = z
     status: evaluationExecutionStatusSchema,
     replayed: z.boolean(),
     generator: resolvedModelIdentitySchema,
-    behaviouralVerdict: z.null(),
+    judge: resolvedModelIdentitySchema.nullable(),
+    behaviouralVerdict: z.boolean().nullable(),
+    behaviouralScore: z.number().int().min(0).max(100).nullable(),
+    judgement: quickRubricJudgementSchema.nullable(),
     output: z.string().max(250_000).nullable(),
     transientContentAvailable: z.boolean(),
     transientContentExpiresAt: z.iso.datetime({ offset: true }),
-    providerCall: z
-      .object({
-        status: providerCallStatusSchema,
-        responseId: z.string().min(1).max(500).nullable(),
-        inputTokens: z.number().int().nonnegative().nullable(),
-        outputTokens: z.number().int().nonnegative().nullable(),
-        costMicrousd: moneySchema,
-        costBasis: providerCallCostBasisSchema,
-      })
-      .strict(),
+    providerCall: settledProviderCallSchema,
+    judgeCall: settledProviderCallSchema.nullable(),
   })
   .strict();
 
@@ -377,6 +425,7 @@ export type EvaluationPreflightRequest = z.infer<typeof evaluationPreflightReque
 export type EvaluationPreflightLimits = z.infer<typeof evaluationPreflightLimitsSchema>;
 export type EvaluationPreflightResponse = z.infer<typeof evaluationPreflightResponseSchema>;
 export type ResolvedModelIdentity = z.infer<typeof resolvedModelIdentitySchema>;
+export type QuickRubricJudgement = z.infer<typeof quickRubricJudgementSchema>;
 export type EvaluationConfirmRequest = z.infer<typeof evaluationConfirmRequestSchema>;
 export type EvaluationExecutionStatus = z.infer<typeof evaluationExecutionStatusSchema>;
 export type ProviderCallStatus = z.infer<typeof providerCallStatusSchema>;

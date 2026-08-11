@@ -4,9 +4,11 @@ import {
   managedRunIdSchema,
   providerCallCostBasisSchema,
   providerCallStatusSchema,
+  quickRubricJudgementSchema,
   resolvedModelIdentitySchema,
   type ProviderCallCostBasis,
   type ProviderCallStatus,
+  type QuickRubricJudgement,
   type ResolvedModelIdentity,
 } from "@rack/managed";
 import type { VerifiedAuthClaims } from "./store.js";
@@ -25,6 +27,10 @@ export type QuickEvaluationReservationInput = {
   transientExpiresAt: string;
 };
 
+export type QuickRubricReservationInput = QuickEvaluationReservationInput & {
+  rubric: string;
+};
+
 export type QuickEvaluationSettlementInput = {
   runId: string;
   providerCallStatus: ProviderCallStatus;
@@ -36,31 +42,67 @@ export type QuickEvaluationSettlementInput = {
   output: string | null;
 };
 
+export type QuickCandidateForJudgeInput = {
+  runId: string;
+  responseId: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costMicrousd: number;
+  costBasis: "provider-usage" | "planned-allowance";
+  output: string;
+};
+
+export type QuickJudgementSettlementInput = {
+  runId: string;
+  providerCallStatus: ProviderCallStatus;
+  responseId: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costMicrousd: number;
+  costBasis: "provider-usage" | "planned-allowance" | "failed-conservative";
+  judgeOutput: string | null;
+  judgement: QuickRubricJudgement | null;
+  executionStatus: "completed" | "incomplete";
+  behaviouralVerdict: boolean | null;
+};
+
+type StoredProviderCall = {
+  status: "claimed" | ProviderCallStatus;
+  responseId: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costMicrousd: number;
+  costBasis: ProviderCallCostBasis | null;
+};
+
 export type StoredQuickEvaluation = {
   runId: string;
   workspaceId: string;
   status: "running" | "completed" | "incomplete";
   generator: ResolvedModelIdentity;
-  behaviouralVerdict: null;
+  judge: ResolvedModelIdentity | null;
+  behaviouralVerdict: boolean | null;
+  behaviouralScore: number | null;
+  judgement: QuickRubricJudgement | null;
   output: string | null;
   transientContentAvailable: boolean;
   transientContentExpiresAt: string;
-  providerCall: {
-    status: "claimed" | ProviderCallStatus;
-    responseId: string | null;
-    inputTokens: number | null;
-    outputTokens: number | null;
-    costMicrousd: number;
-    costBasis: ProviderCallCostBasis | null;
-  };
+  providerCall: StoredProviderCall;
+  judgeCall: StoredProviderCall | null;
 };
 
 export type ModelExecutionStore = {
   reserveQuickEvaluation: (
     input: QuickEvaluationReservationInput,
   ) => Promise<{ runId: string; workspaceId: string; replayed: boolean }>;
+  reserveQuickRubricEvaluation: (
+    input: QuickRubricReservationInput,
+  ) => Promise<{ runId: string; workspaceId: string; replayed: boolean }>;
   getQuickEvaluation: (runId: string) => Promise<StoredQuickEvaluation | null>;
   settleQuickEvaluation: (input: QuickEvaluationSettlementInput) => Promise<void>;
+  recordQuickCandidateForJudge: (input: QuickCandidateForJudgeInput) => Promise<void>;
+  claimQuickJudge: (runId: string, judge: ResolvedModelIdentity) => Promise<boolean>;
+  settleQuickJudgement: (input: QuickJudgementSettlementInput) => Promise<void>;
 };
 
 const claimsJson = (claims: VerifiedAuthClaims): string => {
@@ -86,41 +128,95 @@ const asIso = (value: unknown): string => {
   return parsed.toISOString();
 };
 
+const asJson = (value: unknown): unknown => {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+};
+
+const parseCall = (
+  row: Record<string, unknown>,
+  prefix: "candidate" | "judge",
+): StoredProviderCall | null => {
+  const rawStatus = row[`${prefix}_status`];
+  if (rawStatus === null || rawStatus === undefined) return null;
+  const textStatus = String(rawStatus);
+  const status =
+    textStatus === "claimed" ? "claimed" : providerCallStatusSchema.parse(textStatus);
+  const rawBasis = row[`${prefix}_cost_basis`];
+  const costBasis =
+    rawBasis === null || rawBasis === undefined
+      ? null
+      : providerCallCostBasisSchema.parse(rawBasis);
+  return {
+    status,
+    responseId:
+      row[`${prefix}_response_id`] === null || row[`${prefix}_response_id`] === undefined
+        ? null
+        : String(row[`${prefix}_response_id`]),
+    inputTokens: nullableInteger(
+      row[`${prefix}_input_tokens`],
+      `${prefix} provider input tokens`,
+    ),
+    outputTokens: nullableInteger(
+      row[`${prefix}_output_tokens`],
+      `${prefix} provider output tokens`,
+    ),
+    costMicrousd: safeInteger(
+      row[`${prefix}_cost_microusd`] ?? 0,
+      `${prefix} provider call cost`,
+    ),
+    costBasis,
+  };
+};
+
 const parseStoredRow = (row: Record<string, unknown> | undefined): StoredQuickEvaluation | null => {
   if (!row) return null;
   const status = String(row.status);
   if (status !== "running" && status !== "completed" && status !== "incomplete") {
     throw new Error(`Unknown model-evaluation status: ${status}`);
   }
-  const rawCallStatus = String(row.call_status);
-  const callStatus =
-    rawCallStatus === "claimed" ? "claimed" : providerCallStatusSchema.parse(rawCallStatus);
-  const costBasis =
-    row.cost_basis === null || row.cost_basis === undefined
-      ? null
-      : providerCallCostBasisSchema.parse(row.cost_basis);
+  const candidateCall = parseCall(row, "candidate");
+  if (!candidateCall) throw new Error("A model-evaluation run requires its candidate call ledger.");
+  const judgeCall = parseCall(row, "judge");
   const generator = resolvedModelIdentitySchema.parse({
     alias: row.generator_alias,
     providerId: row.provider_id,
     modelId: row.model_id,
   });
+  const judge =
+    row.judge_alias === null || row.judge_alias === undefined
+      ? null
+      : resolvedModelIdentitySchema.parse({
+          alias: row.judge_alias,
+          providerId: row.judge_provider_id,
+          modelId: row.judge_model_id,
+        });
+  const judgementResult = quickRubricJudgementSchema.safeParse(asJson(row.judgement));
+  const judgement = judgementResult.success ? judgementResult.data : null;
+  const verdict =
+    row.behavioural_verdict === true
+      ? true
+      : row.behavioural_verdict === false
+        ? false
+        : null;
   return {
     runId: managedRunIdSchema.parse(row.run_id),
     workspaceId: String(row.workspace_id),
     status,
     generator,
-    behaviouralVerdict: null,
+    judge,
+    behaviouralVerdict: verdict,
+    behaviouralScore: judgement?.score ?? null,
+    judgement,
     output: row.output_text === null || row.output_text === undefined ? null : String(row.output_text),
     transientContentAvailable: row.transient_available === true,
     transientContentExpiresAt: asIso(row.transient_expires_at),
-    providerCall: {
-      status: callStatus,
-      responseId: row.response_id === null || row.response_id === undefined ? null : String(row.response_id),
-      inputTokens: nullableInteger(row.input_tokens, "Provider input tokens"),
-      outputTokens: nullableInteger(row.output_tokens, "Provider output tokens"),
-      costMicrousd: safeInteger(row.cost_microusd ?? 0, "Provider call cost"),
-      costBasis,
-    },
+    providerCall: candidateCall,
+    judgeCall,
   };
 };
 
@@ -147,22 +243,39 @@ export const createNeonModelExecutionStore = (options: {
         evaluation.generator_alias,
         evaluation.provider_id,
         evaluation.model_id,
+        evaluation.behavioural_verdict,
         evaluation.transient_expires_at,
-        call.status as call_status,
-        call.response_id,
-        call.input_tokens,
-        call.output_tokens,
-        call.cost_microusd,
-        call.cost_basis,
+        candidate.status as candidate_status,
+        candidate.response_id as candidate_response_id,
+        candidate.input_tokens as candidate_input_tokens,
+        candidate.output_tokens as candidate_output_tokens,
+        candidate.cost_microusd as candidate_cost_microusd,
+        candidate.cost_basis as candidate_cost_basis,
+        judge.generator_alias as judge_alias,
+        judge.provider_id as judge_provider_id,
+        judge.model_id as judge_model_id,
+        judge.status as judge_status,
+        judge.response_id as judge_response_id,
+        judge.input_tokens as judge_input_tokens,
+        judge.output_tokens as judge_output_tokens,
+        judge.cost_microusd as judge_cost_microusd,
+        judge.cost_basis as judge_cost_basis,
         case
           when payload.run_id is not null and payload.expires_at > now()
             then payload.response_body ->> 'output'
           else null
         end as output_text,
+        case
+          when payload.run_id is not null and payload.expires_at > now()
+            then payload.response_body -> 'judgement'
+          else null
+        end as judgement,
         (payload.run_id is not null and payload.expires_at > now()) as transient_available
       from rack_model_evaluation_runs evaluation
-      join rack_provider_calls call
-        on call.run_id = evaluation.run_id and call.call_key = 'candidate-0'
+      join rack_provider_calls candidate
+        on candidate.run_id = evaluation.run_id and candidate.call_key = 'candidate-0'
+      left join rack_provider_calls judge
+        on judge.run_id = evaluation.run_id and judge.call_key = 'judge-0'
       left join rack_managed_payloads payload on payload.run_id = evaluation.run_id
       where evaluation.run_id = ${runId}::uuid
       limit 1
@@ -170,41 +283,69 @@ export const createNeonModelExecutionStore = (options: {
     return parseStoredRow((rows as unknown as Record<string, unknown>[])[0]);
   };
 
+  const reserve = async (
+    input: QuickEvaluationReservationInput,
+    rubric: string | null,
+  ): Promise<{ runId: string; workspaceId: string; replayed: boolean }> => {
+    const generator = resolvedModelIdentitySchema.parse(input.generator);
+    const runId = randomUUID();
+    const acceptedMaximumRetryCostMicrousd = safeInteger(
+      input.acceptedMaximumRetryCostMicrousd,
+      "Accepted maximum retry cost",
+    );
+    const estimatedCostMicrousd = safeInteger(input.estimatedCostMicrousd, "Estimated run cost");
+    const query =
+      rubric === null
+        ? sql`
+            select * from rack_reserve_quick_evaluation(
+              ${input.workspaceId}::uuid,
+              ${runId}::uuid,
+              ${input.idempotencyKey}::uuid,
+              ${input.rackFingerprint},
+              ${input.profileId},
+              ${input.target},
+              ${generator.alias},
+              ${generator.providerId},
+              ${generator.modelId},
+              ${acceptedMaximumRetryCostMicrousd}::bigint,
+              ${estimatedCostMicrousd}::bigint,
+              ${input.instructions},
+              ${input.casePrompt},
+              ${input.transientExpiresAt}::timestamptz
+            )
+          `
+        : sql`
+            select * from rack_reserve_quick_rubric_evaluation(
+              ${input.workspaceId}::uuid,
+              ${runId}::uuid,
+              ${input.idempotencyKey}::uuid,
+              ${input.rackFingerprint},
+              ${input.profileId},
+              ${input.target},
+              ${generator.alias},
+              ${generator.providerId},
+              ${generator.modelId},
+              ${acceptedMaximumRetryCostMicrousd}::bigint,
+              ${estimatedCostMicrousd}::bigint,
+              ${input.instructions},
+              ${input.casePrompt},
+              ${rubric},
+              ${input.transientExpiresAt}::timestamptz
+            )
+          `;
+    const [, rows] = await withClaims(query);
+    const row = (rows as unknown as { reserved_run_id: string; replayed: boolean }[])[0];
+    if (!row?.reserved_run_id) throw new Error("Could not reserve the Quick evaluation.");
+    return {
+      runId: managedRunIdSchema.parse(row.reserved_run_id),
+      workspaceId: input.workspaceId,
+      replayed: row.replayed === true,
+    };
+  };
+
   return {
-    async reserveQuickEvaluation(input) {
-      const generator = resolvedModelIdentitySchema.parse(input.generator);
-      const runId = randomUUID();
-      const acceptedMaximumRetryCostMicrousd = safeInteger(
-        input.acceptedMaximumRetryCostMicrousd,
-        "Accepted maximum retry cost",
-      );
-      const estimatedCostMicrousd = safeInteger(input.estimatedCostMicrousd, "Estimated run cost");
-      const [, rows] = await withClaims(sql`
-        select * from rack_reserve_quick_evaluation(
-          ${input.workspaceId}::uuid,
-          ${runId}::uuid,
-          ${input.idempotencyKey}::uuid,
-          ${input.rackFingerprint},
-          ${input.profileId},
-          ${input.target},
-          ${generator.alias},
-          ${generator.providerId},
-          ${generator.modelId},
-          ${acceptedMaximumRetryCostMicrousd}::bigint,
-          ${estimatedCostMicrousd}::bigint,
-          ${input.instructions},
-          ${input.casePrompt},
-          ${input.transientExpiresAt}::timestamptz
-        )
-      `);
-      const row = (rows as unknown as { reserved_run_id: string; replayed: boolean }[])[0];
-      if (!row?.reserved_run_id) throw new Error("Could not reserve the Quick evaluation.");
-      return {
-        runId: managedRunIdSchema.parse(row.reserved_run_id),
-        workspaceId: input.workspaceId,
-        replayed: row.replayed === true,
-      };
-    },
+    reserveQuickEvaluation: (input) => reserve(input, null),
+    reserveQuickRubricEvaluation: (input) => reserve(input, input.rubric),
 
     getQuickEvaluation,
 
@@ -223,6 +364,58 @@ export const createNeonModelExecutionStore = (options: {
           ${costMicrousd}::bigint,
           ${costBasis},
           ${input.output}
+        )
+      `);
+    },
+
+    async recordQuickCandidateForJudge(input) {
+      const runId = managedRunIdSchema.parse(input.runId);
+      const costMicrousd = safeInteger(input.costMicrousd, "Candidate provider cost");
+      await withClaims(sql`
+        select rack_record_quick_candidate_for_judge(
+          ${runId}::uuid,
+          ${input.responseId},
+          ${input.inputTokens},
+          ${input.outputTokens},
+          ${costMicrousd}::bigint,
+          ${input.costBasis},
+          ${input.output}
+        )
+      `);
+    },
+
+    async claimQuickJudge(inputRunId, inputJudge) {
+      const runId = managedRunIdSchema.parse(inputRunId);
+      const judge = resolvedModelIdentitySchema.parse(inputJudge);
+      const [, rows] = await withClaims(sql`
+        select rack_claim_quick_judge(
+          ${runId}::uuid,
+          ${judge.alias},
+          ${judge.providerId},
+          ${judge.modelId}
+        ) as claimed
+      `);
+      return (rows as unknown as { claimed: boolean }[])[0]?.claimed === true;
+    },
+
+    async settleQuickJudgement(input) {
+      const runId = managedRunIdSchema.parse(input.runId);
+      const status = providerCallStatusSchema.parse(input.providerCallStatus);
+      const costMicrousd = safeInteger(input.costMicrousd, "Judge provider cost");
+      const judgementJson = input.judgement === null ? null : JSON.stringify(input.judgement);
+      await withClaims(sql`
+        select rack_settle_quick_judgement(
+          ${runId}::uuid,
+          ${status},
+          ${input.responseId},
+          ${input.inputTokens},
+          ${input.outputTokens},
+          ${costMicrousd}::bigint,
+          ${input.costBasis},
+          ${input.judgeOutput},
+          ${judgementJson}::jsonb,
+          ${input.executionStatus},
+          ${input.behaviouralVerdict}
         )
       `);
     },

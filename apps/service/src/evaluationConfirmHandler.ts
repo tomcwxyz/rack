@@ -29,6 +29,12 @@ import {
 } from "./evaluationConfig.js";
 import type { ServiceEnvironment } from "./env.js";
 import { json, serviceError } from "./http.js";
+import {
+  buildQuickRubricPrompt,
+  conservativeQuickRubricPromptAllowance,
+  parseQuickRubricJudgement,
+  QUICK_RUBRIC_JUDGE_SYSTEM,
+} from "./quickRubric.js";
 
 export type EvaluationConfirmHandlerDependencies = {
   environment: ServiceEnvironment;
@@ -91,7 +97,13 @@ const responseFromStored = (
     throw new Error("A claimed provider call cannot be represented as a completed response.");
   }
   if (stored.providerCall.status === "claimed" || stored.providerCall.costBasis === null) {
-    throw new Error("A settled evaluation requires a completed provider-call ledger entry.");
+    throw new Error("A settled evaluation requires a completed candidate-call ledger entry.");
+  }
+  if (
+    stored.judgeCall &&
+    (stored.judgeCall.status === "claimed" || stored.judgeCall.costBasis === null)
+  ) {
+    throw new Error("A settled evaluation requires a settled judge-call ledger entry.");
   }
   return evaluationConfirmResponseSchema.parse({
     schemaVersion: "0.1",
@@ -100,7 +112,10 @@ const responseFromStored = (
     status: stored.status,
     replayed,
     generator: stored.generator,
-    behaviouralVerdict: null,
+    judge: stored.judge,
+    behaviouralVerdict: stored.behaviouralVerdict,
+    behaviouralScore: stored.behaviouralScore,
+    judgement: stored.judgement,
     output: stored.output,
     transientContentAvailable: stored.transientContentAvailable,
     transientContentExpiresAt: stored.transientContentExpiresAt,
@@ -112,7 +127,37 @@ const responseFromStored = (
       costMicrousd: stored.providerCall.costMicrousd,
       costBasis: stored.providerCall.costBasis,
     },
+    judgeCall:
+      stored.judgeCall === null
+        ? null
+        : {
+            status: stored.judgeCall.status,
+            responseId: stored.judgeCall.responseId,
+            inputTokens: stored.judgeCall.inputTokens,
+            outputTokens: stored.judgeCall.outputTokens,
+            costMicrousd: stored.judgeCall.costMicrousd,
+            costBasis: stored.judgeCall.costBasis,
+          },
   });
+};
+
+const readSettled = async (
+  store: ModelExecutionStore,
+  runId: string,
+  replayed: boolean,
+): Promise<Response> => {
+  const stored = await store.getQuickEvaluation(runId);
+  if (!stored) {
+    return serviceError("internal-error", "The evaluation run could not be read.", 500);
+  }
+  if (stored.status === "running") {
+    return serviceError(
+      "invalid-request",
+      "This paid evaluation is already in progress or has an ambiguous claimed provider call. Rack will not repeat it automatically.",
+      409,
+    );
+  }
+  return json(responseFromStored(stored, replayed));
 };
 
 export const createEvaluationConfirmHandler = (
@@ -168,6 +213,7 @@ export const createEvaluationConfirmHandler = (
       );
     }
     const confirmation = parsed.data;
+    const rubricBacked = confirmation.preflight.judgeCallsPerOutput === 1;
 
     let modelRegistry: ModelRegistry;
     let defaults: EvaluationLimitDefaults;
@@ -212,6 +258,17 @@ export const createEvaluationConfirmHandler = (
           409,
         );
       }
+      if (
+        rubricBacked &&
+        (!confirmation.acceptedJudge ||
+          !sameIdentity(currentPreflight.judge, confirmation.acceptedJudge))
+      ) {
+        return serviceError(
+          "invalid-request",
+          "The resolved judge changed. Run preflight again before confirming paid work.",
+          409,
+        );
+      }
 
       const generator = resolveModelAlias(
         modelRegistry,
@@ -222,6 +279,16 @@ export const createEvaluationConfirmHandler = (
         return serviceError(
           "invalid-request",
           "The managed confirmation endpoint can only execute deployment-managed model connections.",
+          400,
+        );
+      }
+      const judge = rubricBacked
+        ? resolveModelAlias(modelRegistry, currentPreflight.judge.alias, "judge")
+        : null;
+      if (judge && judge.connection !== "managed") {
+        return serviceError(
+          "invalid-request",
+          "The managed confirmation endpoint can only execute deployment-managed judge connections.",
           400,
         );
       }
@@ -237,9 +304,22 @@ export const createEvaluationConfirmHandler = (
           409,
         );
       }
+      if (
+        rubricBacked &&
+        conservativeQuickRubricPromptAllowance({
+          rubric: confirmation.rubric!,
+          casePrompt: confirmation.casePrompt,
+        }) > confirmation.preflight.judgePromptTokensPerCase
+      ) {
+        return serviceError(
+          "invalid-request",
+          "The confirmed rubric/task is larger than the judge-prompt allowance. Run preflight again with a larger judge allowance.",
+          409,
+        );
+      }
 
       const expiresAt = transientExpiry(now()).toISOString();
-      const reservation = await executionStore.reserveQuickEvaluation({
+      const reservationInput = {
         workspaceId,
         idempotencyKey: confirmation.idempotencyKey,
         rackFingerprint: confirmation.preflight.rackFingerprint,
@@ -248,30 +328,25 @@ export const createEvaluationConfirmHandler = (
         generator: currentPreflight.generator,
         acceptedMaximumRetryCostMicrousd:
           confirmation.acceptedMaximumRetryCostMicrousd,
-        estimatedCostMicrousd: currentPreflight.costMicrousd.generator,
+        estimatedCostMicrousd: currentPreflight.costMicrousd.estimated,
         instructions: confirmation.instructions,
         casePrompt: confirmation.casePrompt,
         transientExpiresAt: expiresAt,
-      });
+      };
+      const reservation = rubricBacked
+        ? await executionStore.reserveQuickRubricEvaluation({
+            ...reservationInput,
+            rubric: confirmation.rubric!,
+          })
+        : await executionStore.reserveQuickEvaluation(reservationInput);
 
       if (reservation.replayed) {
-        const stored = await executionStore.getQuickEvaluation(reservation.runId);
-        if (!stored) {
-          return serviceError("internal-error", "The existing evaluation run could not be read.", 500);
-        }
-        if (stored.status === "running") {
-          return serviceError(
-            "invalid-request",
-            "This paid provider call is already claimed. Rack will not repeat it automatically.",
-            409,
-          );
-        }
-        return json(responseFromStored(stored, true));
+        return readSettled(executionStore, reservation.runId, true);
       }
 
-      let providerResult: Awaited<ReturnType<ModelRunner["generate"]>>;
+      let candidateResult: Awaited<ReturnType<ModelRunner["generate"]>>;
       try {
-        providerResult = await runner.generate({
+        candidateResult = await runner.generate({
           model: generator,
           instructions: confirmation.instructions,
           prompt: confirmation.casePrompt,
@@ -288,46 +363,135 @@ export const createEvaluationConfirmHandler = (
           costBasis: "failed-conservative",
           output: null,
         });
-        const incomplete = await executionStore.getQuickEvaluation(reservation.runId);
-        if (!incomplete) {
-          return serviceError("internal-error", "The incomplete evaluation run could not be read.", 500);
-        }
-        return json(responseFromStored(incomplete, false));
+        return readSettled(executionStore, reservation.runId, false);
       }
 
-      const usageCost = providerUsageCost(generator, providerResult.usage);
+      const candidateUsage = providerUsageCost(generator, candidateResult.usage);
       if (
-        usageCost &&
-        usageCost.costMicrousd > confirmation.acceptedMaximumRetryCostMicrousd
+        candidateUsage &&
+        candidateUsage.costMicrousd > confirmation.acceptedMaximumRetryCostMicrousd
       ) {
         await executionStore.settleQuickEvaluation({
           runId: reservation.runId,
           providerCallStatus: "failed",
-          responseId: providerResult.responseId,
-          inputTokens: usageCost.inputTokens,
-          outputTokens: usageCost.outputTokens,
+          responseId: candidateResult.responseId,
+          inputTokens: candidateUsage.inputTokens,
+          outputTokens: candidateUsage.outputTokens,
           costMicrousd: confirmation.acceptedMaximumRetryCostMicrousd,
           costBasis: "failed-conservative",
           output: null,
         });
-      } else {
+        return readSettled(executionStore, reservation.runId, false);
+      }
+
+      const candidateCost = candidateUsage?.costMicrousd ?? currentPreflight.costMicrousd.generator;
+      if (!rubricBacked) {
         await executionStore.settleQuickEvaluation({
           runId: reservation.runId,
           providerCallStatus: "completed",
-          responseId: providerResult.responseId,
-          inputTokens: usageCost?.inputTokens ?? null,
-          outputTokens: usageCost?.outputTokens ?? null,
-          costMicrousd: usageCost?.costMicrousd ?? currentPreflight.costMicrousd.generator,
-          costBasis: usageCost ? "provider-usage" : "planned-allowance",
-          output: providerResult.text,
+          responseId: candidateResult.responseId,
+          inputTokens: candidateUsage?.inputTokens ?? null,
+          outputTokens: candidateUsage?.outputTokens ?? null,
+          costMicrousd: candidateCost,
+          costBasis: candidateUsage ? "provider-usage" : "planned-allowance",
+          output: candidateResult.text,
         });
+        return readSettled(executionStore, reservation.runId, false);
       }
 
-      const completed = await executionStore.getQuickEvaluation(reservation.runId);
-      if (!completed) {
-        return serviceError("internal-error", "The completed evaluation run could not be read.", 500);
+      await executionStore.recordQuickCandidateForJudge({
+        runId: reservation.runId,
+        responseId: candidateResult.responseId,
+        inputTokens: candidateUsage?.inputTokens ?? null,
+        outputTokens: candidateUsage?.outputTokens ?? null,
+        costMicrousd: candidateCost,
+        costBasis: candidateUsage ? "provider-usage" : "planned-allowance",
+        output: candidateResult.text,
+      });
+
+      const claimedJudge = await executionStore.claimQuickJudge(
+        reservation.runId,
+        currentPreflight.judge,
+      );
+      if (!claimedJudge) {
+        return serviceError(
+          "invalid-request",
+          "The rubric judge call is already claimed. Rack will not repeat it automatically.",
+          409,
+        );
       }
-      return json(responseFromStored(completed, false));
+
+      let judgeResult: Awaited<ReturnType<ModelRunner["generate"]>>;
+      try {
+        judgeResult = await runner.generate({
+          model: judge!,
+          instructions: QUICK_RUBRIC_JUDGE_SYSTEM,
+          prompt: buildQuickRubricPrompt({
+            rubric: confirmation.rubric!,
+            casePrompt: confirmation.casePrompt,
+            candidateOutput: candidateResult.text,
+          }),
+          maxOutputTokens: confirmation.preflight.judgeOutputTokensPerCall,
+        });
+      } catch {
+        const remaining = Math.max(
+          0,
+          confirmation.acceptedMaximumRetryCostMicrousd - candidateCost,
+        );
+        await executionStore.settleQuickJudgement({
+          runId: reservation.runId,
+          providerCallStatus: "failed",
+          responseId: null,
+          inputTokens: null,
+          outputTokens: null,
+          costMicrousd: Math.min(currentPreflight.costMicrousd.judge, remaining),
+          costBasis: "failed-conservative",
+          judgeOutput: null,
+          judgement: null,
+          executionStatus: "incomplete",
+          behaviouralVerdict: null,
+        });
+        return readSettled(executionStore, reservation.runId, false);
+      }
+
+      const judgeUsage = providerUsageCost(judge!, judgeResult.usage);
+      const remaining = Math.max(
+        0,
+        confirmation.acceptedMaximumRetryCostMicrousd - candidateCost,
+      );
+      const requestedJudgeCost = judgeUsage?.costMicrousd ?? currentPreflight.costMicrousd.judge;
+      if (requestedJudgeCost > remaining) {
+        await executionStore.settleQuickJudgement({
+          runId: reservation.runId,
+          providerCallStatus: "completed",
+          responseId: judgeResult.responseId,
+          inputTokens: judgeUsage?.inputTokens ?? null,
+          outputTokens: judgeUsage?.outputTokens ?? null,
+          costMicrousd: remaining,
+          costBasis: "failed-conservative",
+          judgeOutput: judgeResult.text,
+          judgement: null,
+          executionStatus: "incomplete",
+          behaviouralVerdict: null,
+        });
+        return readSettled(executionStore, reservation.runId, false);
+      }
+
+      const judgement = parseQuickRubricJudgement(judgeResult.text);
+      await executionStore.settleQuickJudgement({
+        runId: reservation.runId,
+        providerCallStatus: "completed",
+        responseId: judgeResult.responseId,
+        inputTokens: judgeUsage?.inputTokens ?? null,
+        outputTokens: judgeUsage?.outputTokens ?? null,
+        costMicrousd: requestedJudgeCost,
+        costBasis: judgeUsage ? "provider-usage" : "planned-allowance",
+        judgeOutput: judgeResult.text,
+        judgement,
+        executionStatus: judgement ? "completed" : "incomplete",
+        behaviouralVerdict: judgement ? judgement.verdict === "pass" : null,
+      });
+      return readSettled(executionStore, reservation.runId, false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (
@@ -340,11 +504,11 @@ export const createEvaluationConfirmHandler = (
       if (message.includes("rack-eval:")) {
         return serviceError(
           "invalid-request",
-          "Evaluation limits changed while reserving paid work. Run preflight again.",
+          "Evaluation limits or paid-call state changed while reserving/executing work. Run preflight again or inspect the existing run.",
           409,
         );
       }
-      return serviceError("internal-error", "Confirmed model execution could not be completed.", 500);
+      return serviceError("internal-error", "Confirmed model evaluation could not be completed.", 500);
     }
   };
 };
