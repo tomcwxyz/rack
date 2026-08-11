@@ -142,6 +142,91 @@ export const workspaceEvaluationLimits = pgTable(
   ],
 ).enableRLS();
 
+export const modelEvaluationRuns = pgTable(
+  "rack_model_evaluation_runs",
+  {
+    runId: uuid("run_id")
+      .primaryKey()
+      .references(() => managedRuns.id, { onDelete: "cascade" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    idempotencyKey: uuid("idempotency_key").notNull(),
+    mode: text("mode").notNull().default("quick"),
+    generatorAlias: text("generator_alias").notNull(),
+    providerId: text("provider_id").notNull(),
+    modelId: text("model_id").notNull(),
+    acceptedMaximumRetryMicrousd: bigint("accepted_maximum_retry_microusd", {
+      mode: "number",
+    }).notNull(),
+    estimatedCostMicrousd: bigint("estimated_cost_microusd", { mode: "number" }).notNull(),
+    settledCostMicrousd: bigint("settled_cost_microusd", { mode: "number" }).notNull().default(0),
+    status: text("status").notNull().default("running"),
+    behaviouralVerdict: boolean("behavioural_verdict"),
+    transientExpiresAt: timestamp("transient_expires_at", {
+      withTimezone: true,
+      mode: "string",
+    }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+  },
+  (table) => [
+    uniqueIndex("rack_model_eval_idempotency_unique").on(table.workspaceId, table.idempotencyKey),
+    check("rack_model_eval_quick_only", sql`${table.mode} = 'quick'`),
+    check("rack_model_eval_cost_nonnegative", sql`${table.acceptedMaximumRetryMicrousd} >= 0 and ${table.estimatedCostMicrousd} >= 0 and ${table.settledCostMicrousd} >= 0`),
+    check("rack_model_eval_status", sql`${table.status} in ('running', 'completed', 'incomplete')`),
+    pgPolicy("rack_model_eval_workspace_owner", {
+      for: "all",
+      to: authenticatedRole,
+      using: ownsWorkspace(table.workspaceId),
+      withCheck: ownsWorkspace(table.workspaceId),
+    }),
+  ],
+).enableRLS();
+
+export const providerCalls = pgTable(
+  "rack_provider_calls",
+  {
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => managedRuns.id, { onDelete: "cascade" }),
+    callKey: text("call_key").notNull(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    generatorAlias: text("generator_alias").notNull(),
+    providerId: text("provider_id").notNull(),
+    modelId: text("model_id").notNull(),
+    status: text("status").notNull().default("claimed"),
+    responseId: text("response_id"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    costMicrousd: bigint("cost_microusd", { mode: "number" }).notNull().default(0),
+    costBasis: text("cost_basis"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "string" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.runId, table.callKey] }),
+    check("rack_provider_call_status", sql`${table.status} in ('claimed', 'completed', 'failed')`),
+    check("rack_provider_call_cost_nonnegative", sql`${table.costMicrousd} >= 0`),
+    check(
+      "rack_provider_call_cost_basis",
+      sql`${table.costBasis} is null or ${table.costBasis} in ('provider-usage', 'planned-allowance', 'failed-conservative')`,
+    ),
+    pgPolicy("rack_provider_call_workspace_owner", {
+      for: "all",
+      to: authenticatedRole,
+      using: ownsWorkspace(table.workspaceId),
+      withCheck: ownsWorkspace(table.workspaceId),
+    }),
+  ],
+).enableRLS();
+
 export const managedPayloads = pgTable(
   "rack_managed_payloads",
   {

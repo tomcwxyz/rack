@@ -219,6 +219,14 @@ export const evaluationPreflightBlockerSchema = z
   })
   .strict();
 
+export const resolvedModelIdentitySchema = z
+  .object({
+    alias: slugSchema,
+    providerId: slugSchema,
+    modelId: z.string().min(1).max(200),
+  })
+  .strict();
+
 export const evaluationPreflightResponseSchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
@@ -228,6 +236,8 @@ export const evaluationPreflightResponseSchema = z
     eligibleForConfirmation: z.boolean(),
     generatorAlias: slugSchema,
     judgeAlias: slugSchema,
+    generator: resolvedModelIdentitySchema,
+    judge: resolvedModelIdentitySchema,
     judgeIndependent: z.boolean().nullable(),
     repetitions: z.number().int().positive(),
     baselineEnabled: z.boolean(),
@@ -261,6 +271,74 @@ export const evaluationPreflightResponseSchema = z
     limits: evaluationPreflightLimitsSchema,
     warnings: z.array(evaluationPreflightWarningSchema),
     blockers: z.array(evaluationPreflightBlockerSchema),
+  })
+  .strict();
+
+export const evaluationConfirmRequestSchema = z
+  .object({
+    schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    preflight: evaluationPreflightRequestSchema,
+    acceptedGenerator: resolvedModelIdentitySchema,
+    acceptedMaximumRetryCostMicrousd: moneySchema,
+    idempotencyKey: z.uuid(),
+    instructions: z.string().min(1).max(250_000),
+    casePrompt: z.string().min(1).max(250_000),
+  })
+  .strict()
+  .superRefine((request, context) => {
+    if (request.preflight.mode !== "quick") {
+      context.addIssue({
+        code: "custom",
+        path: ["preflight", "mode"],
+        message: "Confirmed execution currently supports Quick evaluation only.",
+      });
+    }
+    if (request.preflight.caseCount !== 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["preflight", "caseCount"],
+        message: "Confirmed Quick execution currently supports exactly one case.",
+      });
+    }
+    if (request.preflight.judgeCallsPerOutput !== 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["preflight", "judgeCallsPerOutput"],
+        message: "Confirmed Quick execution does not run a rubric judge yet.",
+      });
+    }
+  });
+
+export const evaluationExecutionStatusSchema = z.enum(["completed", "incomplete"]);
+export const providerCallStatusSchema = z.enum(["completed", "failed"]);
+export const providerCallCostBasisSchema = z.enum([
+  "provider-usage",
+  "planned-allowance",
+  "failed-conservative",
+]);
+
+export const evaluationConfirmResponseSchema = z
+  .object({
+    schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    runId: managedRunIdSchema,
+    workspaceId: z.uuid(),
+    status: evaluationExecutionStatusSchema,
+    replayed: z.boolean(),
+    generator: resolvedModelIdentitySchema,
+    behaviouralVerdict: z.null(),
+    output: z.string().max(250_000).nullable(),
+    transientContentAvailable: z.boolean(),
+    transientContentExpiresAt: z.iso.datetime({ offset: true }),
+    providerCall: z
+      .object({
+        status: providerCallStatusSchema,
+        responseId: z.string().min(1).max(500).nullable(),
+        inputTokens: z.number().int().nonnegative().nullable(),
+        outputTokens: z.number().int().nonnegative().nullable(),
+        costMicrousd: moneySchema,
+        costBasis: providerCallCostBasisSchema,
+      })
+      .strict(),
   })
   .strict();
 
@@ -298,4 +376,10 @@ export type EvaluationMode = z.infer<typeof evaluationModeSchema>;
 export type EvaluationPreflightRequest = z.infer<typeof evaluationPreflightRequestSchema>;
 export type EvaluationPreflightLimits = z.infer<typeof evaluationPreflightLimitsSchema>;
 export type EvaluationPreflightResponse = z.infer<typeof evaluationPreflightResponseSchema>;
+export type ResolvedModelIdentity = z.infer<typeof resolvedModelIdentitySchema>;
+export type EvaluationConfirmRequest = z.infer<typeof evaluationConfirmRequestSchema>;
+export type EvaluationExecutionStatus = z.infer<typeof evaluationExecutionStatusSchema>;
+export type ProviderCallStatus = z.infer<typeof providerCallStatusSchema>;
+export type ProviderCallCostBasis = z.infer<typeof providerCallCostBasisSchema>;
+export type EvaluationConfirmResponse = z.infer<typeof evaluationConfirmResponseSchema>;
 export type ManagedServiceError = z.infer<typeof managedServiceErrorSchema>;

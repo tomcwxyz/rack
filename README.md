@@ -29,7 +29,7 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 adds the provider-neutral model registry and paid-evaluation preflight: model/call/token/cost visibility plus workspace hard limits before any provider call can exist. Local Rack use remains account-free and does not depend on the service.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 adds the first explicit confirmed paid Quick execution boundary: exact resolved-model/cost confirmation, atomic workspace budget reservation, a pre-call provider ledger, provider-neutral Vercel AI SDK execution and conservative settlement. Successful generation is not yet a behavioural verdict; rubric-backed Quick evaluation is the next slice. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -45,7 +45,7 @@ The bundled Starter library is another way into that same source model. Starter 
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
-The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation records and reliable-workflow data are content-free summaries/identifiers. Paid model evaluation requires a separate preflight that accepts metadata/token estimates only and exposes the maximum retry cost against hard workspace limits.
+The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output content has a maximum 24-hour retention window; durable evaluation, provider-call and reliable-workflow records contain identifiers/status/accounting metadata rather than prompt/output text. Paid model evaluation starts with a metadata-only preflight and requires a separate explicit confirmation whose resolved model and maximum retry exposure still match current deployment configuration and workspace limits.
 
 Supported destinations are:
 
@@ -62,13 +62,14 @@ Hermes Agent and OpenClaw remain planned Preview destinations.
 This is a pnpm/Turborepo monorepo.
 
 - `apps/desktop` — Tauri and React desktop application, guided creation, maintenance and Starter library;
-- `apps/service` — optional Vercel managed-service functions, evaluation preflight, reliable Workflows and retention boundary;
+- `apps/service` — optional Vercel managed-service functions, evaluation preflight/confirmation, reliable Workflows and retention boundary;
 - `packages/schemas` — source and generated-manifest schemas;
 - `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;
 - `packages/starter` — separately licensed bundled Starter catalogue, source, templates and deterministic metadata;
 - `packages/registry` — provider-neutral stable model aliases, deployment mappings, capabilities and pricing metadata;
 - `packages/eval` — deterministic managed-evaluation planning and cost preflight;
-- `packages/managed` — managed-service contracts, quick/reliable checks, evaluation preflight and desktop-consumable client;
+- `packages/model-runner` — provider-neutral model execution over direct Vercel AI SDK provider/OpenAI-compatible adapters;
+- `packages/managed` — managed-service contracts, quick/reliable checks, evaluation preflight/confirmation and desktop-consumable client;
 - `packages/database` — Drizzle schema/migrations and Neon persistence with authenticated, workflow and retention RLS boundaries;
 - `packages/cli` — `rack validate`, `rack build`, `rack check` and `rack library`;
 - `test-fixtures` — accepted source and golden destination packages;

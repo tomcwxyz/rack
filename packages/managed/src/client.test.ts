@@ -9,6 +9,61 @@ const request = {
   instructions: "Write clearly.",
 };
 
+const preflightRequest = {
+  schemaVersion: "0.1" as const,
+  mode: "quick" as const,
+  rackFingerprint: request.rackFingerprint,
+  profileId: "writing",
+  target: "prompt" as const,
+  generatorAlias: "generator",
+  caseCount: 1,
+  judgeCallsPerOutput: 0,
+  candidateInputTokensPerCase: 1000,
+  generatorOutputTokensPerCall: 500,
+  judgePromptTokensPerCase: 0,
+  judgeOutputTokensPerCall: 0,
+};
+
+const preflightResponse = {
+  schemaVersion: "0.1",
+  mode: "quick",
+  indicative: true,
+  requiresExplicitConfirmation: true,
+  eligibleForConfirmation: true,
+  generatorAlias: "generator",
+  judgeAlias: "generator",
+  generator: { alias: "generator", providerId: "provider-one", modelId: "model-a" },
+  judge: { alias: "generator", providerId: "provider-one", modelId: "model-a" },
+  judgeIndependent: null,
+  repetitions: 1,
+  baselineEnabled: false,
+  comparePreviousAcceptedRun: false,
+  regressionGate: false,
+  calls: { candidateGenerator: 1, baselineGenerator: 0, judge: 0, total: 1 },
+  tokens: {
+    generatorInput: 1000,
+    generatorOutput: 500,
+    judgeInput: 0,
+    judgeOutput: 0,
+    total: 1500,
+  },
+  costMicrousd: {
+    generator: 1000,
+    judge: 0,
+    estimated: 1000,
+    maximumRetry: 3000,
+  },
+  limits: {
+    perRunCapMicrousd: 10000,
+    workspaceRemainingMicrousd: 100000,
+    activePaidRuns: 0,
+    concurrencyLimit: 2,
+    maxProviderAttemptsPerCall: 3,
+  },
+  warnings: [],
+  blockers: [],
+};
+
 describe("managed client", () => {
   it("does not make a request without an access token", async () => {
     const fetch = vi.fn();
@@ -56,31 +111,41 @@ describe("managed client", () => {
   });
 
   it("requests evaluation preflight without sending Rack content", async () => {
+    const fetch = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(preflightResponse),
+    );
+    const client = createManagedServiceClient({
+      baseUrl: "https://managed.rack.test",
+      getAccessToken: async () => "token",
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+    const preflight = await client.evaluationPreflight(preflightRequest);
+    const sent = String(fetch.mock.calls[0]?.[1]?.body ?? "");
+    expect(preflight.eligibleForConfirmation).toBe(true);
+    expect(preflight.generator).toEqual(preflightResponse.generator);
+    expect(sent).not.toContain(request.instructions);
+  });
+
+  it("sends content only through explicit confirmed execution", async () => {
     const response = {
       schemaVersion: "0.1",
-      mode: "quick",
-      indicative: true,
-      requiresExplicitConfirmation: true,
-      eligibleForConfirmation: true,
-      generatorAlias: "generator",
-      judgeAlias: "generator",
-      judgeIndependent: null,
-      repetitions: 1,
-      baselineEnabled: false,
-      comparePreviousAcceptedRun: false,
-      regressionGate: false,
-      calls: { candidateGenerator: 1, baselineGenerator: 0, judge: 0, total: 1 },
-      tokens: { generatorInput: 1000, generatorOutput: 500, judgeInput: 0, judgeOutput: 0, total: 1500 },
-      costMicrousd: { generator: 1000, judge: 0, estimated: 1000, maximumRetry: 3000 },
-      limits: {
-        perRunCapMicrousd: 10000,
-        workspaceRemainingMicrousd: 100000,
-        activePaidRuns: 0,
-        concurrencyLimit: 2,
-        maxProviderAttemptsPerCall: 3,
+      runId: "00000000-0000-4000-8000-000000000010",
+      workspaceId: "00000000-0000-4000-8000-000000000001",
+      status: "completed",
+      replayed: false,
+      generator: preflightResponse.generator,
+      behaviouralVerdict: null,
+      output: "A clear update.",
+      transientContentAvailable: true,
+      transientContentExpiresAt: "2026-08-12T05:00:00.000Z",
+      providerCall: {
+        status: "completed",
+        responseId: "resp_123",
+        inputTokens: 20,
+        outputTokens: 10,
+        costMicrousd: 40,
+        costBasis: "provider-usage",
       },
-      warnings: [],
-      blockers: [],
     };
     const fetch = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(response),
@@ -90,22 +155,18 @@ describe("managed client", () => {
       getAccessToken: async () => "token",
       fetch: fetch as unknown as typeof globalThis.fetch,
     });
-    const preflight = await client.evaluationPreflight({
+    const result = await client.confirmEvaluation({
       schemaVersion: "0.1",
-      mode: "quick",
-      rackFingerprint: request.rackFingerprint,
-      profileId: "writing",
-      target: "prompt",
-      generatorAlias: "generator",
-      caseCount: 1,
-      judgeCallsPerOutput: 0,
-      candidateInputTokensPerCase: 1000,
-      generatorOutputTokensPerCall: 500,
-      judgePromptTokensPerCase: 0,
-      judgeOutputTokensPerCall: 0,
+      preflight: preflightRequest,
+      acceptedGenerator: preflightResponse.generator,
+      acceptedMaximumRetryCostMicrousd: preflightResponse.costMicrousd.maximumRetry,
+      idempotencyKey: "00000000-0000-4000-8000-000000000099",
+      instructions: request.instructions,
+      casePrompt: "Write an update.",
     });
-    const sent = String(fetch.mock.calls[0]?.[1]?.body ?? "");
-    expect(preflight.eligibleForConfirmation).toBe(true);
-    expect(sent).not.toContain(request.instructions);
+    expect(result.status).toBe("completed");
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(String(url)).toContain("/api/evaluate/confirm");
+    expect(String(init?.body)).toContain(request.instructions);
   });
 });

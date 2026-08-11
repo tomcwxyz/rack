@@ -15,6 +15,7 @@
     "@rack/database": "workspace:*",
     "@rack/eval": "workspace:*",
     "@rack/managed": "workspace:*",
+    "@rack/model-runner": "workspace:*",
     "@rack/registry": "workspace:*",
     "jose": "^6.2.3",
     "workflow": "^4.6.2"
