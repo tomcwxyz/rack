@@ -1,21 +1,14 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App.js";
+import "@neondatabase/auth-ui/css";
+import App from "./App.js";
+import { ManagedAuthProvider } from "./managedAuth.js";
 import "./styles.css";
-import "./editor.css";
-import "./setup-editor.css";
-import "./build.css";
-import "./creation-routes.css";
-import "./library.css";
 
-const root = document.getElementById("root");
-
-if (!root) {
-  throw new Error("Rack could not find its application root.");
-}
-
-createRoot(root).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ManagedAuthProvider>
+      <App />
+    </ManagedAuthProvider>
   </StrictMode>,
 );

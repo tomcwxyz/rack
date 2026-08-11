@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
+import { ChecksSection } from "./ChecksSection.js";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
 import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
@@ -10,7 +11,7 @@ import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 
-type WorkspaceSection = "rack" | "setups" | "preview" | "library";
+type WorkspaceSection = "rack" | "setups" | "preview" | "checks" | "library";
 type GuidedModule = Extract<
   RackProject["modules"][number],
   { type: "context" | "voice" | "guardrail" | "task" }
@@ -139,7 +140,13 @@ export function ProjectWorkspace({
           >
             Preview and export
           </button>
-          <span className="nav-item nav-item--muted">Checks</span>
+          <button
+            className={`nav-item ${section === "checks" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => setSection("checks")}
+          >
+            Checks
+          </button>
           <button
             className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
             type="button"
@@ -207,6 +214,14 @@ export function ProjectWorkspace({
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
             onStatus={setActionStatus}
+          />
+        ) : null}
+
+        {section === "checks" ? (
+          <ChecksSection
+            project={project}
+            selectedProfile={selectedProfile}
+            onProfileChange={setSelectedProfile}
           />
         ) : null}
 
