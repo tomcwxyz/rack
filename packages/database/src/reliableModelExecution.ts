@@ -125,7 +125,7 @@ const parseStatus = (row: StatusRow | undefined): ReliableEvaluationStatusRespon
       status,
       summary: null,
       transientContentAvailable,
-      transientContentExpiresAt,
+      transientContentExpiresAt: transientExpiresAt,
     });
   }
 
@@ -195,45 +195,11 @@ const parseStatus = (row: StatusRow | undefined): ReliableEvaluationStatusRespon
       checkedAt: asIso(row.completed_at),
     },
     transientContentAvailable,
-    transientContentExpiresAt,
+    transientContentExpiresAt: transientExpiresAt,
   });
 };
 
-const statusQuery = (sql: ReturnType<typeof neon>, runId: string) => sql`
-  select
-    evaluation.run_id,
-    evaluation.status,
-    evaluation.generator_alias,
-    evaluation.provider_id,
-    evaluation.model_id,
-    evaluation.judge_alias,
-    evaluation.judge_provider_id,
-    evaluation.judge_model_id,
-    evaluation.judge_independent,
-    evaluation.behavioural_verdict,
-    evaluation.behavioural_score,
-    evaluation.baseline_score,
-    evaluation.previous_accepted_score,
-    evaluation.candidate_pass_rate,
-    evaluation.baseline_pass_rate,
-    evaluation.regression_passed,
-    evaluation.settled_cost_microusd,
-    evaluation.transient_expires_at,
-    evaluation.completed_at,
-    (select count(*)::integer from rack_provider_calls call
-      where call.run_id = evaluation.run_id
-        and call.call_key like 'judge-candidate-%'
-        and call.status = 'completed') as candidate_judgements,
-    (select count(*)::integer from rack_provider_calls call
-      where call.run_id = evaluation.run_id
-        and call.call_key like 'judge-baseline-%'
-        and call.status = 'completed') as baseline_judgements,
-    (payload.run_id is not null and payload.expires_at > now()) as transient_available
-  from rack_model_evaluation_runs evaluation
-  left join rack_managed_payloads payload on payload.run_id = evaluation.run_id
-  where evaluation.run_id = ${runId}::uuid and evaluation.mode = 'reliable'
-  limit 1
-`;
+const statusQueryText = (runId: string) => ({ runId });
 
 export const createNeonReliableEvaluationStore = (options: {
   databaseUrl: string;
@@ -246,6 +212,44 @@ export const createNeonReliableEvaluationStore = (options: {
       sql`select set_config('request.jwt.claims', ${serialisedClaims}, true)`,
       query as never,
     ]);
+  const queryStatus = (runId: string) => {
+    void statusQueryText(runId);
+    return sql`
+      select
+        evaluation.run_id,
+        evaluation.status,
+        evaluation.generator_alias,
+        evaluation.provider_id,
+        evaluation.model_id,
+        evaluation.judge_alias,
+        evaluation.judge_provider_id,
+        evaluation.judge_model_id,
+        evaluation.judge_independent,
+        evaluation.behavioural_verdict,
+        evaluation.behavioural_score,
+        evaluation.baseline_score,
+        evaluation.previous_accepted_score,
+        evaluation.candidate_pass_rate,
+        evaluation.baseline_pass_rate,
+        evaluation.regression_passed,
+        evaluation.settled_cost_microusd,
+        evaluation.transient_expires_at,
+        evaluation.completed_at,
+        (select count(*)::integer from rack_provider_calls call
+          where call.run_id = evaluation.run_id
+            and call.call_key like 'judge-candidate-%'
+            and call.status = 'completed') as candidate_judgements,
+        (select count(*)::integer from rack_provider_calls call
+          where call.run_id = evaluation.run_id
+            and call.call_key like 'judge-baseline-%'
+            and call.status = 'completed') as baseline_judgements,
+        (payload.run_id is not null and payload.expires_at > now()) as transient_available
+      from rack_model_evaluation_runs evaluation
+      left join rack_managed_payloads payload on payload.run_id = evaluation.run_id
+      where evaluation.run_id = ${runId}::uuid and evaluation.mode = 'reliable'
+      limit 1
+    `;
+  };
 
   return {
     async reserve(input) {
@@ -286,7 +290,7 @@ export const createNeonReliableEvaluationStore = (options: {
 
     async getStatus(inputRunId) {
       const runId = managedRunIdSchema.parse(inputRunId);
-      const [, rows] = await withClaims(statusQuery(sql, runId));
+      const [, rows] = await withClaims(queryStatus(runId));
       return parseStatus((rows as unknown as StatusRow[])[0]);
     },
   };
@@ -303,9 +307,44 @@ export const createNeonReliableEvaluationWorkflowStore = (options: {
       sql`select set_config('rack.workflow_run_id', ${runId}, true)`,
       query as never,
     ]);
+  const queryStatus = () => sql`
+    select
+      evaluation.run_id,
+      evaluation.status,
+      evaluation.generator_alias,
+      evaluation.provider_id,
+      evaluation.model_id,
+      evaluation.judge_alias,
+      evaluation.judge_provider_id,
+      evaluation.judge_model_id,
+      evaluation.judge_independent,
+      evaluation.behavioural_verdict,
+      evaluation.behavioural_score,
+      evaluation.baseline_score,
+      evaluation.previous_accepted_score,
+      evaluation.candidate_pass_rate,
+      evaluation.baseline_pass_rate,
+      evaluation.regression_passed,
+      evaluation.settled_cost_microusd,
+      evaluation.transient_expires_at,
+      evaluation.completed_at,
+      (select count(*)::integer from rack_provider_calls call
+        where call.run_id = evaluation.run_id
+          and call.call_key like 'judge-candidate-%'
+          and call.status = 'completed') as candidate_judgements,
+      (select count(*)::integer from rack_provider_calls call
+        where call.run_id = evaluation.run_id
+          and call.call_key like 'judge-baseline-%'
+          and call.status = 'completed') as baseline_judgements,
+      (payload.run_id is not null and payload.expires_at > now()) as transient_available
+    from rack_model_evaluation_runs evaluation
+    left join rack_managed_payloads payload on payload.run_id = evaluation.run_id
+    where evaluation.run_id = ${runId}::uuid and evaluation.mode = 'reliable'
+    limit 1
+  `;
 
   const getStatus = async (): Promise<ReliableEvaluationStatusResponse | null> => {
-    const [, rows] = await withRunScope(statusQuery(sql, runId));
+    const [, rows] = await withRunScope(queryStatus());
     return parseStatus((rows as unknown as StatusRow[])[0]);
   };
 
