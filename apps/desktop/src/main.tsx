@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "@neondatabase/auth-ui/css";
-import App from "./App.js";
+import { App } from "./App.js";
 import { ManagedAuthProvider } from "./managedAuth.js";
 import "./styles.css";
 

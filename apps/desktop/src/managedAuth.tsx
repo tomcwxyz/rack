@@ -1,4 +1,4 @@
-import { createAuthClient } from "@neondatabase/auth";
+import { createInternalNeonAuth } from "@neondatabase/auth";
 import { NeonAuthUIProvider, SignInForm } from "@neondatabase/auth-ui";
 import {
   createContext,
@@ -24,14 +24,15 @@ type ManagedAuthContextValue = {
 
 const serviceUrl = import.meta.env.VITE_RACK_SERVICE_URL?.trim() || null;
 const authUrl = import.meta.env.VITE_NEON_AUTH_URL?.trim() || null;
+const neonAuth = authUrl ? createInternalNeonAuth(authUrl) : null;
+const authClient = neonAuth?.adapter ?? null;
 const quickModelAlias = import.meta.env.VITE_RACK_QUICK_MODEL_ALIAS?.trim() || "generator";
-const authClient = authUrl ? createAuthClient(authUrl) : null;
 
 const ManagedAuthContext = createContext<ManagedAuthContextValue | null>(null);
 
 const tokenFromClient = async (): Promise<string | null> => {
-  if (!authClient?.getJWTToken) return null;
-  const token = await authClient.getJWTToken();
+  if (!neonAuth) return null;
+  const token = await neonAuth.getJWTToken();
   return typeof token === "string" && token.trim() ? token : null;
 };
 
@@ -106,7 +107,9 @@ export function ManagedAuthProvider({ children }: { children: ReactNode }) {
 export function ManagedSignIn() {
   return (
     <div className="managed-sign-in">
-      <SignInForm className="managed-sign-in__form" />
+      <div className="managed-sign-in__form">
+        <SignInForm />
+      </div>
     </div>
   );
 }
