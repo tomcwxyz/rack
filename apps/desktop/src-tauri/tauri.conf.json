@@ -4,9 +4,16 @@
   "version": "0.0.0",
   "identifier": "uk.co.good-ship.rack",
   "build": {
-    "beforeDevCommand": "pnpm --dir ../.. turbo run build --filter=@rack/core && pnpm dev",
+    "beforeDevCommand": {
+      "script": "pnpm turbo run build --filter=@rack/core --filter=@rack/managed && pnpm --filter @rack/desktop dev",
+      "cwd": "../..",
+      "wait": false
+    },
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm --dir ../.. turbo run build --filter=@rack/core && pnpm build",
+    "beforeBuildCommand": {
+      "script": "pnpm turbo run build --filter=@rack/core --filter=@rack/managed && pnpm --filter @rack/desktop build",
+      "cwd": "../.."
+    },
     "frontendDist": "../dist"
   },
   "app": {
