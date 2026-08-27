@@ -19,6 +19,7 @@ export type AttachedSharedPractice = {
 };
 
 export type PersistedSharedPracticeState = {
+  schemaVersion: "0.1";
   sourcePath: string;
   acceptedContent: string;
   declinedContent: string | null;
@@ -47,6 +48,7 @@ export const attachSharedPracticeContent = (
 export const acceptedStateFromFile = (
   file: SharedPracticeFile,
 ): PersistedSharedPracticeState => ({
+  schemaVersion: "0.1",
   sourcePath: file.path,
   acceptedContent: file.content,
   declinedContent: null,
