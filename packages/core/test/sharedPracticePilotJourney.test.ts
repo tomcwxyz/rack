@@ -191,7 +191,7 @@ describe("shared-practice pilot journey", () => {
       built.diagnostics.filter((diagnostic) => diagnostic.severity === "error"),
     ).toEqual([]);
     expect(built.artifact?.content).toContain(
-      "Public-facing claims need a consistent evidence boundary",
+      "Distinguish evidence from inference",
     );
     expect(built.artifact?.content).toContain(
       "record what was decided and the main reason",
