@@ -206,20 +206,37 @@ Every changed instruction is reported as added, removed or changed. A separate *
 
 The classifier is deliberately descriptive. It does not decide whether the user should accept the update.
 
-## No automatic updates yet
+## Desktop acceptance and updates
 
-Iteration 17 does not watch files or apply updates.
+Iteration 21 turns the source comparison into an explicit local lifecycle.
 
-Later desktop work will:
+When a user attaches a valid shared-practice file, Rack stores three pieces of local app state:
 
-1. remember a path the user explicitly attached;
-2. check that exact path when Rack opens;
-3. materialise the incoming file;
-4. use the core comparison to show what changed and what tightened;
-5. let the user accept or decline;
-6. remember a declined content version so it is not repeatedly offered.
+- the canonical source path;
+- the exact **accepted content snapshot**;
+- optional exact content for the most recently declined update.
 
-Updates must not silently rewrite local source.
+This state is stored in Rack's application data, not in the Rack project files and not in a managed service.
+
+On opening the Rack, the desktop:
+
+1. restores the accepted snapshot immediately;
+2. reads the remembered source path when available;
+3. compares current source content with the accepted snapshot;
+4. keeps Preview, Export and Checks on the accepted snapshot;
+5. presents changed source content as an incoming update;
+6. shows instruction changes and flags tightening changes;
+7. requires explicit acceptance before the effective Rack changes.
+
+If the source path is unavailable, Rack continues using the last accepted snapshot and shows the read failure.
+
+If an incoming file is invalid, it cannot be accepted and the last accepted snapshot remains effective.
+
+Declining an update remembers the exact incoming content. That exact content is not repeatedly offered. If the source changes again, the newer content is reviewed separately. The user can also explicitly reconsider a declined update.
+
+Rack does not silently rewrite local source or silently adopt a changed shared file.
+
+Filesystem watching remains deferred; Iteration 21 checks on Rack open and on an explicit **Check source** action.
 
 ## Managed Rack
 

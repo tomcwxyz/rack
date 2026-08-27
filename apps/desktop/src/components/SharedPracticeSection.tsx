@@ -4,19 +4,20 @@ import { open } from "@tauri-apps/plugin-dialog";
 import type {
   PracticeProjectResolution,
   RackProject,
+  SharedPracticeTighteningReason,
 } from "@rack/core";
 import {
   attachSharedPracticeContent,
   type AttachedSharedPractice,
   type SharedPracticeFile,
 } from "../sharedPractice.js";
+import type { SharedPracticeLifecycleController } from "../useSharedPracticeLifecycle.js";
 import "../shared-practice.css";
 
 type SharedPracticeSectionProps = {
   project: RackProject;
-  attachment: AttachedSharedPractice | null;
+  lifecycle: SharedPracticeLifecycleController;
   resolution: PracticeProjectResolution | null;
-  onAttachmentChange: (attachment: AttachedSharedPractice | null) => void;
   onStatus: (message: string) => void;
 };
 
@@ -24,15 +25,56 @@ const authorityLabel = (
   mode: "adaptable" | "binding",
 ): string => mode === "binding" ? "Binding" : "Adaptable";
 
+const tighteningReasonLabel: Record<SharedPracticeTighteningReason, string> = {
+  "new-binding": "New binding instruction",
+  "became-binding": "Changed to binding",
+  "new-required": "New required instruction",
+  "criticality-increased": "Criticality increased",
+  "binding-review-removed": "Binding review removed",
+  "binding-review-deferred": "Binding review pushed later",
+};
+
+const changeLabel = {
+  added: "Added",
+  removed: "Removed",
+  changed: "Changed",
+} as const;
+
 export function SharedPracticeSection({
   project,
-  attachment,
+  lifecycle,
   resolution,
-  onAttachmentChange,
   onStatus,
 }: SharedPracticeSectionProps) {
   const [busy, setBusy] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
+  const [invalidCandidate, setInvalidCandidate] =
+    useState<AttachedSharedPractice | null>(null);
+
+  const attachment = lifecycle.accepted;
+  const incoming = lifecycle.incoming;
+
+  const run = async (
+    action: () => Promise<void>,
+    success?: string,
+  ) => {
+    setBusy(true);
+    setReadError(null);
+    try {
+      await action();
+      if (success) onStatus(success);
+    } catch (reason) {
+      setReadError(
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "Rack could not update shared-practice state.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const attach = async () => {
     setBusy(true);
@@ -56,13 +98,17 @@ export function SharedPracticeSection({
         "read_shared_practice_file",
         { path },
       );
-      const next = attachSharedPracticeContent(file);
-      onAttachmentChange(next);
-      if (!next.materialization.blocked) {
-        onStatus(
-          `${next.materialization.document?.title ?? "Shared practice"} attached for this session.`,
-        );
+      const candidate = attachSharedPracticeContent(file);
+      if (candidate.materialization.blocked) {
+        setInvalidCandidate(candidate);
+        return;
       }
+
+      const accepted = await lifecycle.attachFile(file);
+      setInvalidCandidate(null);
+      onStatus(
+        `${accepted.materialization.document?.title ?? "Shared practice"} accepted locally. Rack will check its source for updates when this Rack opens.`,
+      );
     } catch (reason) {
       setReadError(
         reason instanceof Error
@@ -94,6 +140,8 @@ export function SharedPracticeSection({
         diagnostic.code === "RACK-PRACTICE-102",
     ) ?? [];
 
+  const invalidDiagnostics = invalidCandidate?.materialization.diagnostics ?? [];
+
   if (!attachment) {
     return (
       <section aria-labelledby="shared-practice-heading">
@@ -108,9 +156,26 @@ export function SharedPracticeSection({
           </div>
         </div>
 
-        {readError ? (
+        {lifecycle.loading ? (
+          <div className="notice" role="status">
+            Restoring shared-practice state…
+          </div>
+        ) : null}
+
+        {readError || lifecycle.sourceError ? (
           <div className="notice notice--error" role="alert">
-            {readError}
+            {readError ?? lifecycle.sourceError}
+          </div>
+        ) : null}
+
+        {invalidCandidate ? (
+          <div className="notice notice--error" role="alert">
+            <strong>That file was not attached.</strong>
+            {invalidDiagnostics.map((diagnostic) => (
+              <span key={`${diagnostic.code}-${diagnostic.message}`}>
+                {diagnostic.code}: {diagnostic.message}
+              </span>
+            ))}
           </div>
         ) : null}
 
@@ -118,21 +183,21 @@ export function SharedPracticeSection({
           <div>
             <h3>Attach one shared-practice file</h3>
             <p>
-              Rack reads the file from where it already lives. It stays
-              separate from your local source and is composed only when Rack
-              previews, builds or checks a Set-up.
+              Rack keeps an accepted local snapshot and checks the original file
+              for newer content. A source change never changes your effective
+              Rack until you explicitly accept it.
             </p>
             <ul>
               <li>No account or Git required.</li>
               <li>Your local Rack files are not rewritten.</li>
-              <li>Binding boundaries are shown when they affect a Set-up.</li>
+              <li>Updates are reviewed before they apply.</li>
             </ul>
           </div>
           <button
             className="primary-action"
             type="button"
             onClick={() => void attach()}
-            disabled={busy}
+            disabled={busy || lifecycle.loading}
           >
             {busy ? "Opening…" : "Attach shared practice"}
           </button>
@@ -144,7 +209,11 @@ export function SharedPracticeSection({
   const materialization = attachment.materialization;
   const document = materialization.document;
   const publisher =
-    document?.published_by.organisation ?? document?.published_by.name ?? "Unknown publisher";
+    document?.published_by.organisation ??
+    document?.published_by.name ??
+    "Unknown publisher";
+  const acceptedVersion = document?.version ?? "Unknown";
+  const incomingDocument = incoming?.materialization.document;
 
   return (
     <section aria-labelledby="shared-practice-heading">
@@ -152,8 +221,8 @@ export function SharedPracticeSection({
         <div>
           <p className="eyebrow">
             {materialization.blocked
-              ? "Attached · needs attention"
-              : "Attached for this session"}
+              ? "Accepted locally · needs attention"
+              : "Accepted locally"}
           </p>
           <h2 id="shared-practice-heading">
             {document?.title ?? "Shared practice"}
@@ -167,6 +236,19 @@ export function SharedPracticeSection({
           <button
             className="quiet-action"
             type="button"
+            onClick={() =>
+              void run(
+                lifecycle.refresh,
+                "Checked the shared-practice source for changes.",
+              )
+            }
+            disabled={busy || lifecycle.loading}
+          >
+            Check source
+          </button>
+          <button
+            className="quiet-action"
+            type="button"
             onClick={() => void attach()}
             disabled={busy}
           >
@@ -175,10 +257,16 @@ export function SharedPracticeSection({
           <button
             className="secondary-action"
             type="button"
-            onClick={() => {
-              onAttachmentChange(null);
-              onStatus("Shared practice detached. Your local Rack was not changed.");
-            }}
+            onClick={() =>
+              void run(
+                async () => {
+                  await lifecycle.detach();
+                  setInvalidCandidate(null);
+                },
+                "Shared practice detached. Your local Rack was not changed.",
+              )
+            }
+            disabled={busy}
           >
             Detach
           </button>
@@ -191,8 +279,8 @@ export function SharedPracticeSection({
           <strong>{publisher}</strong>
         </div>
         <div>
-          <span>Version</span>
-          <strong>{document?.version ?? "Unknown"}</strong>
+          <span>Accepted version</span>
+          <strong>{acceptedVersion}</strong>
         </div>
         <div className="shared-practice-source__path" title={attachment.file.path}>
           <span>Source file</span>
@@ -206,9 +294,156 @@ export function SharedPracticeSection({
         </div>
       ) : null}
 
+      {invalidCandidate ? (
+        <div className="notice notice--error" role="alert">
+          <strong>The replacement file was not accepted.</strong>
+          {invalidDiagnostics.map((diagnostic) => (
+            <span key={`${diagnostic.code}-${diagnostic.message}`}>
+              {diagnostic.code}: {diagnostic.message}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {lifecycle.sourceError ? (
+        <div className="notice notice--warning" role="status">
+          <strong>Using the last accepted version.</strong>
+          <span>
+            Rack could not read the source file: {lifecycle.sourceError}
+          </span>
+        </div>
+      ) : null}
+
+      {incoming ? (
+        <div
+          className={`shared-practice-update ${
+            lifecycle.diff?.tightening ? "shared-practice-update--tightening" : ""
+          }`}
+        >
+          <div className="shared-practice-update__heading">
+            <div>
+              <p className="eyebrow">
+                {incoming.materialization.blocked
+                  ? "Source changed · invalid update"
+                  : lifecycle.diff?.tightening
+                    ? "Source changed · tightening update"
+                    : "Source changed · update available"}
+              </p>
+              <h3>
+                {incomingDocument
+                  ? `Version ${acceptedVersion} → ${incomingDocument.version}`
+                  : "The source file has changed"}
+              </h3>
+              <p>
+                Your accepted snapshot remains active until you choose to use
+                this content.
+              </p>
+            </div>
+          </div>
+
+          {incoming.materialization.blocked ? (
+            <div className="notice notice--error">
+              <strong>The new source content is invalid and cannot be applied.</strong>
+              {incoming.materialization.diagnostics.map((diagnostic) => (
+                <span key={`${diagnostic.code}-${diagnostic.message}`}>
+                  {diagnostic.code}: {diagnostic.message}
+                </span>
+              ))}
+            </div>
+          ) : lifecycle.diff?.changes.length ? (
+            <div className="shared-practice-change-list">
+              {lifecycle.diff.changes.map((change) => (
+                <article key={change.moduleId}>
+                  <div>
+                    <strong>{change.moduleId}</strong>
+                    <span>{changeLabel[change.kind]}</span>
+                  </div>
+                  {change.tighteningReasons.length > 0 ? (
+                    <div className="shared-practice-change-tags">
+                      {change.tighteningReasons.map((reason) => (
+                        <span key={reason}>{tighteningReasonLabel[reason]}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="shared-practice-update__metadata">
+              The publication metadata or version changed, but the materialised
+              instructions are unchanged.
+            </p>
+          )}
+
+          {lifecycle.diff?.tightening ? (
+            <div className="notice notice--warning">
+              <strong>This update tightens shared practice.</strong>
+              <span>
+                Review the affected instructions before accepting it. Rack does
+                not apply tightening changes automatically.
+              </span>
+            </div>
+          ) : null}
+
+          <div className="button-row">
+            {!incoming.materialization.blocked ? (
+              <button
+                className="primary-action"
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void run(
+                    lifecycle.acceptIncoming,
+                    `${incomingDocument?.title ?? "Shared practice"} update accepted.`,
+                  )
+                }
+              >
+                Use this update
+              </button>
+            ) : null}
+            <button
+              className="secondary-action"
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  lifecycle.declineIncoming,
+                  "Kept the current accepted shared practice. This exact source content will not be offered again.",
+                )
+              }
+            >
+              Keep current
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {lifecycle.declinedCurrent ? (
+        <div className="notice shared-practice-declined" role="status">
+          <strong>You chose to keep version {acceptedVersion}.</strong>
+          <span>
+            Rack will not offer this exact source content again. If the source
+            changes, the newer content will be reviewed separately.
+          </span>
+          <button
+            className="quiet-action"
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(
+                lifecycle.reconsiderDeclined,
+                "The declined update is available to review again.",
+              )
+            }
+          >
+            Review this update again
+          </button>
+        </div>
+      ) : null}
+
       {materialization.blocked ? (
         <div className="notice notice--error" role="alert">
-          <strong>This shared practice is not being applied.</strong>
+          <strong>The accepted snapshot can no longer be materialised.</strong>
           {materialization.diagnostics.map((diagnostic) => (
             <span key={`${diagnostic.code}-${diagnostic.message}`}>
               {diagnostic.code}: {diagnostic.message}
@@ -280,9 +515,10 @@ export function SharedPracticeSection({
           <aside className="shared-practice-boundary">
             <strong>Your local source stays yours.</strong>
             <p>
-              This attachment affects Preview, Export and Checks. Editing,
+              Preview, Export and Checks use this accepted snapshot. Editing,
               Starter imports and Set-up source continue to use the files in{" "}
-              <code>{project.root}</code>.
+              <code>{project.root}</code>. A changed shared file is only applied
+              after you accept it here.
             </p>
           </aside>
         </>
