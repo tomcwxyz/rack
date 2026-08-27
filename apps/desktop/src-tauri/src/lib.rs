@@ -469,6 +469,81 @@ fn write_project_file(
     project_snapshot(&canonical_root)
 }
 
+
+#[tauri::command]
+fn write_shared_practice_publication(
+    path: String,
+    content: String,
+    replace_existing: bool,
+) -> Result<(), String> {
+    if content.trim().is_empty() {
+        return Err("Shared practice content cannot be empty.".to_string());
+    }
+    if content.len() > SHARED_PRACTICE_CONTENT_LIMIT {
+        return Err("Shared practice exceeds Rack's 5 MB limit.".to_string());
+    }
+
+    let requested = PathBuf::from(path);
+    let requested_parent = requested
+        .parent()
+        .ok_or_else(|| "Choose a destination inside a folder.".to_string())?;
+    let parent = requested_parent
+        .canonicalize()
+        .map_err(|error| format!("Could not open the destination folder: {error}"))?;
+    let file_name = requested
+        .file_name()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| "The destination filename is not valid.".to_string())?;
+    let destination = parent.join(file_name);
+
+    if destination.exists() {
+        let metadata = fs::symlink_metadata(&destination)
+            .map_err(|error| format!("Could not inspect the destination: {error}"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err(
+                "Rack will only replace an ordinary shared-practice file."
+                    .to_string(),
+            );
+        }
+        if !replace_existing {
+            return Err(
+                "That file already exists. Choose another name or explicitly allow replacement."
+                    .to_string(),
+            );
+        }
+    }
+
+    let temporary = parent.join(format!(
+        ".rack-practice-{file_name}-{}.tmp",
+        std::process::id()
+    ));
+    let backup = parent.join(format!(
+        ".rack-practice-{file_name}-{}.bak",
+        std::process::id()
+    ));
+
+    fs::write(&temporary, content.as_bytes())
+        .map_err(|error| format!("Could not prepare the shared-practice file: {error}"))?;
+
+    if destination.exists() {
+        fs::rename(&destination, &backup)
+            .map_err(|error| format!("Could not back up the existing shared-practice file: {error}"))?;
+    }
+
+    if let Err(error) = fs::rename(&temporary, &destination) {
+        let _ = fs::remove_file(&temporary);
+        if backup.exists() && !destination.exists() {
+            let _ = fs::rename(&backup, &destination);
+        }
+        return Err(format!("Could not finish saving shared practice: {error}"));
+    }
+
+    if backup.exists() {
+        let _ = fs::remove_file(&backup);
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn write_generated_file(path: String, content: String) -> Result<(), String> {
     let destination = PathBuf::from(path);
@@ -524,6 +599,7 @@ pub fn run() {
             create_rack_project,
             read_project_file,
             write_project_file,
+            write_shared_practice_publication,
             write_generated_file,
             starter::apply_starter_import,
             generated::read_generated_prompt_build,
