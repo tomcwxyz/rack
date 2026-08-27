@@ -19,6 +19,7 @@ struct SourceFile {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SharedPracticeState {
+    schema_version: String,
     source_path: String,
     accepted_content: String,
     declined_content: Option<String>,
@@ -252,6 +253,9 @@ fn write_shared_practice_states(
 }
 
 fn validate_shared_practice_state(state: &SharedPracticeState) -> Result<(), String> {
+    if state.schema_version != "0.1" {
+        return Err("Unsupported shared-practice state version.".to_string());
+    }
     if state.source_path.trim().is_empty() {
         return Err("Shared-practice state must include a source path.".to_string());
     }
