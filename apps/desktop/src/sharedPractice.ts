@@ -70,6 +70,13 @@ export const declineSharedPracticeUpdate = (
   declinedContent: incoming.content,
 });
 
+export const reconsiderSharedPracticeUpdate = (
+  state: PersistedSharedPracticeState,
+): PersistedSharedPracticeState => ({
+  ...state,
+  declinedContent: null,
+});
+
 export const deriveSharedPracticeLifecycle = (
   state: PersistedSharedPracticeState | null,
   currentFile: SharedPracticeFile | null,
