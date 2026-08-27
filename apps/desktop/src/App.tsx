@@ -62,6 +62,7 @@ export function App() {
   if (project) {
     return (
       <ProjectWorkspace
+        key={project.root}
         project={project}
         onOpenAnother={() => {
           void chooseRack();

@@ -153,6 +153,31 @@ fn read_rack_project(path: String) -> Result<ProjectSnapshot, String> {
 }
 
 #[tauri::command]
+fn read_shared_practice_file(path: String) -> Result<SourceFile, String> {
+    let requested = PathBuf::from(path);
+    let metadata = fs::symlink_metadata(&requested)
+        .map_err(|error| format!("Could not inspect that shared practice file: {error}"))?;
+
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err("Rack will only attach an ordinary shared practice file.".to_string());
+    }
+    if metadata.len() > 5 * 1024 * 1024 {
+        return Err("That shared practice file is larger than Rack's 5 MB attachment limit.".to_string());
+    }
+
+    let canonical = requested
+        .canonicalize()
+        .map_err(|error| format!("Could not open that shared practice file: {error}"))?;
+    let content = fs::read_to_string(&canonical)
+        .map_err(|error| format!("Could not read that shared practice file: {error}"))?;
+
+    Ok(SourceFile {
+        path: canonical.to_string_lossy().to_string(),
+        content,
+    })
+}
+
+#[tauri::command]
 fn create_rack_project(
     parent_path: String,
     folder_name: String,
@@ -345,6 +370,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
+            read_shared_practice_file,
             create_rack_project,
             read_project_file,
             write_project_file,
