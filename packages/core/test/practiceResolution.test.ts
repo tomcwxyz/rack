@@ -103,6 +103,33 @@ describe("practice resolution", () => {
     ]);
   });
 
+  it("reads authority from v0.2 module metadata when no wrapper override is supplied", () => {
+    const upstreamModule = {
+      ...moduleFor("guardrail.evidence", "organisation"),
+      harness: {
+        ...moduleFor("guardrail.evidence", "organisation").harness,
+        schema_version: "0.2" as const,
+        authority: authority("binding"),
+      },
+    };
+
+    const result = resolvePracticeCandidates([
+      {
+        module: upstreamModule,
+        source: source("organisation", 10),
+      },
+      candidate(
+        "guardrail.evidence",
+        "local adaptation",
+        source("local", 30, "local"),
+      ),
+    ]);
+
+    expect(result.instructions[0]?.provenance.id).toBe("organisation");
+    expect(result.instructions[0]?.authority.mode).toBe("binding");
+    expect(result.instructions[0]?.resolution.adaptationBlocked).toBe(true);
+  });
+
   it("uses the furthest-upstream binding instruction when bindings conflict", () => {
     const result = resolvePracticeCandidates([
       candidate(
