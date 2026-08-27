@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { practiceAuthoritySchema } from "./practice.js";
 
 export const schemaVersionSchema = z.literal("0.1");
+export const moduleSchemaVersionSchema = z.enum(["0.1", "0.2"]);
 export const slugSchema = z.string().regex(/^[a-z][a-z0-9-]*$/, "Expected a lowercase slug.");
 export const moduleIdSchema = z.string().regex(
   /^(?:@[a-z][a-z0-9-]*\/)?[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/,
@@ -40,12 +42,13 @@ const capabilitiesSchema = z.object({
   required: z.array(adapterCapabilityIdSchema).default([]),
 }).strict();
 const commonHarness = {
-  schema_version: schemaVersionSchema,
+  schema_version: moduleSchemaVersionSchema,
   id: moduleIdSchema,
   version: semanticVersionSchema,
   applies_to: z.union([z.literal("all"), z.array(slugSchema)]).default("all"),
   requires: z.array(dependencySchema).default([]),
   criticality: z.enum(["required", "recommended", "optional"]).default("recommended"),
+  authority: practiceAuthoritySchema.optional(),
   enforcement: z.array(z.enum([
     "instruction", "output_check", "rubric_eval", "adversarial_eval", "host_policy",
   ])).min(1).default(["instruction"]),
@@ -146,9 +149,24 @@ const toolsModule = z.object({
   }).strict(),
 }).strict();
 
-export const moduleFrontmatterSchema = z.discriminatedUnion("type", [
+const moduleFrontmatterBaseSchema = z.discriminatedUnion("type", [
   contextModule, voiceModule, methodModule, craftModule, guardrailModule, taskModule, toolsModule,
 ]);
+
+export const moduleFrontmatterSchema = moduleFrontmatterBaseSchema.superRefine(
+  (module, context) => {
+    if (
+      module.harness.schema_version === "0.1" &&
+      module.harness.authority !== undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["harness", "authority"],
+        message: "authority requires module schema_version 0.2.",
+      });
+    }
+  },
+);
 
 const destinationConfig = z.object({ enabled: z.boolean().default(false) }).passthrough();
 export const rackManifestSchema = z.object({
