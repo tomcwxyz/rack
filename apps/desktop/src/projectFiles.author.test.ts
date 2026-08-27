@@ -53,6 +53,7 @@ describe("guided creation author fallback", () => {
         researchQuestion: "What should we learn?",
         evidenceContext: "Use the supplied evidence.",
         methodGuidance: "Assess and synthesise the evidence.",
+        evidenceBoundary: "Do not invent evidence.",
         taskTitle: "Investigate a question",
         taskPurpose: "Produce a grounded synthesis.",
       }),
