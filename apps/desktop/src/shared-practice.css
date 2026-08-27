@@ -237,3 +237,12 @@
     justify-content: flex-start;
   }
 }
+
+
+.shared-practice-review-notice {
+  margin: 1rem 0 1.25rem;
+}
+
+.practice-review--due {
+  font-weight: 700;
+}
