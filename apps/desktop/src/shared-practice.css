@@ -55,7 +55,7 @@
 
 .shared-practice-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   gap: 0.8rem;
   margin: 1rem 0;
 }
@@ -236,4 +236,13 @@
   .shared-practice-change-tags {
     justify-content: flex-start;
   }
+}
+
+
+.shared-practice-review-notice {
+  margin: 1rem 0 1.25rem;
+}
+
+.practice-review--due {
+  font-weight: 700;
 }

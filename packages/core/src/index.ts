@@ -187,6 +187,7 @@ export * from "./compiler.js";
 export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
 export * from "./practiceProject.js";
+export * from "./practiceReview.js";
 export * from "./practiceResolution.js";
 export * from "./profilePatching.js";
 export * from "./sharedPractice.js";

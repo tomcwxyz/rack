@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { moduleFrontmatterSchema } from "../src/index.js";
 import {
   practiceAuthoritySchema,
+  practiceDateSchema,
   practiceSourceSchema,
   sharedPracticeFileSchema,
 } from "../src/practice.js";
@@ -25,7 +26,11 @@ describe("practice source schemas", () => {
     ).toBe(true);
   });
 
-  it("rejects malformed review dates", () => {
+  it("rejects impossible calendar dates as well as malformed review dates", () => {
+    expect(practiceDateSchema.safeParse("2027-02-29").success).toBe(false);
+    expect(practiceDateSchema.safeParse("2028-02-29").success).toBe(true);
+
+
     expect(
       practiceAuthoritySchema.safeParse({
         review_after: "1 February 2027",

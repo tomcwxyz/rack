@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import type { RackProject } from "@rack/core";
+import {
+  assessPracticeReviews,
+  type RackProject,
+} from "@rack/core";
+import { localCalendarDate } from "../date.js";
 
 type GuidedModule = Extract<
   RackProject["modules"][number],
@@ -37,6 +41,14 @@ export function RackSection({
     return groups;
   }, [project]);
   const errors = project.diagnostics.filter((item) => item.severity === "error");
+  const reviewReport = useMemo(
+    () => assessPracticeReviews(project.modules, localCalendarDate()),
+    [project.modules],
+  );
+  const reviewByModuleId = useMemo(
+    () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
+    [reviewReport],
+  );
 
   return (
     <>
@@ -48,6 +60,26 @@ export function RackSection({
           <span>{errors.length === 0 ? "Source is ready to build" : "Source needs attention"}</span>
         </div>
       </section>
+
+      {reviewReport.dueCount > 0 ? (
+        <section aria-labelledby="review-due-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Review dates</p>
+              <h2 id="review-due-heading">
+                {reviewReport.dueCount === 1
+                  ? "One instruction is ready for review"
+                  : `${reviewReport.dueCount} instructions are ready for review`}
+              </h2>
+            </div>
+            <span className="status-pill">Review · not blocking</span>
+          </div>
+          <p className="muted-copy">
+            Review dates do not disable instructions or change their authority.
+            They are reminders to revisit whether the practice still makes sense.
+          </p>
+        </section>
+      ) : null}
 
       {project.diagnostics.length > 0 ? (
         <section aria-labelledby="diagnostics-heading">
@@ -88,10 +120,21 @@ export function RackSection({
             <section className="instruction-group" key={type}>
               <h3>{typeLabels[type] ?? type}</h3>
               <div className="card-grid">
-                {modules.map((module) => (
+                {modules.map((module) => {
+                  const review = reviewByModuleId.get(module.harness.id);
+                  return (
                   <article className="instruction-card" key={module.harness.id}>
                     <div className="card-meta">
                       <span>{module.harness.criticality}</span>
+                      {review ? (
+                        <span title={`Review after ${review.reviewAfter}`}>
+                          {review.status === "due"
+                            ? `review due · ${review.reviewAfter}`
+                            : review.status === "upcoming"
+                              ? `review soon · ${review.reviewAfter}`
+                              : `review · ${review.reviewAfter}`}
+                        </span>
+                      ) : null}
                       <code>{module.harness.id}</code>
                     </div>
                     <h4>{module.title}</h4>
@@ -122,7 +165,8 @@ export function RackSection({
                       </div>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}
