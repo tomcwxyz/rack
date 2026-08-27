@@ -505,7 +505,7 @@ pre {
   margin-bottom: 50px;
   padding: 18px 22px;
   display: grid;
-  grid-template-columns: repeat(3, minmax(105px, 150px)) minmax(0, 1fr);
+  grid-template-columns: repeat(4, minmax(95px, 135px)) minmax(0, 1fr);
   gap: 18px;
   align-items: center;
   border: 1px solid var(--line);
