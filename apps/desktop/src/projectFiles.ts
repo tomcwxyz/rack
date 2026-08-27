@@ -5,6 +5,7 @@ export type WritingDraft = {
   audienceContext: string;
   voiceGuidance: string;
   avoidTerms: string;
+  evidenceGuidance: string;
   taskTitle: string;
   taskPurpose: string;
 };
@@ -39,6 +40,18 @@ export type RackSourceFile = {
 export type RackProposal = {
   folderName: string;
   files: RackSourceFile[];
+};
+
+export type PracticeDecision = "right" | "changed" | "dropped";
+
+export type WritingPracticeSelections = {
+  voice: PracticeDecision;
+  evidence: PracticeDecision;
+};
+
+export const defaultWritingPracticeSelections: WritingPracticeSelections = {
+  voice: "right",
+  evidence: "right",
 };
 
 export type WritingRackProposal = RackProposal;
@@ -93,6 +106,7 @@ const evalFile: RackSourceFile = {
 
 export const buildWritingRackFiles = (
   draft: WritingDraft,
+  practice: WritingPracticeSelections = defaultWritingPracticeSelections,
 ): WritingRackProposal => {
   const folderName = slugify(draft.rackTitle, "writing-rack");
   const command = slugify(draft.taskTitle, "writing-task");
@@ -107,6 +121,46 @@ export const buildWritingRackFiles = (
             "        reason: \"The author chose to avoid this wording.\"",
           ]),
         ].join("\n");
+
+  const includeVoice = practice.voice !== "dropped";
+  const includeEvidence = practice.evidence !== "dropped";
+  const taskRequires = [
+    ...(includeVoice ? ["voice.tone"] : []),
+    ...(includeEvidence ? ["guardrail.evidence"] : []),
+  ];
+  const taskRequiresYaml =
+    taskRequires.length === 0
+      ? "  requires: []"
+      : [
+          "  requires:",
+          ...taskRequires.map((id) => `    - id: ${id}`),
+        ].join("\n");
+  const profileInclude = [
+    "context.organisation",
+    "context.audience",
+    ...(includeVoice ? ["voice.tone"] : []),
+    ...(includeEvidence ? ["guardrail.evidence"] : []),
+    "task.primary-writing",
+  ];
+  const profileIncludeYaml = [
+    "include:",
+    ...profileInclude.map((id) => `  - ${id}`),
+  ].join("\n");
+
+  const evidenceRules =
+    practice.evidence === "changed"
+      ? `    - id: evidence-boundary
+      statement: ${yamlString(draft.evidenceGuidance)}`
+      : `    - id: do-not-invent-sources
+      statement: Do not invent sources, quotations, evidence or certainty.
+      refusal: Say what is unknown and what information would be needed.
+    - id: separate-inference
+      statement: Distinguish evidence, interpretation and recommendation.`;
+
+  const evidenceBody =
+    practice.evidence === "changed"
+      ? draft.evidenceGuidance.trim()
+      : "Do not make weak information appear stronger through confident prose.";
 
   const files: RackSourceFile[] = [
     {
@@ -167,9 +221,11 @@ harness:
 ${draft.audienceContext.trim()}
 `,
     },
-    {
-      path: "modules/voice/tone.md",
-      content: `---
+    ...(includeVoice
+      ? [
+          {
+            path: "modules/voice/tone.md",
+            content: `---
 type: voice
 title: Voice and language
 description: How the writing should sound and which language to avoid.
@@ -192,10 +248,14 @@ ${avoidYaml}
 
 Use this guidance as a consistent voice, while adapting the level of detail to the audience and task.
 `,
-    },
-    {
-      path: "modules/guardrails/evidence.md",
-      content: `---
+          },
+        ]
+      : []),
+    ...(includeEvidence
+      ? [
+          {
+            path: "modules/guardrails/evidence.md",
+            content: `---
 type: guardrail
 title: Evidence boundaries
 description: Be honest about evidence, uncertainty and missing information.
@@ -207,16 +267,14 @@ harness:
   criticality: required
   enforcement: [instruction, output_check]
   rules:
-    - id: do-not-invent-sources
-      statement: Do not invent sources, quotations, evidence or certainty.
-      refusal: Say what is unknown and what information would be needed.
-    - id: separate-inference
-      statement: Distinguish evidence, interpretation and recommendation.
+${evidenceRules}
 ---
 
-Do not make weak information appear stronger through confident prose.
+${evidenceBody}
 `,
-    },
+          },
+        ]
+      : []),
     {
       path: "modules/tasks/primary-writing.md",
       content: `---
@@ -229,9 +287,7 @@ harness:
   id: task.primary-writing
   version: 0.1.0
   applies_to: [writing]
-  requires:
-    - id: voice.tone
-    - id: guardrail.evidence
+${taskRequiresYaml}
   trigger:
     command: ${command}
     label: ${yamlString(draft.taskTitle)}
@@ -266,12 +322,7 @@ id: writing
 title: Writing and communications
 description: Organisation and audience context, voice, evidence boundaries and a repeatable writing task.
 domains: [writing]
-include:
-  - context.organisation
-  - context.audience
-  - voice.tone
-  - guardrail.evidence
-  - task.primary-writing
+${profileIncludeYaml}
 exclude: []
 overrides:
   emit_priority: {}
