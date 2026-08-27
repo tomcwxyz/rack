@@ -49,7 +49,9 @@ const normaliseCandidate = (
 ): NormalisedCandidate => ({
   module: candidate.module,
   source: practiceSourceSchema.parse(candidate.source),
-  authority: practiceAuthoritySchema.parse(candidate.authority ?? {}),
+  authority: practiceAuthoritySchema.parse(
+    candidate.authority ?? candidate.module.harness.authority ?? {},
+  ),
 });
 
 const candidateOrder = (
