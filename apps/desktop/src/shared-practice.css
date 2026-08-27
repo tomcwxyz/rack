@@ -259,3 +259,114 @@
 .shared-practice-experiment {
   grid-column: 1 / -1;
 }
+
+
+.shared-practice-publisher {
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--paper);
+}
+
+.shared-practice-publisher > summary {
+  padding: 1rem 1.2rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.shared-practice-publisher__body {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1.2rem 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+.shared-practice-publisher__intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.shared-practice-publisher__intro h3 {
+  margin: 0.2rem 0 0.4rem;
+}
+
+.shared-practice-publisher__intro p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
+.shared-practice-publisher__form,
+.shared-practice-publisher__review,
+.shared-practice-publisher__selection {
+  display: grid;
+  gap: 1rem;
+}
+
+.shared-practice-publisher__modules {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.shared-practice-publisher__module {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+.shared-practice-publisher__module > span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.shared-practice-publisher__module code,
+.shared-practice-publisher__module small {
+  color: var(--muted);
+}
+
+.shared-practice-publisher__module--disabled {
+  opacity: 0.68;
+}
+
+.shared-practice-publisher__review-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.shared-practice-publisher__review-list article {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.shared-practice-publisher__review-list article > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.shared-practice-publisher__review-list code {
+  color: var(--muted);
+}
+
+.shared-practice-publisher__replace {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .shared-practice-publisher__intro,
+  .shared-practice-publisher__review-list article {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
