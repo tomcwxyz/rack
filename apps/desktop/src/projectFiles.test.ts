@@ -10,6 +10,7 @@ import {
   buildResearchRackFiles,
   buildWritingRackFiles,
   type CodingDraft,
+  type WritingPracticeSelections,
   type RackProposal,
   type ResearchDraft,
   type WritingDraft,
@@ -54,6 +55,8 @@ const writingDraft: WritingDraft = {
   audienceContext: "Readers are busy practitioners and local partners.",
   voiceGuidance: "Use direct, warm British English.",
   avoidTerms: "leverage, low-hanging fruit",
+  evidenceGuidance:
+    "Do not invent evidence or certainty. Distinguish evidence from interpretation.",
   taskTitle: "Draft an update",
   taskPurpose: "Explain what changed, why it matters and what happens next.",
 };
@@ -97,6 +100,60 @@ describe("guided Rack proposal builders", () => {
 
     expect(first).toEqual(second);
     expectBuildsFor(first, "writing", ["prompt"]);
+  });
+
+  it("makes proposition choices change the actual Writing source and Set-up", () => {
+    const choices: WritingPracticeSelections = {
+      voice: "changed",
+      evidence: "dropped",
+    };
+    const proposal = buildWritingRackFiles(
+      {
+        ...writingDraft,
+        voiceGuidance: "Use short, concrete sentences and avoid consultancy language.",
+      },
+      choices,
+    );
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+
+    expect(project.diagnostics).toEqual([]);
+    expect(project.modules.map((module) => module.harness.id)).not.toContain(
+      "guardrail.evidence",
+    );
+    expect(project.profiles[0]?.include).not.toContain("guardrail.evidence");
+    expect(
+      proposal.files.find((file) => file.path === "modules/guardrails/evidence.md"),
+    ).toBeUndefined();
+    expect(
+      proposal.files.find((file) => file.path === "modules/voice/tone.md")?.content,
+    ).toContain("Use short, concrete sentences and avoid consultancy language.");
+
+    const build = buildTarget(project, "writing", "prompt");
+    expect(build.diagnostics).toEqual([]);
+    expect(build.artifacts[0]?.content).toContain(
+      "Use short, concrete sentences and avoid consultancy language.",
+    );
+    expect(build.artifacts[0]?.content).not.toContain(
+      "Do not invent sources, quotations, evidence or certainty.",
+    );
+  });
+
+  it("supports changing the evidence proposition rather than only accepting the default", () => {
+    const proposal = buildWritingRackFiles(
+      {
+        ...writingDraft,
+        evidenceGuidance:
+          "Flag uncertainty plainly and never turn an assumption into a fact.",
+      },
+      { voice: "right", evidence: "changed" },
+    );
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+    const build = buildTarget(project, "writing", "prompt");
+
+    expect(build.diagnostics).toEqual([]);
+    expect(build.artifacts[0]?.content).toContain(
+      "Flag uncertainty plainly and never turn an assumption into a fact.",
+    );
   });
 
   it("builds deterministic Research source for portable destinations", () => {

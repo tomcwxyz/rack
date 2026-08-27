@@ -15,9 +15,9 @@ const routes: Array<{
   {
     id: "writing",
     title: "Writing and communications",
-    status: "Most polished route",
+    status: "Proposition-first route",
     description:
-      "Create reusable organisation and audience context, voice guidance, evidence boundaries and a writing task.",
+      "Add your context, then react to suggested voice and evidence practice instead of writing everything from scratch.",
     includes: ["Audience and voice", "Language to avoid", "Evidence honesty"],
   },
   {
