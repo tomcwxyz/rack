@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildQuickPreflightRequest, formatMicrousd, settledCostMicrousd } from "./managedChecks.js";
+import {
+  buildQuickPreflightRequest,
+  buildReliablePreflightRequest,
+  formatMicrousd,
+  settledCostMicrousd,
+} from "./managedChecks.js";
 
 describe("desktop managed-check helpers", () => {
   it("builds one-case rubric-backed Quick preflight using conservative UTF-8 allowances", () => {
@@ -18,6 +23,29 @@ describe("desktop managed-check helpers", () => {
       judgeCallsPerOutput: 1,
       generatorAlias: "generator",
     });
+    expect(request.candidateInputTokensPerCase).toBeGreaterThan("Write clearly.".length);
+    expect(request.judgePromptTokensPerCase).toBeGreaterThanOrEqual(2048);
+  });
+
+  it("builds the five-repetition Reliable plan with a no-Rack baseline and separate judge", () => {
+    const request = buildReliablePreflightRequest({
+      rackFingerprint: `sha256:${"b".repeat(64)}`,
+      profileId: "writing",
+      generatorAlias: "generator",
+      judgeAlias: "judge",
+      instructions: "Write clearly.",
+      casePrompt: "Write an update.",
+      rubric: "Pass when it is clear and grounded.",
+    });
+    expect(request).toMatchObject({
+      mode: "reliable",
+      target: "prompt",
+      caseCount: 1,
+      judgeCallsPerOutput: 1,
+      generatorAlias: "generator",
+      judgeAlias: "judge",
+    });
+    expect(request.baselineInputTokensPerCase).toBeGreaterThan(0);
     expect(request.candidateInputTokensPerCase).toBeGreaterThan("Write clearly.".length);
     expect(request.judgePromptTokensPerCase).toBeGreaterThanOrEqual(2048);
   });

@@ -107,6 +107,12 @@ export const managedRuns = pgTable(
       using: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
       withCheck: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'reliable-check'`,
     }),
+    pgPolicy("rack_runs_model_eval_workflow", {
+      for: "all",
+      to: workflowRole,
+      using: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'model-evaluation'`,
+      withCheck: sql`${table.id} = ${currentWorkflowRunId} and ${table.kind} = 'model-evaluation'`,
+    }),
   ],
 ).enableRLS();
 
@@ -139,6 +145,29 @@ export const workspaceEvaluationLimits = pgTable(
       using: ownsWorkspace(table.workspaceId),
       withCheck: ownsWorkspace(table.workspaceId),
     }),
+    pgPolicy("rack_eval_limits_workflow", {
+      for: "select",
+      to: workflowRole,
+      using: sql`exists (
+        select 1 from rack_model_evaluation_runs evaluation
+        where evaluation.run_id = ${currentWorkflowRunId}
+          and evaluation.workspace_id = ${table.workspaceId}
+      )`,
+    }),
+    pgPolicy("rack_eval_limits_workflow_update", {
+      for: "update",
+      to: workflowRole,
+      using: sql`exists (
+        select 1 from rack_model_evaluation_runs evaluation
+        where evaluation.run_id = ${currentWorkflowRunId}
+          and evaluation.workspace_id = ${table.workspaceId}
+      )`,
+      withCheck: sql`exists (
+        select 1 from rack_model_evaluation_runs evaluation
+        where evaluation.run_id = ${currentWorkflowRunId}
+          and evaluation.workspace_id = ${table.workspaceId}
+      )`,
+    }),
   ],
 ).enableRLS();
 
@@ -156,6 +185,10 @@ export const modelEvaluationRuns = pgTable(
     generatorAlias: text("generator_alias").notNull(),
     providerId: text("provider_id").notNull(),
     modelId: text("model_id").notNull(),
+    judgeAlias: text("judge_alias"),
+    judgeProviderId: text("judge_provider_id"),
+    judgeModelId: text("judge_model_id"),
+    judgeIndependent: boolean("judge_independent"),
     acceptedMaximumRetryMicrousd: bigint("accepted_maximum_retry_microusd", {
       mode: "number",
     }).notNull(),
@@ -163,6 +196,12 @@ export const modelEvaluationRuns = pgTable(
     settledCostMicrousd: bigint("settled_cost_microusd", { mode: "number" }).notNull().default(0),
     status: text("status").notNull().default("running"),
     behaviouralVerdict: boolean("behavioural_verdict"),
+    behaviouralScore: integer("behavioural_score"),
+    baselineScore: integer("baseline_score"),
+    previousAcceptedScore: integer("previous_accepted_score"),
+    candidatePassRate: integer("candidate_pass_rate"),
+    baselinePassRate: integer("baseline_pass_rate"),
+    regressionPassed: boolean("regression_passed"),
     transientExpiresAt: timestamp("transient_expires_at", {
       withTimezone: true,
       mode: "string",
@@ -174,14 +213,28 @@ export const modelEvaluationRuns = pgTable(
   },
   (table) => [
     uniqueIndex("rack_model_eval_idempotency_unique").on(table.workspaceId, table.idempotencyKey),
-    check("rack_model_eval_quick_only", sql`${table.mode} = 'quick'`),
+    check("rack_model_eval_mode", sql`${table.mode} in ('quick', 'reliable')`),
     check("rack_model_eval_cost_nonnegative", sql`${table.acceptedMaximumRetryMicrousd} >= 0 and ${table.estimatedCostMicrousd} >= 0 and ${table.settledCostMicrousd} >= 0`),
-    check("rack_model_eval_status", sql`${table.status} in ('running', 'completed', 'incomplete')`),
+    check("rack_model_eval_status", sql`${table.status} in ('queued', 'running', 'completed', 'incomplete')`),
+    check(
+      "rack_model_eval_score_ranges",
+      sql`(${table.behaviouralScore} is null or ${table.behaviouralScore} between 0 and 100)
+        and (${table.baselineScore} is null or ${table.baselineScore} between 0 and 100)
+        and (${table.previousAcceptedScore} is null or ${table.previousAcceptedScore} between 0 and 100)
+        and (${table.candidatePassRate} is null or ${table.candidatePassRate} between 0 and 100)
+        and (${table.baselinePassRate} is null or ${table.baselinePassRate} between 0 and 100)`,
+    ),
     pgPolicy("rack_model_eval_workspace_owner", {
       for: "all",
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
       withCheck: ownsWorkspace(table.workspaceId),
+    }),
+    pgPolicy("rack_model_eval_workflow", {
+      for: "all",
+      to: workflowRole,
+      using: sql`${table.runId} = ${currentWorkflowRunId}`,
+      withCheck: sql`${table.runId} = ${currentWorkflowRunId}`,
     }),
   ],
 ).enableRLS();
@@ -224,6 +277,12 @@ export const providerCalls = pgTable(
       using: ownsWorkspace(table.workspaceId),
       withCheck: ownsWorkspace(table.workspaceId),
     }),
+    pgPolicy("rack_provider_calls_workflow", {
+      for: "all",
+      to: workflowRole,
+      using: sql`${table.runId} = ${currentWorkflowRunId}`,
+      withCheck: sql`${table.runId} = ${currentWorkflowRunId}`,
+    }),
   ],
 ).enableRLS();
 
@@ -258,6 +317,12 @@ export const managedPayloads = pgTable(
       for: "select",
       to: workflowRole,
       using: sql`${table.runId} = ${currentWorkflowRunId} and ${table.expiresAt} > now()`,
+    }),
+    pgPolicy("rack_payload_model_eval_workflow_update", {
+      for: "update",
+      to: workflowRole,
+      using: sql`${table.runId} = ${currentWorkflowRunId} and ${table.expiresAt} > now()`,
+      withCheck: sql`${table.runId} = ${currentWorkflowRunId} and ${table.expiresAt} > now()`,
     }),
     pgPolicy("rack_payload_retention_delete", {
       for: "delete",

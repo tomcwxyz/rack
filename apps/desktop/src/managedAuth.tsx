@@ -17,6 +17,7 @@ type ManagedAuthContextValue = {
   signedIn: boolean;
   serviceUrl: string | null;
   quickModelAlias: string;
+  reliableJudgeAlias: string;
   getAccessToken: () => Promise<string | null>;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -27,6 +28,8 @@ const authUrl = import.meta.env.VITE_NEON_AUTH_URL?.trim() || null;
 const neonAuth = authUrl ? createInternalNeonAuth(authUrl) : null;
 const authClient = neonAuth?.adapter ?? null;
 const quickModelAlias = import.meta.env.VITE_RACK_QUICK_MODEL_ALIAS?.trim() || "generator";
+const reliableJudgeAlias =
+  import.meta.env.VITE_RACK_RELIABLE_JUDGE_ALIAS?.trim() || "judge";
 
 const ManagedAuthContext = createContext<ManagedAuthContextValue | null>(null);
 
@@ -80,6 +83,7 @@ export function ManagedAuthProvider({ children }: { children: ReactNode }) {
       signedIn,
       serviceUrl,
       quickModelAlias,
+      reliableJudgeAlias,
       getAccessToken,
       refresh,
       signOut,

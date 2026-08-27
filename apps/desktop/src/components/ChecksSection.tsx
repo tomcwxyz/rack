@@ -1,18 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { prepareTargetBuild, type RackProject } from "@rack/core";
 import {
   createManagedServiceClient,
+  createReliableEvaluationClient,
   type EvaluationConfirmResponse,
   type EvaluationPreflightRequest,
   type EvaluationPreflightResponse,
+  type ReliableEvaluationStartResponse,
+  type ReliableEvaluationStatusResponse,
 } from "@rack/managed";
 import { ManagedSignIn, useManagedAuth } from "../managedAuth.js";
 import {
   buildQuickPreflightRequest,
+  buildReliablePreflightRequest,
   formatMicrousd,
   settledCostMicrousd,
 } from "../managedChecks.js";
 import "../checks.css";
+import "../reliable-checks.css";
 
 type ChecksSectionProps = {
   project: RackProject;
@@ -20,17 +25,26 @@ type ChecksSectionProps = {
   onProfileChange: (profileId: string) => void;
 };
 
-type QuickPlan = {
+type CheckMode = "quick" | "reliable";
+
+type CheckPlan = {
   request: EvaluationPreflightRequest;
   response: EvaluationPreflightResponse;
   instructions: string;
 };
 
-const resultLabel = (result: EvaluationConfirmResponse): string => {
+const quickResultLabel = (result: EvaluationConfirmResponse): string => {
   if (result.status === "incomplete") return "Incomplete";
   if (result.behaviouralVerdict === true) return "Pass";
   if (result.behaviouralVerdict === false) return "Fail";
   return "Completed";
+};
+
+const reliableResultLabel = (result: ReliableEvaluationStatusResponse): string => {
+  if (result.status === "incomplete") return "Incomplete";
+  if (result.summary?.behaviouralVerdict === true) return "Pass";
+  if (result.summary?.behaviouralVerdict === false) return "Fail";
+  return result.status === "completed" ? "Completed" : "Running";
 };
 
 export function ChecksSection({
@@ -39,10 +53,13 @@ export function ChecksSection({
   onProfileChange,
 }: ChecksSectionProps) {
   const auth = useManagedAuth();
+  const [mode, setMode] = useState<CheckMode>("quick");
   const [casePrompt, setCasePrompt] = useState("");
   const [rubric, setRubric] = useState("");
-  const [plan, setPlan] = useState<QuickPlan | null>(null);
-  const [result, setResult] = useState<EvaluationConfirmResponse | null>(null);
+  const [plan, setPlan] = useState<CheckPlan | null>(null);
+  const [quickResult, setQuickResult] = useState<EvaluationConfirmResponse | null>(null);
+  const [reliableStart, setReliableStart] = useState<ReliableEvaluationStartResponse | null>(null);
+  const [reliableResult, setReliableResult] = useState<ReliableEvaluationStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"preflight" | "run" | null>(null);
 
@@ -57,22 +74,74 @@ export function ChecksSection({
     [auth.getAccessToken, auth.serviceUrl],
   );
 
+  const reliableClient = useMemo(
+    () =>
+      auth.serviceUrl
+        ? createReliableEvaluationClient({
+            baseUrl: auth.serviceUrl,
+            getAccessToken: auth.getAccessToken,
+          })
+        : null,
+    [auth.getAccessToken, auth.serviceUrl],
+  );
+
+  useEffect(() => {
+    if (!reliableClient || !reliableStart) return;
+    if (reliableResult?.status === "completed" || reliableResult?.status === "incomplete") return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      try {
+        const status = await reliableClient.status(reliableStart.runId);
+        if (cancelled) return;
+        setReliableResult(status);
+        if (status.status === "queued" || status.status === "running") {
+          timer = setTimeout(() => void poll(), 1_500);
+        }
+      } catch (caught) {
+        if (!cancelled) {
+          setError(
+            caught instanceof Error
+              ? caught.message
+              : "Rack could not read the Reliable check status.",
+          );
+        }
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [reliableClient, reliableResult?.status, reliableStart]);
+
   const invalidatePlan = () => {
     setPlan(null);
-    setResult(null);
+    setQuickResult(null);
+    setReliableStart(null);
+    setReliableResult(null);
     setError(null);
   };
 
-  const prepareQuickSource = async () => {
+  const changeMode = (nextMode: CheckMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    invalidatePlan();
+  };
+
+  const prepareCheckSource = async () => {
     const prepared = await prepareTargetBuild(project, selectedProfile, "prompt");
     const errors = prepared.diagnostics.filter((item) => item.severity === "error");
     if (errors.length > 0) {
-      throw new Error(errors[0]?.message ?? "This Set-up cannot be built for a Quick check.");
+      throw new Error(errors[0]?.message ?? "This Set-up cannot be built for a managed check.");
     }
     const instructions = prepared.targetBuild.artifacts[0]?.content;
     const rackFingerprint = prepared.manifest?.source.digest;
     if (!instructions || !rackFingerprint) {
-      throw new Error("Rack could not prepare the selected Set-up for a Quick check.");
+      throw new Error("Rack could not prepare the selected Set-up for a managed check.");
     }
     return { instructions, rackFingerprint };
   };
@@ -85,17 +154,30 @@ export function ChecksSection({
     }
     setBusy("preflight");
     setError(null);
-    setResult(null);
+    setQuickResult(null);
+    setReliableStart(null);
+    setReliableResult(null);
     try {
-      const source = await prepareQuickSource();
-      const request = buildQuickPreflightRequest({
-        rackFingerprint: source.rackFingerprint,
-        profileId: selectedProfile,
-        generatorAlias: auth.quickModelAlias,
-        instructions: source.instructions,
-        casePrompt: casePrompt.trim(),
-        rubric: rubric.trim(),
-      });
+      const source = await prepareCheckSource();
+      const request =
+        mode === "quick"
+          ? buildQuickPreflightRequest({
+              rackFingerprint: source.rackFingerprint,
+              profileId: selectedProfile,
+              generatorAlias: auth.quickModelAlias,
+              instructions: source.instructions,
+              casePrompt: casePrompt.trim(),
+              rubric: rubric.trim(),
+            })
+          : buildReliablePreflightRequest({
+              rackFingerprint: source.rackFingerprint,
+              profileId: selectedProfile,
+              generatorAlias: auth.quickModelAlias,
+              judgeAlias: auth.reliableJudgeAlias,
+              instructions: source.instructions,
+              casePrompt: casePrompt.trim(),
+              rubric: rubric.trim(),
+            });
       const response = await client.evaluationPreflight(request);
       setPlan({ request, response, instructions: source.instructions });
     } catch (caught) {
@@ -122,9 +204,43 @@ export function ChecksSection({
         casePrompt: casePrompt.trim(),
         rubric: rubric.trim(),
       });
-      setResult(response);
+      setQuickResult(response);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The Quick check could not be completed.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runReliableCheck = async () => {
+    if (
+      !reliableClient ||
+      !plan ||
+      !plan.response.eligibleForConfirmation ||
+      plan.response.judgeIndependent !== true
+    ) {
+      return;
+    }
+    setBusy("run");
+    setError(null);
+    setReliableResult(null);
+    try {
+      const response = await reliableClient.start({
+        schemaVersion: "0.1",
+        preflight: plan.request,
+        acceptedGenerator: plan.response.generator,
+        acceptedJudge: plan.response.judge,
+        acceptedMaximumRetryCostMicrousd: plan.response.costMicrousd.maximumRetry,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+        instructions: plan.instructions,
+        casePrompt: casePrompt.trim(),
+        rubric: rubric.trim(),
+      });
+      setReliableStart(response);
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "The Reliable check could not be started.",
+      );
     } finally {
       setBusy(null);
     }
@@ -163,7 +279,7 @@ export function ChecksSection({
           </p>
           <ul>
             <li>See the maximum cost before any paid model call starts.</li>
-            <li>Run one indicative Quick case against a rubric.</li>
+            <li>Use Quick for one indicative run or Reliable for repeated comparison.</li>
             <li>Managed prompt, output and judgement detail expire within 24 hours.</li>
           </ul>
         </div>
@@ -174,16 +290,25 @@ export function ChecksSection({
 
   const selected = project.profiles.find((profile) => profile.id === selectedProfile);
   const blockers = plan?.response.blockers ?? [];
-  const canConfirm = Boolean(plan?.response.eligibleForConfirmation && blockers.length === 0);
+  const reliableJudgeBlocked = mode === "reliable" && plan?.response.judgeIndependent !== true;
+  const canConfirm = Boolean(
+    plan?.response.eligibleForConfirmation && blockers.length === 0 && !reliableJudgeBlocked,
+  );
+  const reliablePending = Boolean(
+    reliableStart &&
+      (!reliableResult || reliableResult.status === "queued" || reliableResult.status === "running"),
+  );
 
   return (
     <section className="checks-section">
       <div className="section-heading checks-heading">
         <div>
-          <p className="eyebrow">Managed · Quick</p>
+          <p className="eyebrow">Managed · {mode === "quick" ? "Quick" : "Reliable"}</p>
           <h2>Check how this Set-up behaves</h2>
           <p className="section-intro">
-            Quick is a one-case, one-run indication. The same selected model judges its own response, so treat the result as a useful signal rather than proof.
+            {mode === "quick"
+              ? "Quick is a one-case, one-run indication. The same selected model judges its own response, so treat the result as a useful signal rather than proof."
+              : "Reliable repeats the same case five times, compares it with five no-Rack baseline runs, uses an independent judge and checks against the last passing Reliable score for this Set-up."}
           </p>
         </div>
         <button className="quiet-action" type="button" onClick={() => void auth.signOut()}>
@@ -192,16 +317,26 @@ export function ChecksSection({
       </div>
 
       <div className="check-mode-grid" aria-label="Check mode">
-        <article className="check-mode-card check-mode-card--active">
+        <button
+          className={`check-mode-card check-mode-choice ${mode === "quick" ? "check-mode-card--active" : ""}`}
+          type="button"
+          aria-pressed={mode === "quick"}
+          onClick={() => changeMode("quick")}
+        >
           <span className="check-mode-badge">Available</span>
           <h3>Quick</h3>
           <p>One candidate, one rubric judgement, indicative result.</p>
-        </article>
-        <article className="check-mode-card check-mode-card--disabled" aria-disabled="true">
-          <span className="check-mode-badge">Next</span>
+        </button>
+        <button
+          className={`check-mode-card check-mode-choice ${mode === "reliable" ? "check-mode-card--active" : ""}`}
+          type="button"
+          aria-pressed={mode === "reliable"}
+          onClick={() => changeMode("reliable")}
+        >
+          <span className="check-mode-badge">Available</span>
           <h3>Reliable</h3>
-          <p>Repeated candidate and baseline runs with independent judging and regression gating.</p>
-        </article>
+          <p>Five candidates, five baselines, independent judging and regression gating.</p>
+        </button>
       </div>
 
       <div className="check-form-grid">
@@ -247,21 +382,30 @@ export function ChecksSection({
                 invalidatePlan();
               }}
             />
-            <small>Write a plain-language rubric. Quick returns pass/fail, score, reason and evidence.</small>
+            <small>Write a plain-language rubric. Rack records structured pass/fail judgements and scores.</small>
           </label>
 
           <div className="check-model-row">
             <div>
-              <span className="check-label">Model</span>
+              <span className="check-label">Generator</span>
               <strong>Managed standard</strong>
             </div>
             <code>{auth.quickModelAlias}</code>
           </div>
+          {mode === "reliable" ? (
+            <div className="check-model-row">
+              <div>
+                <span className="check-label">Independent judge</span>
+                <strong>Managed judge</strong>
+              </div>
+              <code>{auth.reliableJudgeAlias}</code>
+            </div>
+          ) : null}
 
           <button
             className="secondary-action"
             type="button"
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || reliablePending}
             onClick={() => void checkCost()}
           >
             {busy === "preflight" ? "Checking cost…" : "Check cost"}
@@ -290,7 +434,16 @@ export function ChecksSection({
                 <div><dt>Set-up</dt><dd>{selected?.title ?? selectedProfile}</dd></div>
                 <div><dt>Calls</dt><dd>{plan.response.calls.total}</dd></div>
                 <div><dt>Repetitions</dt><dd>{plan.response.repetitions}</dd></div>
-                <div><dt>Judge</dt><dd>Same model · indicative</dd></div>
+                <div>
+                  <dt>Judge</dt>
+                  <dd>
+                    {mode === "quick"
+                      ? "Same model · indicative"
+                      : plan.response.judgeIndependent
+                        ? "Independent"
+                        : "Not independent"}
+                  </dd>
+                </div>
               </dl>
 
               {plan.response.warnings.map((warning) => (
@@ -299,18 +452,30 @@ export function ChecksSection({
               {blockers.map((blocker) => (
                 <div className="notice notice--error" key={blocker.code}>{blocker.message}</div>
               ))}
+              {reliableJudgeBlocked ? (
+                <div className="notice notice--error">
+                  Reliable requires the judge alias to resolve to a different provider/model from the generator.
+                </div>
+              ) : null}
 
               <button
                 className="primary-action check-confirm"
                 type="button"
-                disabled={!canConfirm || Boolean(busy) || Boolean(result)}
-                onClick={() => void runQuickCheck()}
+                disabled={!canConfirm || Boolean(busy) || Boolean(quickResult) || Boolean(reliableStart)}
+                onClick={() => void (mode === "quick" ? runQuickCheck() : runReliableCheck())}
               >
                 {busy === "run"
-                  ? "Running Quick check…"
-                  : `Run Quick check — up to ${formatMicrousd(plan.response.costMicrousd.maximumRetry)}`}
+                  ? `Starting ${mode === "quick" ? "Quick" : "Reliable"} check…`
+                  : `Run ${mode === "quick" ? "Quick" : "Reliable"} check — up to ${formatMicrousd(plan.response.costMicrousd.maximumRetry)}`}
               </button>
-              <p className="check-confirm-note">This button is the paid-work confirmation. Rack rechecks the model, price and workspace limits before the first provider call.</p>
+              <p className="check-confirm-note">
+                This button is the paid-work confirmation. Rack rechecks the models, price and workspace limits before the first provider call.
+              </p>
+              {mode === "reliable" ? (
+                <p className="check-confirm-note">
+                  Reliable makes {plan.response.calls.total} paid model calls in this v0.1 plan. It will not automatically repeat a call left in an ambiguous paid state.
+                </p>
+              ) : null}
             </>
           )}
         </aside>
@@ -318,23 +483,23 @@ export function ChecksSection({
 
       {error ? <div className="notice notice--error" role="alert">{error}</div> : null}
 
-      {result ? (
-        <article className={`check-result check-result--${result.status === "incomplete" ? "incomplete" : result.behaviouralVerdict ? "pass" : "fail"}`}>
+      {quickResult ? (
+        <article className={`check-result check-result--${quickResult.status === "incomplete" ? "incomplete" : quickResult.behaviouralVerdict ? "pass" : "fail"}`}>
           <div className="check-result-heading">
             <div>
               <p className="eyebrow">Quick result · indicative</p>
-              <h3>{resultLabel(result)}</h3>
+              <h3>{quickResultLabel(quickResult)}</h3>
             </div>
             <div className="check-result-score">
-              {result.behaviouralScore === null ? "—" : `${result.behaviouralScore}/100`}
+              {quickResult.behaviouralScore === null ? "—" : `${quickResult.behaviouralScore}/100`}
             </div>
           </div>
 
-          {result.judgement ? (
+          {quickResult.judgement ? (
             <div className="check-judgement">
-              <p>{result.judgement.reason}</p>
-              {result.judgement.evidence.length ? (
-                <ul>{result.judgement.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
+              <p>{quickResult.judgement.reason}</p>
+              {quickResult.judgement.evidence.length ? (
+                <ul>{quickResult.judgement.evidence.map((item) => <li key={item}>{item}</li>)}</ul>
               ) : null}
             </div>
           ) : (
@@ -342,16 +507,74 @@ export function ChecksSection({
           )}
 
           <div className="check-result-meta">
-            <span>Settled cost {formatMicrousd(settledCostMicrousd(result))}</span>
-            <span>Transient detail expires {new Date(result.transientContentExpiresAt).toLocaleString("en-GB")}</span>
+            <span>Settled cost {formatMicrousd(settledCostMicrousd(quickResult))}</span>
+            <span>Transient detail expires {new Date(quickResult.transientContentExpiresAt).toLocaleString("en-GB")}</span>
           </div>
 
-          {result.output ? (
+          {quickResult.output ? (
             <details className="check-output">
               <summary>Candidate response</summary>
-              <pre>{result.output}</pre>
+              <pre>{quickResult.output}</pre>
             </details>
           ) : null}
+        </article>
+      ) : null}
+
+      {reliablePending ? (
+        <article className="check-result check-result--running" aria-live="polite">
+          <div className="check-result-heading">
+            <div>
+              <p className="eyebrow">Reliable · in progress</p>
+              <h3>{reliableResult?.status === "running" ? "Running" : "Queued"}</h3>
+            </div>
+            <div className="check-result-score">5 + 5</div>
+          </div>
+          <p>Rack is running five candidate responses and five no-Rack baselines, then judging all ten outputs. You can leave this section open while the workflow progresses.</p>
+        </article>
+      ) : null}
+
+      {reliableResult && (reliableResult.status === "completed" || reliableResult.status === "incomplete") ? (
+        <article className={`check-result check-result--${reliableResult.status === "incomplete" ? "incomplete" : reliableResult.summary?.behaviouralVerdict ? "pass" : "fail"}`}>
+          <div className="check-result-heading">
+            <div>
+              <p className="eyebrow">Reliable result</p>
+              <h3>{reliableResultLabel(reliableResult)}</h3>
+            </div>
+            <div className="check-result-score">
+              {reliableResult.summary?.candidateScore == null
+                ? "—"
+                : `${reliableResult.summary.candidateScore}/100`}
+            </div>
+          </div>
+
+          {reliableResult.summary ? (
+            <div className="reliable-result-grid">
+              <div><span>Candidate score</span><strong>{reliableResult.summary.candidateScore ?? "—"}</strong></div>
+              <div><span>Baseline score</span><strong>{reliableResult.summary.baselineScore ?? "—"}</strong></div>
+              <div><span>Candidate pass rate</span><strong>{reliableResult.summary.candidatePassRate == null ? "—" : `${reliableResult.summary.candidatePassRate}%`}</strong></div>
+              <div><span>Baseline pass rate</span><strong>{reliableResult.summary.baselinePassRate == null ? "—" : `${reliableResult.summary.baselinePassRate}%`}</strong></div>
+              <div><span>Previous passing score</span><strong>{reliableResult.summary.previousAcceptedScore ?? "None"}</strong></div>
+              <div>
+                <span>Regression gate</span>
+                <strong>
+                  {reliableResult.summary.regressionPassed === null
+                    ? "First accepted run"
+                    : reliableResult.summary.regressionPassed
+                      ? "Passed"
+                      : "Regressed"}
+                </strong>
+              </div>
+            </div>
+          ) : (
+            <p>Rack could not complete every paid call and obtain all required structured judgements. This run is Incomplete rather than being counted as a pass or fail.</p>
+          )}
+
+          <div className="check-result-meta">
+            {reliableResult.summary ? (
+              <span>Settled cost {formatMicrousd(reliableResult.summary.settledCostMicrousd)}</span>
+            ) : null}
+            <span>Transient detail expires {new Date(reliableResult.transientContentExpiresAt).toLocaleString("en-GB")}</span>
+          </div>
         </article>
       ) : null}
     </section>
