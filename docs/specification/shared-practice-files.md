@@ -150,6 +150,24 @@ rack practice inspect good-ship.rack.yaml --json
 
 Inspection reports document metadata, instruction counts, binding/adaptable practice, experiments, review dates and diagnostics.
 
+### Desktop publishing
+
+Iteration 27 exposes the same core publisher through the Shared practice area.
+
+The desktop publisher always receives the **canonical local Rack**, not the resolved project containing received shared practice.
+
+It:
+
+- starts publication metadata from the local Rack manifest where useful;
+- selects local instructions explicitly, with nothing preselected;
+- shows local-only instructions but prevents selecting them;
+- warns that context instructions may contain organisation/project details;
+- reviews the exact selected instructions and generated file before save;
+- refuses existing output by default;
+- only replaces an existing ordinary file after an explicit replacement choice.
+
+The saved output is the same `.rack.yaml` format produced by the CLI and round-trips through the same receiver materialiser.
+
 ## What the receiver controls
 
 The shared file does **not** contain:
