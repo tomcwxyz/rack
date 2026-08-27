@@ -155,7 +155,8 @@ export function SharedPracticeSection({
     resolution?.project.diagnostics.filter(
       (diagnostic) =>
         diagnostic.code === "RACK-PRACTICE-101" ||
-        diagnostic.code === "RACK-PRACTICE-102",
+        diagnostic.code === "RACK-PRACTICE-102" ||
+        diagnostic.code === "RACK-PRACTICE-103",
     ) ?? [];
 
   const invalidDiagnostics = invalidCandidate?.materialization.diagnostics ?? [];
