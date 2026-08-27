@@ -11,6 +11,7 @@ import {
   attachSharedPracticeContent,
   declineSharedPracticeUpdate,
   deriveSharedPracticeLifecycle,
+  reconsiderSharedPracticeUpdate,
   type AttachedSharedPractice,
   type PersistedSharedPracticeState,
   type SharedPracticeFile,
@@ -24,6 +25,7 @@ export type SharedPracticeLifecycleController = ReturnType<
   refresh: () => Promise<void>;
   acceptIncoming: () => Promise<void>;
   declineIncoming: () => Promise<void>;
+  reconsiderDeclined: () => Promise<void>;
   detach: () => Promise<void>;
 };
 
@@ -162,6 +164,11 @@ export const useSharedPracticeLifecycle = (
     await save(next);
   }, [persisted, save, view.incoming]);
 
+  const reconsiderDeclined = useCallback(async () => {
+    if (!persisted || persisted.declinedContent === null) return;
+    await save(reconsiderSharedPracticeUpdate(persisted));
+  }, [persisted, save]);
+
   const detach = useCallback(async () => {
     await save(null);
     setCurrentFile(null);
@@ -175,6 +182,7 @@ export const useSharedPracticeLifecycle = (
     refresh,
     acceptIncoming,
     declineIncoming,
+    reconsiderDeclined,
     detach,
   };
 };
