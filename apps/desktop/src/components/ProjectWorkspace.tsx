@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
+import {
+  resolveAttachedSharedPractice,
+  type AttachedSharedPractice,
+} from "../sharedPractice.js";
 import { ChecksSection } from "./ChecksSection.js";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
@@ -9,9 +13,16 @@ import { LibrarySection } from "./LibrarySection.js";
 import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
+import { SharedPracticeSection } from "./SharedPracticeSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 
-type WorkspaceSection = "rack" | "setups" | "preview" | "checks" | "library";
+type WorkspaceSection =
+  | "rack"
+  | "shared"
+  | "setups"
+  | "preview"
+  | "checks"
+  | "library";
 type GuidedModule = Extract<
   RackProject["modules"][number],
   { type: "context" | "voice" | "guardrail" | "task" }
@@ -38,7 +49,14 @@ export function ProjectWorkspace({
   const [section, setSection] = useState<WorkspaceSection>("rack");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [sharedPractice, setSharedPractice] =
+    useState<AttachedSharedPractice | null>(null);
   const [editing, setEditing] = useState<EditingSource | null>(null);
+  const sharedResolution = useMemo(
+    () => resolveAttachedSharedPractice(project, sharedPractice),
+    [project, sharedPractice],
+  );
+  const effectiveProject = sharedResolution?.project ?? project;
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const editingOpen = editing !== null;
   const editingIdentity = editing
@@ -127,6 +145,13 @@ export function ProjectWorkspace({
             Your Rack
           </button>
           <button
+            className={`nav-item ${section === "shared" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => setSection("shared")}
+          >
+            Shared practice
+          </button>
+          <button
             className={`nav-item ${section === "setups" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => setSection("setups")}
@@ -195,6 +220,16 @@ export function ProjectWorkspace({
           />
         ) : null}
 
+        {section === "shared" ? (
+          <SharedPracticeSection
+            project={project}
+            attachment={sharedPractice}
+            resolution={sharedResolution}
+            onAttachmentChange={setSharedPractice}
+            onStatus={setActionStatus}
+          />
+        ) : null}
+
         {section === "setups" ? (
           <SetupsSection
             project={project}
@@ -210,7 +245,7 @@ export function ProjectWorkspace({
 
         {section === "preview" ? (
           <PreviewSection
-            project={project}
+            project={effectiveProject}
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
             onStatus={setActionStatus}
@@ -219,7 +254,7 @@ export function ProjectWorkspace({
 
         {section === "checks" ? (
           <ChecksSection
-            project={project}
+            project={effectiveProject}
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
           />
