@@ -10,6 +10,8 @@ import {
   buildResearchRackFiles,
   buildWritingRackFiles,
   type CodingDraft,
+  type CodingPracticeSelections,
+  type ResearchPracticeSelections,
   type WritingPracticeSelections,
   type RackProposal,
   type ResearchDraft,
@@ -72,6 +74,8 @@ const researchDraft: ResearchDraft = {
     "Use supplied local data, interviews and published research. Note coverage and quality gaps.",
   methodGuidance:
     "Clarify the decision, assess each source, compare perspectives and keep findings separate from recommendations.",
+  evidenceBoundary:
+    "Do not invent sources or certainty. Keep evidence, inference and recommendation distinct.",
   taskTitle: "Investigate a question",
   taskPurpose:
     "Produce a grounded synthesis with uncertainty, gaps and proportionate next steps.",
@@ -162,6 +166,90 @@ describe("guided Rack proposal builders", () => {
 
     expect(first).toEqual(second);
     expectBuildsFor(first, "research", ["prompt", "agents-md"]);
+  });
+
+  it("makes Research proposition choices structural", () => {
+    const choices: ResearchPracticeSelections = {
+      method: "dropped",
+      evidence: "changed",
+    };
+    const proposal = buildResearchRackFiles(
+      {
+        ...researchDraft,
+        evidenceBoundary:
+          "State uncertainty plainly and never present an inference as observed evidence.",
+      },
+      choices,
+    );
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+
+    expect(project.diagnostics).toEqual([]);
+    expect(project.modules.map((module) => module.harness.id)).not.toContain(
+      "method.research",
+    );
+    expect(project.profiles[0]?.include).not.toContain("method.research");
+    expect(
+      proposal.files.find((file) => file.path === "modules/method/research.md"),
+    ).toBeUndefined();
+
+    const build = buildTarget(project, "research", "prompt");
+    expect(build.diagnostics).toEqual([]);
+    expect(build.artifacts[0]?.content).toContain(
+      "State uncertainty plainly and never present an inference as observed evidence.",
+    );
+  });
+
+  it("makes Coding proposition choices structural across coding destinations", () => {
+    const choices: CodingPracticeSelections = {
+      craft: "changed",
+      safety: "dropped",
+    };
+    const proposal = buildCodingRackFiles(
+      {
+        ...codingDraft,
+        codingPrinciples:
+          "Inspect first, make the smallest coherent change and test the behaviour you touched.",
+      },
+      choices,
+    );
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+
+    expect(project.diagnostics).toEqual([]);
+    expect(project.modules.map((module) => module.harness.id)).not.toContain(
+      "guardrail.code-safety",
+    );
+    expect(project.profiles[0]?.include).not.toContain("guardrail.code-safety");
+    expect(
+      proposal.files.find(
+        (file) => file.path === "modules/guardrails/code-safety.md",
+      ),
+    ).toBeUndefined();
+
+    for (const target of ["prompt", "agents-md", "claude-code", "opencode", "codex"] as const) {
+      const build = buildTarget(project, "coding", target);
+      expect(build.diagnostics).toEqual([]);
+      expect(build.artifacts[0]?.content).toContain(
+        "Inspect first, make the smallest coherent change and test the behaviour you touched.",
+      );
+    }
+  });
+
+  it("supports a custom Coding safety boundary", () => {
+    const proposal = buildCodingRackFiles(
+      {
+        ...codingDraft,
+        safetyBoundaries:
+          "Never expose secrets, and never claim a verification step ran when it did not.",
+      },
+      { craft: "right", safety: "changed" },
+    );
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+    const build = buildTarget(project, "coding", "prompt");
+
+    expect(build.diagnostics).toEqual([]);
+    expect(build.artifacts[0]?.content).toContain(
+      "Never expose secrets, and never claim a verification step ran when it did not.",
+    );
   });
 
   it("builds deterministic Coding source for every supported coding host", () => {
