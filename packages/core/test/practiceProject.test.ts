@@ -99,6 +99,9 @@ describe("resolved practice projects", () => {
     expect(resolved.project.profiles[0]?.include).toEqual([
       "guardrail.evidence",
     ]);
+    expect(resolved.profileChanges[0]?.applicableBindingIds).toEqual([
+      "guardrail.evidence",
+    ]);
     expect(resolved.profileChanges[0]?.addedBindingIds).toEqual([
       "guardrail.evidence",
     ]);
@@ -149,6 +152,9 @@ describe("resolved practice projects", () => {
 
     expect(sourceProject.profiles[0]?.include).toEqual([]);
     expect(resolved.project.profiles[0]?.include).toEqual(["voice.plain"]);
+    expect(resolved.profileChanges[0]?.applicableAdaptableDefaultIds).toEqual([
+      "voice.plain",
+    ]);
     expect(resolved.profileChanges[0]?.addedAdaptableDefaultIds).toEqual([
       "voice.plain",
     ]);
@@ -173,6 +179,9 @@ describe("resolved practice projects", () => {
 
     expect(resolved.project.profiles[0]?.include).toEqual([]);
     expect(resolved.project.profiles[0]?.exclude).toEqual(["voice.plain"]);
+    expect(resolved.profileChanges[0]?.applicableAdaptableDefaultIds).toEqual([
+      "voice.plain",
+    ]);
     expect(resolved.profileChanges[0]?.addedAdaptableDefaultIds).toEqual([]);
     expect(
       resolved.project.diagnostics.some(
