@@ -42,3 +42,14 @@
     align-items: stretch;
   }
 }
+
+.setup-instruction-row small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.setup-instruction-row select:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
