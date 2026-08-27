@@ -18,6 +18,7 @@ import {
   readInstalledTargetBuild,
 } from "@rack/core/node";
 import { registerLibraryCommands } from "./libraryCommands.js";
+import { registerPracticeCommands } from "./practiceCommands.js";
 
 const program = new Command()
   .name("rack")
@@ -290,5 +291,6 @@ program
   );
 
 registerLibraryCommands(program);
+registerPracticeCommands(program);
 
 await program.parseAsync(process.argv);
