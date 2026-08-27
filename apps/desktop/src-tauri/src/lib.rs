@@ -3,16 +3,25 @@ mod starter;
 
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     fs,
     path::{Component, Path, PathBuf},
 };
+use tauri::Manager;
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SourceFile {
     path: String,
     content: String,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SharedPracticeState {
+    source_path: String,
+    accepted_content: String,
+    declined_content: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -150,6 +159,141 @@ fn read_rack_project(path: String) -> Result<ProjectSnapshot, String> {
         .canonicalize()
         .map_err(|error| format!("Could not open that folder: {error}"))?;
     project_snapshot(&root)
+}
+
+
+const SHARED_PRACTICE_CONTENT_LIMIT: usize = 5 * 1024 * 1024;
+
+fn canonical_project_key(root: &str) -> Result<String, String> {
+    let canonical = PathBuf::from(root)
+        .canonicalize()
+        .map_err(|error| format!("Could not open the Rack folder: {error}"))?;
+    project_snapshot(&canonical)?;
+    Ok(canonical.to_string_lossy().to_string())
+}
+
+fn shared_practice_state_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let directory = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Could not locate Rack app data: {error}"))?;
+    fs::create_dir_all(&directory)
+        .map_err(|error| format!("Could not prepare Rack app data: {error}"))?;
+    Ok(directory.join("shared-practice-state.json"))
+}
+
+fn read_shared_practice_states(
+    app_handle: &tauri::AppHandle,
+) -> Result<BTreeMap<String, SharedPracticeState>, String> {
+    let path = shared_practice_state_path(app_handle)?;
+    if !path.exists() {
+        return Ok(BTreeMap::new());
+    }
+
+    let metadata = fs::symlink_metadata(&path)
+        .map_err(|error| format!("Could not inspect shared-practice state: {error}"))?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err("Rack's shared-practice state path is not an ordinary file.".to_string());
+    }
+
+    let content = fs::read_to_string(&path)
+        .map_err(|error| format!("Could not read shared-practice state: {error}"))?;
+    serde_json::from_str(&content)
+        .map_err(|error| format!("Rack's shared-practice state is invalid JSON: {error}"))
+}
+
+fn write_shared_practice_states(
+    app_handle: &tauri::AppHandle,
+    states: &BTreeMap<String, SharedPracticeState>,
+) -> Result<(), String> {
+    let path = shared_practice_state_path(app_handle)?;
+    if path.exists() {
+        let metadata = fs::symlink_metadata(&path)
+            .map_err(|error| format!("Could not inspect shared-practice state: {error}"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err("Rack's shared-practice state path is not an ordinary file.".to_string());
+        }
+    }
+
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Rack's shared-practice state has no parent folder.".to_string())?;
+    let temporary = parent.join(format!(
+        ".shared-practice-state-{}.tmp",
+        std::process::id()
+    ));
+    let backup = parent.join(format!(
+        ".shared-practice-state-{}.bak",
+        std::process::id()
+    ));
+    let content = serde_json::to_vec_pretty(states)
+        .map_err(|error| format!("Could not encode shared-practice state: {error}"))?;
+
+    fs::write(&temporary, content)
+        .map_err(|error| format!("Could not prepare shared-practice state: {error}"))?;
+
+    if path.exists() {
+        fs::rename(&path, &backup)
+            .map_err(|error| format!("Could not back up shared-practice state: {error}"))?;
+    }
+
+    if let Err(error) = fs::rename(&temporary, &path) {
+        let _ = fs::remove_file(&temporary);
+        if backup.exists() && !path.exists() {
+            let _ = fs::rename(&backup, &path);
+        }
+        return Err(format!("Could not finish saving shared-practice state: {error}"));
+    }
+
+    if backup.exists() {
+        let _ = fs::remove_file(&backup);
+    }
+    Ok(())
+}
+
+fn validate_shared_practice_state(state: &SharedPracticeState) -> Result<(), String> {
+    if state.source_path.trim().is_empty() {
+        return Err("Shared-practice state must include a source path.".to_string());
+    }
+    if state.accepted_content.len() > SHARED_PRACTICE_CONTENT_LIMIT {
+        return Err("Accepted shared practice exceeds Rack's 5 MB limit.".to_string());
+    }
+    if state
+        .declined_content
+        .as_ref()
+        .is_some_and(|content| content.len() > SHARED_PRACTICE_CONTENT_LIMIT)
+    {
+        return Err("Declined shared practice exceeds Rack's 5 MB limit.".to_string());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn read_shared_practice_state(
+    app_handle: tauri::AppHandle,
+    project_root: String,
+) -> Result<Option<SharedPracticeState>, String> {
+    let key = canonical_project_key(&project_root)?;
+    Ok(read_shared_practice_states(&app_handle)?.get(&key).cloned())
+}
+
+#[tauri::command]
+fn write_shared_practice_state(
+    app_handle: tauri::AppHandle,
+    project_root: String,
+    state: Option<SharedPracticeState>,
+) -> Result<(), String> {
+    let key = canonical_project_key(&project_root)?;
+    let mut states = read_shared_practice_states(&app_handle)?;
+
+    if let Some(state) = state {
+        validate_shared_practice_state(&state)?;
+        states.insert(key, state);
+    } else {
+        states.remove(&key);
+    }
+
+    write_shared_practice_states(&app_handle, &states)
 }
 
 #[tauri::command]
@@ -371,6 +515,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
             read_shared_practice_file,
+            read_shared_practice_state,
+            write_shared_practice_state,
             create_rack_project,
             read_project_file,
             write_project_file,
