@@ -137,6 +137,8 @@ export function SharedPracticeSection({
       ),
     [reviewReport],
   );
+  const ordinaryDueCount =
+    reviewReport.dueCount - reviewReport.experimentDueCount;
   const counts = useMemo(() => {
     let binding = 0;
     let adaptable = 0;
@@ -505,12 +507,12 @@ export function SharedPracticeSection({
             </div>
           ) : null}
 
-          {reviewReport.dueCount > 0 ? (
+          {ordinaryDueCount > 0 ? (
             <div className="notice notice--warning shared-practice-review-notice">
               <strong>
-                {reviewReport.dueCount === 1
+                {ordinaryDueCount === 1
                   ? "One shared instruction has reached its review date."
-                  : `${reviewReport.dueCount} shared instructions have reached their review dates.`}
+                  : `${ordinaryDueCount} shared instructions have reached their review dates.`}
               </strong>
               <span>
                 The accepted practice remains active and keeps the same authority.
