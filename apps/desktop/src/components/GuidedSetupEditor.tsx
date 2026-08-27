@@ -7,6 +7,11 @@ import {
   type RackProject,
   type SetupDraft,
 } from "@rack/core";
+import {
+  setupInstructionSelection,
+  updateSetupInstructionSelection,
+  type SetupInstructionSelection,
+} from "../sharedSetupSelection.js";
 import { SourceDiffReview } from "./SourceDiffReview.js";
 
 type RackProfile = RackProject["profiles"][number];
@@ -15,6 +20,8 @@ type GuidedSetupEditorProps = {
   projectRoot: string;
   profile: RackProfile;
   modules: RackProject["modules"];
+  sharedBindingIds?: string[];
+  sharedAdaptableDefaultIds?: string[];
   onClose: () => void;
   onAdvanced: () => void;
   onSaved: (snapshot: ProjectSnapshot) => void;
@@ -31,6 +38,8 @@ export function GuidedSetupEditor({
   projectRoot,
   profile,
   modules,
+  sharedBindingIds = [],
+  sharedAdaptableDefaultIds = [],
   onClose,
   onAdvanced,
   onSaved,
@@ -186,6 +195,8 @@ export function GuidedSetupEditor({
                 modules={modules}
                 include={draft.include}
                 exclude={draft.exclude}
+                sharedBindingIds={sharedBindingIds}
+                sharedAdaptableDefaultIds={sharedAdaptableDefaultIds}
                 onChange={(include, exclude) => {
                   update("include", include);
                   update("exclude", exclude);
@@ -235,6 +246,8 @@ type InstructionSelectionProps = {
   modules: RackProject["modules"];
   include: string[];
   exclude: string[];
+  sharedBindingIds: string[];
+  sharedAdaptableDefaultIds: string[];
   onChange: (include: string[], exclude: string[]) => void;
 };
 
@@ -242,6 +255,8 @@ function InstructionSelection({
   modules,
   include,
   exclude,
+  sharedBindingIds,
+  sharedAdaptableDefaultIds,
   onChange,
 }: InstructionSelectionProps) {
   const included = new Set(include);
@@ -260,32 +275,58 @@ function InstructionSelection({
       </div>
       <div className="setup-instruction-list">
         {modules.map((module) => {
-          const state = included.has(module.harness.id)
-            ? "include"
-            : excluded.has(module.harness.id)
-              ? "exclude"
-              : "unused";
+          const id = module.harness.id;
+          const isBindingShared = sharedBindingIds.includes(id);
+          const isAdaptableShared = sharedAdaptableDefaultIds.includes(id);
+          const state = setupInstructionSelection({
+            moduleId: id,
+            include,
+            exclude,
+            sharedBindingIds,
+            sharedAdaptableDefaultIds,
+          });
           return (
             <label className="setup-instruction-row" key={module.harness.id}>
               <span>
                 <strong>{module.title}</strong>
                 <code>{module.harness.id}</code>
+                {isBindingShared ? (
+                  <small>Required by shared practice.</small>
+                ) : isAdaptableShared ? (
+                  <small>
+                    Shared default · keep it, adapt it locally or leave it out.
+                  </small>
+                ) : null}
               </span>
               <select
                 aria-label={`${module.title} selection`}
                 value={state}
+                disabled={isBindingShared}
                 onChange={(event) => {
-                  const next = event.target.value;
-                  const nextInclude = include.filter((id) => id !== module.harness.id);
-                  const nextExclude = exclude.filter((id) => id !== module.harness.id);
-                  if (next === "include") nextInclude.push(module.harness.id);
-                  if (next === "exclude") nextExclude.push(module.harness.id);
-                  onChange(nextInclude, nextExclude);
+                  const next = event.target.value as SetupInstructionSelection;
+                  const changed = updateSetupInstructionSelection(
+                    id,
+                    next,
+                    include,
+                    exclude,
+                  );
+                  onChange(changed.include, changed.exclude);
                 }}
               >
-                <option value="unused">Not selected</option>
-                <option value="include">Include</option>
-                <option value="exclude">Exclude</option>
+                {isBindingShared ? (
+                  <option value="binding">Required by shared practice</option>
+                ) : (
+                  <>
+                    <option value="unused">Not selected</option>
+                    {isAdaptableShared ? (
+                      <option value="default">Included by shared practice</option>
+                    ) : null}
+                    <option value="include">Include locally</option>
+                    <option value="exclude">
+                      {isAdaptableShared ? "Leave out" : "Exclude"}
+                    </option>
+                  </>
+                )}
               </select>
             </label>
           );
