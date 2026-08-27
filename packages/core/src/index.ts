@@ -15,6 +15,7 @@ export type Diagnostic = {
   message: string;
   filePaths?: string[];
   moduleIds?: string[];
+  sourceIds?: string[];
 };
 
 export type ProjectSourceFile = { path: string; content: string };
@@ -185,7 +186,11 @@ export * from "./build.js";
 export * from "./compiler.js";
 export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
+export * from "./practiceProject.js";
+export * from "./practiceResolution.js";
 export * from "./profilePatching.js";
+export * from "./sharedPractice.js";
+export * from "./sharedPracticeDiff.js";
 export * from "./sourcePatching.js";
 export * from "./structuredPatching.js";
 export * from "./targetRegistry.js";
