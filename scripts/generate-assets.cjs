@@ -7,7 +7,7 @@ const pngSource = path.join(iconDirectory, 'icon.png.b64');
 const pngDestination = path.join(iconDirectory, 'icon.png');
 const icoDestination = path.join(iconDirectory, 'icon.ico');
 
-if (fs.existsSync(pngSource) && !fs.existsSync(pngDestination)) {
+if (fs.existsSync(pngSource)) {
   fs.writeFileSync(
     pngDestination,
     Buffer.from(fs.readFileSync(pngSource, 'utf8').trim(), 'base64'),
