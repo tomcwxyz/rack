@@ -26,6 +26,7 @@ The fork also exposes an important semantic problem: `required/recommended/optio
 This branch adds:
 
 - reusable schemas/types for practice authority and practice-source metadata;
+- additive module-level schema `0.2` support for authority metadata while preserving `0.1` behaviour;
 - a pure practice-candidate resolver in `@rack/core`;
 - deterministic precedence rules;
 - upstream local-only filtering;
@@ -51,8 +52,8 @@ The resolver does not mutate source files.
 
 ## Deferred from this slice
 
-- writing authority into canonical module frontmatter;
-- a source format version bump/default writer migration;
+- default-writer migration from module schema 0.1 to 0.2;
+- manifest/profile format version changes;
 - shared-practice file parsing;
 - Git fetching/caching;
 - automatic injection of applicable binding instructions into Set-ups;
