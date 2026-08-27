@@ -1,4 +1,10 @@
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
@@ -48,7 +54,7 @@ type PropositionProps = {
   detail: string;
   choice: PracticeChoice;
   onChoice: (choice: PracticeDecision) => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 function Proposition({
