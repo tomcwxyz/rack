@@ -17,6 +17,7 @@ const surfaces: readonly Surface[] = [
   { path: "ProjectWorkspace.tsx", context: "ordinary" },
   { path: "RackSection.tsx", context: "ordinary" },
   { path: "SharedPracticeSection.tsx", context: "ordinary" },
+  { path: "SharedPracticePublisher.tsx", context: "ordinary" },
   { path: "SetupsSection.tsx", context: "advanced" },
   { path: "PreviewSection.tsx", context: "advanced" },
   { path: "ChecksSection.tsx", context: "advanced" },
