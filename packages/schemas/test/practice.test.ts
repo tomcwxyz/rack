@@ -3,6 +3,7 @@ import { moduleFrontmatterSchema } from "../src/index.js";
 import {
   practiceAuthoritySchema,
   practiceDateSchema,
+  practiceExperimentSchema,
   practiceSourceSchema,
   sharedPracticeFileSchema,
 } from "../src/practice.js";
@@ -34,6 +35,103 @@ describe("practice source schemas", () => {
     expect(
       practiceAuthoritySchema.safeParse({
         review_after: "1 February 2027",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts an experiment learning question", () => {
+    expect(
+      practiceExperimentSchema.safeParse({
+        question: "Does this reduce avoidable hand-off work?",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts an adaptable reviewed experiment on a v0.2 module", () => {
+    const result = moduleFrontmatterSchema.safeParse({
+      type: "method",
+      title: "Try decision notes",
+      harness: {
+        schema_version: "0.2",
+        id: "method.decision-notes",
+        version: "0.2.0",
+        authority: {
+          mode: "adaptable",
+          propagation: "shared",
+          review_after: "2026-10-01",
+        },
+        experiment: {
+          question: "Do short decision notes reduce repeated discussion?",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.harness.experiment?.question).toContain(
+        "repeated discussion",
+      );
+    }
+  });
+
+  it("rejects experiments without review dates", () => {
+    expect(
+      moduleFrontmatterSchema.safeParse({
+        type: "method",
+        title: "Try decision notes",
+        harness: {
+          schema_version: "0.2",
+          id: "method.decision-notes",
+          version: "0.2.0",
+          experiment: {
+            question: "Do short decision notes help?",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects binding experiments", () => {
+    expect(
+      moduleFrontmatterSchema.safeParse({
+        type: "guardrail",
+        title: "Experimental boundary",
+        harness: {
+          schema_version: "0.2",
+          id: "guardrail.experimental-boundary",
+          version: "0.2.0",
+          authority: {
+            mode: "binding",
+            propagation: "shared",
+            rationale: "Example binding rationale.",
+            review_after: "2026-10-01",
+          },
+          experiment: {
+            question: "Should this become permanent?",
+          },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects experiments on v0.1 modules", () => {
+    expect(
+      moduleFrontmatterSchema.safeParse({
+        type: "method",
+        title: "Try decision notes",
+        harness: {
+          schema_version: "0.1",
+          id: "method.decision-notes",
+          version: "0.1.0",
+          authority: {
+            mode: "adaptable",
+            propagation: "shared",
+            review_after: "2026-10-01",
+          },
+          experiment: {
+            question: "Do short decision notes help?",
+          },
+        },
       }).success,
     ).toBe(false);
   });

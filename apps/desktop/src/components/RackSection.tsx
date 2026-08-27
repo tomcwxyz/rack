@@ -49,6 +49,8 @@ export function RackSection({
     () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
     [reviewReport],
   );
+  const ordinaryDueCount =
+    reviewReport.dueCount - reviewReport.experimentDueCount;
 
   return (
     <>
@@ -56,20 +58,47 @@ export function RackSection({
         <div><strong>{project.modules.length}</strong><span>instructions</span></div>
         <div><strong>{project.profiles.length}</strong><span>set-ups</span></div>
         <div><strong>{errors.length}</strong><span>blocking problems</span></div>
+        <div>
+          <strong>
+            {project.modules.filter((module) => module.harness.experiment).length}
+          </strong>
+          <span>experiments</span>
+        </div>
         <div className="summary-path">
           <span>{errors.length === 0 ? "Source is ready to build" : "Source needs attention"}</span>
         </div>
       </section>
 
-      {reviewReport.dueCount > 0 ? (
+      {reviewReport.experimentDueCount > 0 ? (
+        <section aria-labelledby="experiment-review-heading">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Experiments</p>
+              <h2 id="experiment-review-heading">
+                {reviewReport.experimentDueCount === 1
+                  ? "One experiment is ready to learn from"
+                  : `${reviewReport.experimentDueCount} experiments are ready to learn from`}
+              </h2>
+            </div>
+            <span className="status-pill">Review · still active</span>
+          </div>
+          <p className="muted-copy">
+            Revisit the learning question and decide whether to keep, change or
+            remove the practice. Reaching the date does not switch the
+            instruction off.
+          </p>
+        </section>
+      ) : null}
+
+      {ordinaryDueCount > 0 ? (
         <section aria-labelledby="review-due-heading">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Review dates</p>
               <h2 id="review-due-heading">
-                {reviewReport.dueCount === 1
+                {ordinaryDueCount === 1
                   ? "One instruction is ready for review"
-                  : `${reviewReport.dueCount} instructions are ready for review`}
+                  : `${ordinaryDueCount} instructions are ready for review`}
               </h2>
             </div>
             <span className="status-pill">Review · not blocking</span>
@@ -122,10 +151,12 @@ export function RackSection({
               <div className="card-grid">
                 {modules.map((module) => {
                   const review = reviewByModuleId.get(module.harness.id);
+                  const experiment = module.harness.experiment;
                   return (
                   <article className="instruction-card" key={module.harness.id}>
                     <div className="card-meta">
                       <span>{module.harness.criticality}</span>
+                      {experiment ? <span>experiment</span> : null}
                       {review ? (
                         <span title={`Review after ${review.reviewAfter}`}>
                           {review.status === "due"
@@ -143,6 +174,12 @@ export function RackSection({
                         module.body.split("\n").find(Boolean) ||
                         "No description yet."}
                     </p>
+                    {experiment ? (
+                      <p className="practice-experiment-question">
+                        <strong>Learning question:</strong>{" "}
+                        {experiment.question}
+                      </p>
+                    ) : null}
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">

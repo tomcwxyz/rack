@@ -6,6 +6,7 @@ const moduleFor = (
   id: string,
   reviewAfter?: string,
   mode: "adaptable" | "binding" = "binding",
+  experimentQuestion?: string,
 ): RackModule => ({
   type: "context",
   title: id,
@@ -24,6 +25,9 @@ const moduleFor = (
       ...(mode === "binding" ? { rationale: "Shared boundary." } : {}),
       ...(reviewAfter ? { review_after: reviewAfter } : {}),
     },
+    ...(experimentQuestion
+      ? { experiment: { question: experimentQuestion } }
+      : {}),
     enforcement: ["instruction"],
     capabilities: { required: [] },
     emit: { priority: 50, targets: "all" },
@@ -103,6 +107,44 @@ describe("practice review dates", () => {
       "review.upcoming",
       "review.future",
     ]);
+  });
+
+  it("carries experiment questions into review signals", () => {
+    const report = assessPracticeReviews(
+      [
+        moduleFor(
+          "method.experiment",
+          "2026-08-27",
+          "adaptable",
+          "Does this make decisions easier to recover later?",
+        ),
+      ],
+      "2026-08-27",
+    );
+
+    expect(report.experimentDueCount).toBe(1);
+    expect(report.items[0]?.experimentQuestion).toBe(
+      "Does this make decisions easier to recover later?",
+    );
+  });
+
+  it("keeps ordinary and experimental review counts separate", () => {
+    const report = assessPracticeReviews(
+      [
+        moduleFor("context.ordinary", "2026-08-27", "binding"),
+        moduleFor(
+          "method.experiment",
+          "2026-09-01",
+          "adaptable",
+          "Does this help?",
+        ),
+      ],
+      "2026-08-27",
+    );
+
+    expect(report.dueCount).toBe(1);
+    expect(report.experimentDueCount).toBe(0);
+    expect(report.experimentUpcomingCount).toBe(1);
   });
 
   it("requires a real explicit as-of date", () => {

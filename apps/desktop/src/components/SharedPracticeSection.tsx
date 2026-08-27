@@ -137,14 +137,18 @@ export function SharedPracticeSection({
       ),
     [reviewReport],
   );
+  const ordinaryDueCount =
+    reviewReport.dueCount - reviewReport.experimentDueCount;
   const counts = useMemo(() => {
     let binding = 0;
     let adaptable = 0;
+    let experiments = 0;
     for (const module of modules) {
       if (module.harness.authority?.mode === "binding") binding += 1;
       else adaptable += 1;
+      if (module.harness.experiment) experiments += 1;
     }
-    return { binding, adaptable };
+    return { binding, adaptable, experiments };
   }, [modules]);
 
   const relevantResolutionDiagnostics =
@@ -480,17 +484,35 @@ export function SharedPracticeSection({
               <strong>{counts.adaptable}</strong>
             </article>
             <article>
+              <span>Experiments</span>
+              <strong>{counts.experiments}</strong>
+            </article>
+            <article>
               <span>Review due</span>
               <strong>{reviewReport.dueCount}</strong>
             </article>
           </div>
 
-          {reviewReport.dueCount > 0 ? (
+          {reviewReport.experimentDueCount > 0 ? (
             <div className="notice notice--warning shared-practice-review-notice">
               <strong>
-                {reviewReport.dueCount === 1
+                {reviewReport.experimentDueCount === 1
+                  ? "One shared experiment is ready to learn from."
+                  : `${reviewReport.experimentDueCount} shared experiments are ready to learn from.`}
+              </strong>
+              <span>
+                The experiment remains active until revised shared practice is
+                published and you choose whether to accept it.
+              </span>
+            </div>
+          ) : null}
+
+          {ordinaryDueCount > 0 ? (
+            <div className="notice notice--warning shared-practice-review-notice">
+              <strong>
+                {ordinaryDueCount === 1
                   ? "One shared instruction has reached its review date."
-                  : `${reviewReport.dueCount} shared instructions have reached their review dates.`}
+                  : `${ordinaryDueCount} shared instructions have reached their review dates.`}
               </strong>
               <span>
                 The accepted practice remains active and keeps the same authority.
@@ -523,6 +545,7 @@ export function SharedPracticeSection({
             {modules.map((module) => {
               const mode = module.harness.authority?.mode ?? "adaptable";
               const review = reviewByModuleId.get(module.harness.id);
+              const experiment = module.harness.experiment;
               return (
                 <article className="shared-practice-item" key={module.harness.id}>
                   <div>
@@ -534,6 +557,7 @@ export function SharedPracticeSection({
                       {authorityLabel(mode)}
                     </span>
                     <span>{module.harness.criticality}</span>
+                    {experiment ? <span>Experiment</span> : null}
                     {review ? (
                       <span
                         className={`practice-review practice-review--${review.status}`}
@@ -547,6 +571,12 @@ export function SharedPracticeSection({
                       </span>
                     ) : null}
                   </div>
+                  {experiment ? (
+                    <p className="shared-practice-experiment">
+                      <strong>Learning question:</strong>{" "}
+                      {experiment.question}
+                    </p>
+                  ) : null}
                   {mode === "binding" && module.harness.authority?.rationale ? (
                     <p className="shared-practice-rationale">
                       <strong>Why binding:</strong>{" "}

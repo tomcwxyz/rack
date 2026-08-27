@@ -27,6 +27,10 @@ export const practiceDateSchema = z.string()
   .regex(calendarDatePattern, "Expected an ISO date such as 2026-11-01.")
   .refine(isCalendarDate, "Expected a real calendar date.");
 
+export const practiceExperimentSchema = z.object({
+  question: z.string().trim().min(1),
+}).strict();
+
 export const practiceAuthoritySchema = z.object({
   mode: practiceAuthorityModeSchema.default("adaptable"),
   propagation: practicePropagationSchema.default("shared"),
@@ -83,6 +87,7 @@ export const sharedPracticeFileSchema = z.object({
 }).strict();
 
 export type PracticeAuthority = z.infer<typeof practiceAuthoritySchema>;
+export type PracticeExperiment = z.infer<typeof practiceExperimentSchema>;
 export type PracticeAuthorityMode = z.infer<typeof practiceAuthorityModeSchema>;
 export type PracticePropagation = z.infer<typeof practicePropagationSchema>;
 export type PracticeSource = z.infer<typeof practiceSourceSchema>;

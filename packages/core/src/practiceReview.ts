@@ -10,6 +10,7 @@ export type PracticeReviewItem = {
   status: PracticeReviewStatus;
   daysUntilReview: number;
   authorityMode: "adaptable" | "binding";
+  experimentQuestion: string | null;
 };
 
 export type PracticeReviewReport = {
@@ -17,6 +18,8 @@ export type PracticeReviewReport = {
   upcomingWindowDays: number;
   dueCount: number;
   upcomingCount: number;
+  experimentDueCount: number;
+  experimentUpcomingCount: number;
   items: PracticeReviewItem[];
 };
 
@@ -65,6 +68,7 @@ export const assessPracticeReviews = (
       status,
       daysUntilReview,
       authorityMode: module.harness.authority?.mode ?? "adaptable",
+      experimentQuestion: module.harness.experiment?.question ?? null,
     });
   }
 
@@ -80,6 +84,12 @@ export const assessPracticeReviews = (
     upcomingWindowDays,
     dueCount: items.filter((item) => item.status === "due").length,
     upcomingCount: items.filter((item) => item.status === "upcoming").length,
+    experimentDueCount: items.filter(
+      (item) => item.status === "due" && item.experimentQuestion !== null,
+    ).length,
+    experimentUpcomingCount: items.filter(
+      (item) => item.status === "upcoming" && item.experimentQuestion !== null,
+    ).length,
     items,
   };
 };
