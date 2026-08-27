@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { moduleFrontmatterSchema } from "../src/index.js";
 import {
   practiceAuthoritySchema,
   practiceSourceSchema,
@@ -27,6 +28,46 @@ describe("practice source schemas", () => {
     expect(
       practiceAuthoritySchema.safeParse({
         review_after: "1 February 2027",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts authority on a v0.2 module", () => {
+    const result = moduleFrontmatterSchema.safeParse({
+      type: "context",
+      title: "Evidence context",
+      harness: {
+        schema_version: "0.2",
+        id: "context.evidence",
+        version: "0.2.0",
+        authority: {
+          mode: "binding",
+          propagation: "shared",
+          rationale: "Evidence boundaries are shared practice.",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.harness.authority?.mode).toBe("binding");
+    }
+  });
+
+  it("rejects authority on a v0.1 module", () => {
+    expect(
+      moduleFrontmatterSchema.safeParse({
+        type: "context",
+        title: "Evidence context",
+        harness: {
+          schema_version: "0.1",
+          id: "context.evidence",
+          version: "0.1.0",
+          authority: {
+            mode: "binding",
+            propagation: "shared",
+          },
+        },
       }).success,
     ).toBe(false);
   });
