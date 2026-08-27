@@ -1,0 +1,15 @@
+schema_version: "0.1"
+id: writing
+title: Writing
+description: Local writing Set-up before shared practice is composed.
+domains: [writing]
+include:
+  - context.receiver
+exclude: []
+overrides:
+  emit_priority: {}
+  target_waivers: {}
+budgets:
+  prompt:
+    recommended_tokens: 10000
+    maximum_tokens: 16000
