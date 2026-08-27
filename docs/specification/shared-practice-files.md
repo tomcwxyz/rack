@@ -212,7 +212,18 @@ Binding shared instructions need stronger behaviour: when a winning binding inst
 
 If the local Set-up explicitly excludes that binding ID, the resolved copy removes the exclusion and emits a warning explaining what happened. The local source file remains unchanged.
 
-New adaptable shared instructions are not auto-injected in this iteration. They remain available in the resolved module set but require later activation/acceptance UX before entering a Set-up automatically.
+From Iteration 26, applicable adaptable shared instructions enter the **resolved copy** of a Set-up as defaults. They do not rewrite the local Set-up file.
+
+A local Set-up can leave an adaptable shared default out by adding that instruction ID to its existing `exclude` list. The resolver honours that local exclusion. Removing the local include/exclude decision returns the Set-up to the shared default.
+
+The desktop Set-up editor exposes this directly:
+
+- **Required by shared practice** — binding shared practice; cannot be left out;
+- **Included by shared practice** — adaptable default;
+- **Include locally** — make the inclusion explicit in local source;
+- **Leave out** — write a local exclusion for an adaptable default.
+
+A local same-ID adaptation still wins over an adaptable shared source. If it was not otherwise selected, the shared default activates that winning local adaptation in the resolved Set-up.
 
 This fixes the important failure mode where an organisation publishes a new binding instruction with a new module ID but an existing user's local Set-up has never heard of that ID.
 

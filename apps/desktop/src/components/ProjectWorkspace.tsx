@@ -228,7 +228,7 @@ export function ProjectWorkspace({
 
         {section === "setups" ? (
           <SetupsSection
-            project={project}
+            project={effectiveProject}
             selectedProfile={selectedProfile}
             onGuidedEdit={(profile) => setEditing({ kind: "setup", profile })}
             onSourceEdit={sourceEdit}
@@ -298,7 +298,17 @@ export function ProjectWorkspace({
         <GuidedSetupEditor
           projectRoot={project.root}
           profile={editing.profile}
-          modules={project.modules}
+          modules={effectiveProject.modules}
+          sharedBindingIds={
+            sharedResolution?.profileChanges.find(
+              (change) => change.profileId === editing.profile.id,
+            )?.applicableBindingIds ?? []
+          }
+          sharedAdaptableDefaultIds={
+            sharedResolution?.profileChanges.find(
+              (change) => change.profileId === editing.profile.id,
+            )?.applicableAdaptableDefaultIds ?? []
+          }
           onClose={() => setEditing(null)}
           onAdvanced={() =>
             setEditing({

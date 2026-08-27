@@ -99,6 +99,9 @@ describe("resolved practice projects", () => {
     expect(resolved.project.profiles[0]?.include).toEqual([
       "guardrail.evidence",
     ]);
+    expect(resolved.profileChanges[0]?.applicableBindingIds).toEqual([
+      "guardrail.evidence",
+    ]);
     expect(resolved.profileChanges[0]?.addedBindingIds).toEqual([
       "guardrail.evidence",
     ]);
@@ -137,17 +140,56 @@ describe("resolved practice projects", () => {
     );
   });
 
-  it("does not auto-inject a new adaptable shared instruction", () => {
+  it("injects a new adaptable shared instruction as a default", () => {
+    const adaptable = moduleFor("voice.plain", {
+      body: "Prefer direct language.",
+    });
+    const sourceProject = projectFor();
+    const resolved = resolvePracticeProject(sourceProject, [{
+      module: adaptable,
+      source: sharedSource,
+    }]);
+
+    expect(sourceProject.profiles[0]?.include).toEqual([]);
+    expect(resolved.project.profiles[0]?.include).toEqual(["voice.plain"]);
+    expect(resolved.profileChanges[0]?.applicableAdaptableDefaultIds).toEqual([
+      "voice.plain",
+    ]);
+    expect(resolved.profileChanges[0]?.addedAdaptableDefaultIds).toEqual([
+      "voice.plain",
+    ]);
+    expect(resolved.project.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "RACK-PRACTICE-103",
+        moduleIds: ["voice.plain"],
+      }),
+    );
+
+    const built = buildPrompt(resolved.project, "writing");
+    expect(built.artifact?.content).toContain("Prefer direct language.");
+  });
+
+  it("honours a local exclusion of adaptable shared practice", () => {
     const adaptable = moduleFor("voice.plain");
-    const resolved = resolvePracticeProject(projectFor(), [{
+    const sourceProject = projectFor({ exclude: ["voice.plain"] });
+    const resolved = resolvePracticeProject(sourceProject, [{
       module: adaptable,
       source: sharedSource,
     }]);
 
     expect(resolved.project.profiles[0]?.include).toEqual([]);
-    expect(resolved.project.modules.map((module) => module.harness.id)).toEqual([
+    expect(resolved.project.profiles[0]?.exclude).toEqual(["voice.plain"]);
+    expect(resolved.profileChanges[0]?.applicableAdaptableDefaultIds).toEqual([
       "voice.plain",
     ]);
+    expect(resolved.profileChanges[0]?.addedAdaptableDefaultIds).toEqual([]);
+    expect(
+      resolved.project.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === "RACK-PRACTICE-103" &&
+          diagnostic.moduleIds?.includes("voice.plain"),
+      ),
+    ).toBe(false);
   });
 
   it("does not inject a binding instruction that does not apply to the Set-up domains", () => {
@@ -178,5 +220,34 @@ describe("resolved practice projects", () => {
 
     expect(resolved.resolution.instructions[0]?.provenance.kind).toBe("local");
     expect(resolved.project.modules[0]?.body).toBe("Local wording.");
+    expect(resolved.project.profiles[0]?.include).toEqual(["voice.plain"]);
+  });
+
+  it("keeps a local same-ID adaptation active even when it was not explicitly included", () => {
+    const local = moduleFor("voice.plain", { body: "My adapted wording." });
+    const shared = moduleFor("voice.plain", { body: "Shared wording." });
+    const resolved = resolvePracticeProject(
+      projectFor({ modules: [local] }),
+      [{ module: shared, source: sharedSource }],
+    );
+
+    expect(resolved.resolution.instructions[0]?.provenance.kind).toBe("local");
+    expect(resolved.project.modules[0]?.body).toBe("My adapted wording.");
+    expect(resolved.project.profiles[0]?.include).toEqual(["voice.plain"]);
+    expect(resolved.profileChanges[0]?.addedAdaptableDefaultIds).toEqual([
+      "voice.plain",
+    ]);
+  });
+
+  it("does not inject adaptable shared practice outside its Set-up domains", () => {
+    const researchDefault = moduleFor("method.research", {
+      appliesTo: ["research"],
+    });
+    const resolved = resolvePracticeProject(
+      projectFor({ domains: ["writing"] }),
+      [{ module: researchDefault, source: sharedSource }],
+    );
+
+    expect(resolved.project.profiles[0]?.include).toEqual([]);
   });
 });
