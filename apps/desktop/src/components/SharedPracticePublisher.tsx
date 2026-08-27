@@ -251,6 +251,14 @@ export function SharedPracticePublisher({
                 </span>
               </div>
 
+              <div className="notice">
+                <span>
+                  Context instructions can contain organisation, project or
+                  audience details. Only select them when those details are
+                  intended to be shared.
+                </span>
+              </div>
+
               <div className="shared-practice-publisher__modules">
                 {selectableModules.map((module) => {
                   const localOnly =
@@ -280,7 +288,7 @@ export function SharedPracticePublisher({
                         <small>
                           {localOnly
                             ? "Stays local · not available to publish"
-                            : `${mode === "binding" ? "Binding" : "Adaptable"} · ${module.harness.criticality}`}
+                            : `${module.type} · ${mode === "binding" ? "Binding" : "Adaptable"} · ${module.harness.criticality}`}
                         </small>
                       </span>
                     </label>
