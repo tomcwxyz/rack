@@ -1,16 +1,19 @@
 import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type {
-  PracticeProjectResolution,
-  RackProject,
-  SharedPracticeTighteningReason,
+import {
+  assessPracticeReviews,
+  type PracticeProjectResolution,
+  type PracticeReviewItem,
+  type RackProject,
+  type SharedPracticeTighteningReason,
 } from "@rack/core";
 import {
   attachSharedPracticeContent,
   type AttachedSharedPractice,
   type SharedPracticeFile,
 } from "../sharedPractice.js";
+import { localCalendarDate } from "../date.js";
 import type { SharedPracticeLifecycleController } from "../useSharedPracticeLifecycle.js";
 import "../shared-practice.css";
 
@@ -123,6 +126,17 @@ export function SharedPracticeSection({
   };
 
   const modules = attachment?.materialization.modules ?? [];
+  const reviewReport = useMemo(
+    () => assessPracticeReviews(modules, localCalendarDate()),
+    [modules],
+  );
+  const reviewByModuleId = useMemo(
+    () =>
+      new Map<string, PracticeReviewItem>(
+        reviewReport.items.map((item) => [item.moduleId, item]),
+      ),
+    [reviewReport],
+  );
   const counts = useMemo(() => {
     let binding = 0;
     let adaptable = 0;
@@ -465,7 +479,26 @@ export function SharedPracticeSection({
               <span>Adaptable</span>
               <strong>{counts.adaptable}</strong>
             </article>
+            <article>
+              <span>Review due</span>
+              <strong>{reviewReport.dueCount}</strong>
+            </article>
           </div>
+
+          {reviewReport.dueCount > 0 ? (
+            <div className="notice notice--warning shared-practice-review-notice">
+              <strong>
+                {reviewReport.dueCount === 1
+                  ? "One shared instruction has reached its review date."
+                  : `${reviewReport.dueCount} shared instructions have reached their review dates.`}
+              </strong>
+              <span>
+                The accepted practice remains active and keeps the same authority.
+                The date is a prompt to revisit the rule, not an automatic expiry
+                or downgrade.
+              </span>
+            </div>
+          ) : null}
 
           {relevantResolutionDiagnostics.length > 0 ? (
             <div className="shared-practice-impact">
@@ -489,6 +522,7 @@ export function SharedPracticeSection({
           <div className="shared-practice-list">
             {modules.map((module) => {
               const mode = module.harness.authority?.mode ?? "adaptable";
+              const review = reviewByModuleId.get(module.harness.id);
               return (
                 <article className="shared-practice-item" key={module.harness.id}>
                   <div>
@@ -500,6 +534,18 @@ export function SharedPracticeSection({
                       {authorityLabel(mode)}
                     </span>
                     <span>{module.harness.criticality}</span>
+                    {review ? (
+                      <span
+                        className={`practice-review practice-review--${review.status}`}
+                        title={`Review after ${review.reviewAfter}`}
+                      >
+                        {review.status === "due"
+                          ? `Review due · ${review.reviewAfter}`
+                          : review.status === "upcoming"
+                            ? `Review soon · ${review.reviewAfter}`
+                            : `Review · ${review.reviewAfter}`}
+                      </span>
+                    ) : null}
                   </div>
                   {mode === "binding" && module.harness.authority?.rationale ? (
                     <p className="shared-practice-rationale">
