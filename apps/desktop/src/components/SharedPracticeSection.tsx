@@ -206,7 +206,7 @@ export function SharedPracticeSection({
               Rack until you explicitly accept it.
             </p>
             <ul>
-              <li>No account or Git required.</li>
+              <li>No account or command line required.</li>
               <li>Your local Rack files are not rewritten.</li>
               <li>Updates are reviewed before they apply.</li>
             </ul>
