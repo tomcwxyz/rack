@@ -1,0 +1,19 @@
+schema_version: "0.1"
+name: pilot-receiver
+version: 0.1.0
+title: Pilot receiver
+description: A local Rack which receives and adapts shared organisational practice.
+author:
+  name: Pilot participant
+license: null
+okf_root: modules
+default_profile: writing
+profiles:
+  - writing
+targets:
+  prompt:
+    enabled: true
+  agents-md:
+    enabled: true
+evaluation:
+  config: eval/config.yaml
