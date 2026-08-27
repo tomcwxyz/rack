@@ -49,6 +49,8 @@ export function RackSection({
     () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
     [reviewReport],
   );
+  const ordinaryDueCount =
+    reviewReport.dueCount - reviewReport.experimentDueCount;
 
   return (
     <>
@@ -88,15 +90,15 @@ export function RackSection({
         </section>
       ) : null}
 
-      {reviewReport.dueCount > 0 ? (
+      {ordinaryDueCount > 0 ? (
         <section aria-labelledby="review-due-heading">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Review dates</p>
               <h2 id="review-due-heading">
-                {reviewReport.dueCount === 1
+                {ordinaryDueCount === 1
                   ? "One instruction is ready for review"
-                  : `${reviewReport.dueCount} instructions are ready for review`}
+                  : `${ordinaryDueCount} instructions are ready for review`}
               </h2>
             </div>
             <span className="status-pill">Review · not blocking</span>
