@@ -40,6 +40,7 @@ export const practiceSourceSchema = z.object({
   relationship: practiceSourceRelationshipSchema.optional(),
   precedence: z.number().int().nonnegative(),
   path: z.string().trim().min(1).optional(),
+  version: z.string().trim().min(1).optional(),
   ref: z.string().trim().min(1).optional(),
   commit: z.string()
     .regex(/^[0-9a-f]{7,64}$/i, "Expected a Git commit SHA.")
