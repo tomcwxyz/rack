@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
-import {
-  resolveAttachedSharedPractice,
-  type AttachedSharedPractice,
-} from "../sharedPractice.js";
+import { resolveAttachedSharedPractice } from "../sharedPractice.js";
+import { useSharedPracticeLifecycle } from "../useSharedPracticeLifecycle.js";
 import { ChecksSection } from "./ChecksSection.js";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
@@ -49,12 +47,11 @@ export function ProjectWorkspace({
   const [section, setSection] = useState<WorkspaceSection>("rack");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
-  const [sharedPractice, setSharedPractice] =
-    useState<AttachedSharedPractice | null>(null);
+  const sharedPractice = useSharedPracticeLifecycle(project.root);
   const [editing, setEditing] = useState<EditingSource | null>(null);
   const sharedResolution = useMemo(
-    () => resolveAttachedSharedPractice(project, sharedPractice),
-    [project, sharedPractice],
+    () => resolveAttachedSharedPractice(project, sharedPractice.accepted),
+    [project, sharedPractice.accepted],
   );
   const effectiveProject = sharedResolution?.project ?? project;
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -223,9 +220,8 @@ export function ProjectWorkspace({
         {section === "shared" ? (
           <SharedPracticeSection
             project={project}
-            attachment={sharedPractice}
+            lifecycle={sharedPractice}
             resolution={sharedResolution}
-            onAttachmentChange={setSharedPractice}
             onStatus={setActionStatus}
           />
         ) : null}
