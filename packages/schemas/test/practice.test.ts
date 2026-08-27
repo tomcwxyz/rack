@@ -3,6 +3,7 @@ import { moduleFrontmatterSchema } from "../src/index.js";
 import {
   practiceAuthoritySchema,
   practiceSourceSchema,
+  sharedPracticeFileSchema,
 } from "../src/practice.js";
 
 describe("practice source schemas", () => {
@@ -70,6 +71,44 @@ describe("practice source schemas", () => {
         },
       }).success,
     ).toBe(false);
+  });
+
+  it("accepts an inspectable shared practice file envelope", () => {
+    const result = sharedPracticeFileSchema.safeParse({
+      format: "rack.shared-practice",
+      schema_version: "0.1",
+      id: "good-ship",
+      version: "0.1.0",
+      title: "The Good Ship practice",
+      published_by: { name: "The Good Ship" },
+      instructions: [
+        {
+          type: "context",
+          title: "Example",
+          harness: {
+            schema_version: "0.2",
+            id: "context.example",
+            version: "0.2.0",
+          },
+          body: "Example context.",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps source file path and content version in receiver metadata", () => {
+    expect(
+      practiceSourceSchema.safeParse({
+        id: "good-ship-org",
+        label: "The Good Ship",
+        kind: "shared-file",
+        precedence: 10,
+        path: "/shared/good-ship.rack.yaml",
+        version: "0.1.0",
+      }).success,
+    ).toBe(true);
   });
 
   it("accepts local, Starter, shared-file and Git source kinds", () => {
