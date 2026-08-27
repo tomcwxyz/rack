@@ -17,6 +17,7 @@ export type ResearchDraft = {
   researchQuestion: string;
   evidenceContext: string;
   methodGuidance: string;
+  evidenceBoundary: string;
   taskTitle: string;
   taskPurpose: string;
 };
@@ -52,6 +53,26 @@ export type WritingPracticeSelections = {
 export const defaultWritingPracticeSelections: WritingPracticeSelections = {
   voice: "right",
   evidence: "right",
+};
+
+export type ResearchPracticeSelections = {
+  method: PracticeDecision;
+  evidence: PracticeDecision;
+};
+
+export const defaultResearchPracticeSelections: ResearchPracticeSelections = {
+  method: "right",
+  evidence: "right",
+};
+
+export type CodingPracticeSelections = {
+  craft: PracticeDecision;
+  safety: PracticeDecision;
+};
+
+export const defaultCodingPracticeSelections: CodingPracticeSelections = {
+  craft: "right",
+  safety: "right",
 };
 
 export type WritingRackProposal = RackProposal;
@@ -341,9 +362,51 @@ budgets:
 
 export const buildResearchRackFiles = (
   draft: ResearchDraft,
+  practice: ResearchPracticeSelections = defaultResearchPracticeSelections,
 ): ResearchRackProposal => {
   const folderName = slugify(draft.rackTitle, "research-rack");
   const command = slugify(draft.taskTitle, "research-task");
+  const includeMethod = practice.method !== "dropped";
+  const includeEvidenceBoundary = practice.evidence !== "dropped";
+  const taskRequires = [
+    ...(includeMethod ? ["method.research"] : []),
+    ...(includeEvidenceBoundary ? ["guardrail.evidence"] : []),
+  ];
+  const taskRequiresYaml =
+    taskRequires.length === 0
+      ? "  requires: []"
+      : [
+          "  requires:",
+          ...taskRequires.map((id) => `    - id: ${id}`),
+        ].join("\n");
+  const profileInclude = [
+    "context.organisation",
+    "context.research-question",
+    "context.evidence",
+    ...(includeMethod ? ["method.research"] : []),
+    ...(includeEvidenceBoundary ? ["guardrail.evidence"] : []),
+    "task.primary-research",
+  ];
+  const profileIncludeYaml = [
+    "include:",
+    ...profileInclude.map((id) => `  - ${id}`),
+  ].join("\n");
+  const evidenceRules =
+    practice.evidence === "changed"
+      ? `    - id: evidence-boundary
+      statement: ${yamlString(draft.evidenceBoundary)}`
+      : `    - id: cite-available-evidence
+      statement: Ground factual claims in the evidence available for this task.
+      refusal: Say when a claim cannot be supported and identify the evidence needed.
+    - id: do-not-invent-sources
+      statement: Do not invent sources, quotations, findings or certainty.
+      refusal: Mark the gap rather than filling it with plausible detail.
+    - id: separate-inference
+      statement: Distinguish evidence, interpretation, inference and recommendation.`;
+  const evidenceBody =
+    practice.evidence === "changed"
+      ? draft.evidenceBoundary.trim()
+      : "Treat missing, conflicting and weak evidence as part of the result rather than something to smooth away.";
 
   const files: RackSourceFile[] = [
     {
@@ -426,9 +489,11 @@ harness:
 ${draft.evidenceContext.trim()}
 `,
     },
-    {
-      path: "modules/method/research.md",
-      content: `---
+    ...(includeMethod
+      ? [
+          {
+            path: "modules/method/research.md",
+            content: `---
 type: method
 title: Research method
 description: A repeatable way to frame, gather, assess and synthesise evidence.
@@ -446,10 +511,14 @@ harness:
 
 ${draft.methodGuidance.trim()}
 `,
-    },
-    {
-      path: "modules/guardrails/evidence.md",
-      content: `---
+          },
+        ]
+      : []),
+    ...(includeEvidenceBoundary
+      ? [
+          {
+            path: "modules/guardrails/evidence.md",
+            content: `---
 type: guardrail
 title: Evidence and uncertainty boundaries
 description: Protect against invented evidence, hidden assumptions and false certainty.
@@ -461,19 +530,14 @@ harness:
   criticality: required
   enforcement: [instruction, output_check]
   rules:
-    - id: cite-available-evidence
-      statement: Ground factual claims in the evidence available for this task.
-      refusal: Say when a claim cannot be supported and identify the evidence needed.
-    - id: do-not-invent-sources
-      statement: Do not invent sources, quotations, findings or certainty.
-      refusal: Mark the gap rather than filling it with plausible detail.
-    - id: separate-inference
-      statement: Distinguish evidence, interpretation, inference and recommendation.
+${evidenceRules}
 ---
 
-Treat missing, conflicting and weak evidence as part of the result rather than something to smooth away.
+${evidenceBody}
 `,
-    },
+          },
+        ]
+      : []),
     {
       path: "modules/tasks/primary-research.md",
       content: `---
@@ -486,9 +550,7 @@ harness:
   id: task.primary-research
   version: 0.1.0
   applies_to: [research]
-  requires:
-    - id: method.research
-    - id: guardrail.evidence
+${taskRequiresYaml}
   trigger:
     command: ${command}
     label: ${yamlString(draft.taskTitle)}
@@ -531,13 +593,7 @@ id: research
 title: Research and knowledge work
 description: Decision context, a research question, evidence expectations, method and uncertainty boundaries.
 domains: [research]
-include:
-  - context.organisation
-  - context.research-question
-  - context.evidence
-  - method.research
-  - guardrail.evidence
-  - task.primary-research
+${profileIncludeYaml}
 exclude: []
 overrides:
   emit_priority: {}
@@ -559,9 +615,47 @@ budgets:
 
 export const buildCodingRackFiles = (
   draft: CodingDraft,
+  practice: CodingPracticeSelections = defaultCodingPracticeSelections,
 ): CodingRackProposal => {
   const folderName = slugify(draft.rackTitle, "coding-rack");
   const command = slugify(draft.taskTitle, "coding-task");
+  const includeCraft = practice.craft !== "dropped";
+  const includeSafety = practice.safety !== "dropped";
+  const taskRequires = [
+    ...(includeCraft ? ["craft.code"] : []),
+    ...(includeSafety ? ["guardrail.code-safety"] : []),
+  ];
+  const taskRequiresYaml =
+    taskRequires.length === 0
+      ? "  requires: []"
+      : [
+          "  requires:",
+          ...taskRequires.map((id) => `    - id: ${id}`),
+        ].join("\n");
+  const profileInclude = [
+    "context.repository",
+    "context.technology",
+    ...(includeCraft ? ["craft.code"] : []),
+    ...(includeSafety ? ["guardrail.code-safety"] : []),
+    "task.primary-coding",
+  ];
+  const profileIncludeYaml = [
+    "include:",
+    ...profileInclude.map((id) => `  - ${id}`),
+  ].join("\n");
+  const safetyRules =
+    practice.safety === "changed"
+      ? `    - id: safety-boundary
+      statement: ${yamlString(draft.safetyBoundaries)}`
+      : `    - id: protect-sensitive-data
+      statement: Do not expose credentials, tokens, private data or confidential configuration.
+      refusal: Stop and identify a safer way to inspect or test the system.
+    - id: preserve-behaviour
+      statement: Do not remove or change existing behaviour without making the consequence explicit.
+      refusal: Explain the compatibility risk and ask for a decision when the change is consequential.
+    - id: honest-verification
+      statement: Do not claim that checks, builds or tests passed unless they were actually run.
+      refusal: State which verification remains outstanding.`;
 
   const files: RackSourceFile[] = [
     {
@@ -630,9 +724,11 @@ harness:
 ${draft.technologyContext.trim()}
 `,
     },
-    {
-      path: "modules/craft/code.md",
-      content: `---
+    ...(includeCraft
+      ? [
+          {
+            path: "modules/craft/code.md",
+            content: `---
 type: craft
 title: Implementation practice
 description: How code and technical changes should be designed, structured and tested.
@@ -650,10 +746,14 @@ harness:
 
 ${draft.codingPrinciples.trim()}
 `,
-    },
-    {
-      path: "modules/guardrails/code-safety.md",
-      content: `---
+          },
+        ]
+      : []),
+    ...(includeSafety
+      ? [
+          {
+            path: "modules/guardrails/code-safety.md",
+            content: `---
 type: guardrail
 title: Safe technical changes
 description: Protect existing behaviour, private information and the integrity of verification.
@@ -665,20 +765,14 @@ harness:
   criticality: required
   enforcement: [instruction, output_check]
   rules:
-    - id: protect-sensitive-data
-      statement: Do not expose credentials, tokens, private data or confidential configuration.
-      refusal: Stop and identify a safer way to inspect or test the system.
-    - id: preserve-behaviour
-      statement: Do not remove or change existing behaviour without making the consequence explicit.
-      refusal: Explain the compatibility risk and ask for a decision when the change is consequential.
-    - id: honest-verification
-      statement: Do not claim that checks, builds or tests passed unless they were actually run.
-      refusal: State which verification remains outstanding.
+${safetyRules}
 ---
 
 ${draft.safetyBoundaries.trim()}
 `,
-    },
+          },
+        ]
+      : []),
     {
       path: "modules/tasks/primary-coding.md",
       content: `---
@@ -691,9 +785,7 @@ harness:
   id: task.primary-coding
   version: 0.1.0
   applies_to: [code]
-  requires:
-    - id: craft.code
-    - id: guardrail.code-safety
+${taskRequiresYaml}
   trigger:
     command: ${command}
     label: ${yamlString(draft.taskTitle)}
@@ -730,12 +822,7 @@ id: coding
 title: Coding and technical work
 description: Repository context, technology constraints, implementation practice, safety boundaries and a repeatable task.
 domains: [code]
-include:
-  - context.repository
-  - context.technology
-  - craft.code
-  - guardrail.code-safety
-  - task.primary-coding
+${profileIncludeYaml}
 exclude: []
 overrides:
   emit_priority: {}

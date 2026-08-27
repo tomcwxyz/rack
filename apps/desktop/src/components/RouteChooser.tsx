@@ -23,17 +23,17 @@ const routes: Array<{
   {
     id: "research",
     title: "Research and knowledge work",
-    status: "New guided route",
+    status: "Proposition-first route",
     description:
-      "Frame a question or decision, set evidence expectations, define a method and make uncertainty visible.",
+      "Add the research question and evidence context, then react to suggested method and uncertainty practice.",
     includes: ["Research question", "Evidence and sources", "Method and gaps"],
   },
   {
     id: "coding",
     title: "Coding and technical work",
-    status: "New guided route",
+    status: "Proposition-first route",
     description:
-      "Capture repository context, technical constraints, implementation practice and safe-change boundaries.",
+      "Add repository and stack context, then react to suggested implementation and safety practice.",
     includes: ["Project and stack", "Implementation practice", "Safe verification"],
   },
 ];
@@ -59,9 +59,7 @@ export function RouteChooser({ onSelect, onCancel }: RouteChooserProps) {
       <div className="route-choice-grid">
         {routes.map((route) => (
           <article
-            className={`route-choice-card ${
-              route.id === "writing" ? "route-choice-card--pilot" : ""
-            }`}
+            className="route-choice-card"
             key={route.id}
           >
             <div>
@@ -75,9 +73,7 @@ export function RouteChooser({ onSelect, onCancel }: RouteChooserProps) {
               </ul>
             </div>
             <button
-              className={
-                route.id === "writing" ? "primary-action" : "secondary-action"
-              }
+              className="primary-action"
               type="button"
               onClick={() => onSelect(route.id)}
             >

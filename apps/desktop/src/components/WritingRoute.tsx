@@ -3,27 +3,28 @@ import {
   useState,
   type ChangeEvent,
   type FormEvent,
-  type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
   buildWritingRackFiles,
-  type PracticeDecision,
   type WritingDraft,
   type WritingPracticeSelections,
 } from "../projectFiles.js";
+import {
+  CreationProgress,
+  PracticeProposition,
+  practiceChoiceLabel,
+  type CreationStep,
+  type PracticeChoice,
+} from "./PracticeProposition.js";
 import "../proposition-creation.css";
 
 type WritingRouteProps = {
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
-
-type Step = "questions" | "practice" | "review";
-
-type PracticeChoice = PracticeDecision | null;
 
 const initialDraft: WritingDraft = {
   rackTitle: "My writing Rack",
@@ -40,66 +41,9 @@ const initialDraft: WritingDraft = {
     "Turn notes into a concise update that explains what changed, why it matters and what happens next.",
 };
 
-const choiceLabel: Record<PracticeDecision, string> = {
-  right: "That’s right",
-  changed: "Not quite",
-  dropped: "Not me",
-};
-
-type PropositionProps = {
-  id: string;
-  eyebrow: string;
-  title: string;
-  summary: string;
-  detail: string;
-  choice: PracticeChoice;
-  onChoice: (choice: PracticeDecision) => void;
-  children?: ReactNode;
-};
-
-function Proposition({
-  id,
-  eyebrow,
-  title,
-  summary,
-  detail,
-  choice,
-  onChoice,
-  children,
-}: PropositionProps) {
-  return (
-    <article className="practice-proposition" aria-labelledby={`${id}-title`}>
-      <div className="practice-proposition__copy">
-        <p className="eyebrow">{eyebrow}</p>
-        <h2 id={`${id}-title`}>{title}</h2>
-        <p className="practice-proposition__summary">{summary}</p>
-        <p className="practice-proposition__detail">{detail}</p>
-      </div>
-
-      <div className="practice-choice-group" aria-label={`Choose for ${title}`}>
-        {(["right", "changed", "dropped"] as const).map((option) => (
-          <button
-            className={`practice-choice ${choice === option ? "practice-choice--active" : ""}`}
-            type="button"
-            key={option}
-            aria-pressed={choice === option}
-            onClick={() => onChoice(option)}
-          >
-            {choiceLabel[option]}
-          </button>
-        ))}
-      </div>
-
-      {choice === "changed" ? (
-        <div className="practice-proposition__edit">{children}</div>
-      ) : null}
-    </article>
-  );
-}
-
 export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
   const [draft, setDraft] = useState<WritingDraft>(initialDraft);
-  const [step, setStep] = useState<Step>("questions");
+  const [step, setStep] = useState<CreationStep>("questions");
   const [voiceChoice, setVoiceChoice] = useState<PracticeChoice>(null);
   const [evidenceChoice, setEvidenceChoice] = useState<PracticeChoice>(null);
   const [saving, setSaving] = useState(false);
@@ -196,17 +140,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
         </button>
       </header>
 
-      <div className="creation-progress" aria-label="Creation progress">
-        <span className={step === "questions" ? "creation-progress__active" : ""}>
-          1 · Your context
-        </span>
-        <span className={step === "practice" ? "creation-progress__active" : ""}>
-          2 · Suggested practice
-        </span>
-        <span className={step === "review" ? "creation-progress__active" : ""}>
-          3 · Review
-        </span>
-      </div>
+      <CreationProgress step={step} />
 
       {error ? (
         <div className="notice notice--error" role="alert">
@@ -308,7 +242,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
 
       {step === "practice" ? (
         <div className="practice-propositions">
-          <Proposition
+          <PracticeProposition
             id="voice-proposition"
             eyebrow="Voice and language"
             title="Clear, warm and direct"
@@ -335,9 +269,9 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
                 placeholder="Optional · commas or new lines"
               />
             </label>
-          </Proposition>
+          </PracticeProposition>
 
-          <Proposition
+          <PracticeProposition
             id="evidence-proposition"
             eyebrow="Evidence boundary"
             title="Do not make weak information look stronger"
@@ -357,7 +291,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
                 required
               />
             </label>
-          </Proposition>
+          </PracticeProposition>
 
           <div className="route-actions">
             <button
@@ -405,7 +339,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
             </article>
 
             <article className="proposal-card">
-              <p className="eyebrow">Voice · {choiceLabel[practice.voice]}</p>
+              <p className="eyebrow">Voice · {practiceChoiceLabel[practice.voice]}</p>
               <h2>How it should sound</h2>
               {practice.voice === "dropped" ? (
                 <p>No voice instruction will be created.</p>
@@ -419,7 +353,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
 
             <article className="proposal-card">
               <p className="eyebrow">
-                Evidence · {choiceLabel[practice.evidence]}
+                Evidence · {practiceChoiceLabel[practice.evidence]}
               </p>
               <h2>Evidence honesty</h2>
               <p>
