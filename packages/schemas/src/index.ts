@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { practiceAuthoritySchema } from "./practice.js";
+import {
+  practiceAuthoritySchema,
+  practiceExperimentSchema,
+} from "./practice.js";
 
 export const schemaVersionSchema = z.literal("0.1");
 export const moduleSchemaVersionSchema = z.enum(["0.1", "0.2"]);
@@ -49,6 +52,7 @@ const commonHarness = {
   requires: z.array(dependencySchema).default([]),
   criticality: z.enum(["required", "recommended", "optional"]).default("recommended"),
   authority: practiceAuthoritySchema.optional(),
+  experiment: practiceExperimentSchema.optional(),
   enforcement: z.array(z.enum([
     "instruction", "output_check", "rubric_eval", "adversarial_eval", "host_policy",
   ])).min(1).default(["instruction"]),
@@ -155,15 +159,38 @@ const moduleFrontmatterBaseSchema = z.discriminatedUnion("type", [
 
 export const moduleFrontmatterSchema = moduleFrontmatterBaseSchema.superRefine(
   (module, context) => {
-    if (
-      module.harness.schema_version === "0.1" &&
-      module.harness.authority !== undefined
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["harness", "authority"],
-        message: "authority requires module schema_version 0.2.",
-      });
+    if (module.harness.schema_version === "0.1") {
+      if (module.harness.authority !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "authority"],
+          message: "authority requires module schema_version 0.2.",
+        });
+      }
+      if (module.harness.experiment !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "experiment"],
+          message: "experiment requires module schema_version 0.2.",
+        });
+      }
+    }
+
+    if (module.harness.experiment !== undefined) {
+      if (module.harness.authority?.mode === "binding") {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "experiment"],
+          message: "An experiment cannot use binding authority.",
+        });
+      }
+      if (!module.harness.authority?.review_after) {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "authority", "review_after"],
+          message: "An experiment requires authority.review_after.",
+        });
+      }
     }
   },
 );
