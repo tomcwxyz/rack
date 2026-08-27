@@ -191,6 +191,7 @@ export * from "./practiceReview.js";
 export * from "./practiceResolution.js";
 export * from "./profilePatching.js";
 export * from "./sharedPractice.js";
+export * from "./sharedPracticePublisher.js";
 export * from "./sharedPracticeDiff.js";
 export * from "./sourcePatching.js";
 export * from "./structuredPatching.js";

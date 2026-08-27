@@ -7,7 +7,7 @@
   "bin": { "rack": "./dist/index.js" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "pnpm typecheck",
+    "check": "pnpm typecheck && pnpm test",
     "dev": "tsx src/index.ts",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc -p tsconfig.json --noEmit"
