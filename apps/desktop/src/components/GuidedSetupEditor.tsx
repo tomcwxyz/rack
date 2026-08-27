@@ -259,9 +259,6 @@ function InstructionSelection({
   sharedAdaptableDefaultIds,
   onChange,
 }: InstructionSelectionProps) {
-  const included = new Set(include);
-  const excluded = new Set(exclude);
-
   return (
     <section className="repeatable-editor" aria-labelledby="setup-instructions-heading">
       <div className="repeatable-editor-heading">
