@@ -39,6 +39,7 @@ describe("guided creation author fallback", () => {
         audienceContext: "Audience context.",
         voiceGuidance: "Write plainly.",
         avoidTerms: "",
+        evidenceGuidance: "Do not invent evidence.",
         taskTitle: "Draft an update",
         taskPurpose: "Produce a useful update.",
       }),
