@@ -1,4 +1,5 @@
 import {
+  practiceAuthoritySchema,
   practiceSourceSchema,
   type PracticeSource,
   type RackModule,
@@ -22,6 +23,7 @@ export type PracticeProjectResolutionOptions = {
 export type PracticeProfileChange = {
   profileId: string;
   addedBindingIds: string[];
+  addedAdaptableDefaultIds: string[];
   overriddenExclusionIds: string[];
 };
 
@@ -87,6 +89,25 @@ export const resolvePracticeProject = (
       instruction.authority.mode === "binding" &&
       sourceCarriesSharedAuthority(instruction.provenance),
   );
+  const externalAdaptableIds = new Set(
+    externalCandidates
+      .filter((candidate) => sourceCarriesSharedAuthority(candidate.source))
+      .filter((candidate) => {
+        const authority = practiceAuthoritySchema.parse(
+          candidate.authority ?? candidate.module.harness.authority ?? {},
+        );
+        return (
+          authority.mode === "adaptable" &&
+          authority.propagation === "shared"
+        );
+      })
+      .map((candidate) => candidate.module.harness.id),
+  );
+  const adaptableDefaultInstructions = resolution.instructions.filter(
+    (instruction) =>
+      instruction.authority.mode === "adaptable" &&
+      externalAdaptableIds.has(instruction.module.harness.id),
+  );
 
   const profiles = project.profiles.map((profile) => {
     const applicable = bindingInstructions
@@ -98,6 +119,14 @@ export const resolvePracticeProject = (
       applicable.map((instruction) => instruction.module.harness.id),
     );
     const applicableIdSet = new Set(applicableIds);
+    const applicableAdaptable = adaptableDefaultInstructions
+      .filter((instruction) => appliesToProfile(instruction.module, profile))
+      .sort((left, right) =>
+        left.module.harness.id.localeCompare(right.module.harness.id),
+      );
+    const applicableAdaptableIds = uniqueSorted(
+      applicableAdaptable.map((instruction) => instruction.module.harness.id),
+    );
     const included = new Set(profile.include);
     const excluded = new Set(profile.exclude);
 
@@ -105,6 +134,9 @@ export const resolvePracticeProject = (
     const overriddenExclusionIds = applicableIds.filter((id) => excluded.has(id));
     const ordinaryAdditions = addedBindingIds.filter(
       (id) => !excluded.has(id),
+    );
+    const addedAdaptableDefaultIds = applicableAdaptableIds.filter(
+      (id) => !included.has(id) && !excluded.has(id),
     );
 
     if (ordinaryAdditions.length > 0) {
@@ -120,6 +152,32 @@ export const resolvePracticeProject = (
               ordinaryAdditions.includes(instruction.module.harness.id),
             )
             .map((instruction) => instruction.provenance.id),
+        ),
+      });
+    }
+
+    if (addedAdaptableDefaultIds.length > 0) {
+      diagnostics.push({
+        code: "RACK-PRACTICE-103",
+        severity: "info",
+        title: "Shared adaptable practice applies by default",
+        message: `${profile.title} adds shared adaptable practice: ${addedAdaptableDefaultIds.join(", ")}. The local Set-up can leave this practice out without changing the shared source.`,
+        moduleIds: addedAdaptableDefaultIds,
+        sourceIds: uniqueSorted(
+          applicableAdaptable
+            .filter((instruction) =>
+              addedAdaptableDefaultIds.includes(instruction.module.harness.id),
+            )
+            .flatMap((instruction) => [
+              instruction.provenance.id,
+              ...instruction.resolution.supersededSourceIds.filter((sourceId) =>
+                externalCandidates.some(
+                  (candidate) =>
+                    candidate.source.id === sourceId &&
+                    candidate.module.harness.id === instruction.module.harness.id,
+                ),
+              ),
+            ]),
         ),
       });
     }
@@ -144,6 +202,7 @@ export const resolvePracticeProject = (
     profileChanges.push({
       profileId: profile.id,
       addedBindingIds,
+      addedAdaptableDefaultIds,
       overriddenExclusionIds,
     });
 
@@ -152,6 +211,9 @@ export const resolvePracticeProject = (
       include: [
         ...profile.include,
         ...addedBindingIds.filter((id) => !profile.include.includes(id)),
+        ...addedAdaptableDefaultIds.filter(
+          (id) => !profile.include.includes(id),
+        ),
       ],
       exclude: profile.exclude.filter((id) => !applicableIdSet.has(id)),
     };
