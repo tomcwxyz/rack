@@ -1,0 +1,224 @@
+# Shared practice files
+
+**Status:** Iteration 17 implementation contract  
+**Date:** 27 August 2026
+
+## Purpose
+
+A shared practice file is the simplest organisational transport for Rack practice.
+
+It is one inspectable YAML file which can be distributed through infrastructure an organisation already uses: OneDrive, Google Drive, Dropbox, Nextcloud, a shared network folder, email or chat.
+
+Rack does not need to run a control plane in order for shared practice to work.
+
+The file is a transport. After parsing, its instructions become ordinary Rack modules and enter the same source-resolution stage as local, Starter and later Git/managed sources.
+
+## File extension
+
+Use:
+
+```text
+.rack.yaml
+```
+
+The extension is a convention rather than a security boundary. Rack still validates the file format before applying it.
+
+## Envelope
+
+Version 0.1:
+
+```yaml
+format: rack.shared-practice
+schema_version: "0.1"
+
+id: good-ship
+version: 0.1.0
+title: The Good Ship practice
+description: Shared working practice for AI-supported work.
+
+published_by:
+  name: The Good Ship
+
+license: CC-BY-4.0
+
+instructions:
+  - type: guardrail
+    title: Evidence boundaries
+    harness:
+      schema_version: "0.2"
+      id: guardrail.evidence
+      version: 0.2.0
+      criticality: required
+      authority:
+        mode: binding
+        propagation: shared
+        rationale: Public-facing work must distinguish evidence from inference.
+      rules:
+        - id: evidence
+          statement: Distinguish evidence from inference.
+    body: |
+      Make the source of important claims clear.
+
+  - type: voice
+    title: Plain language
+    harness:
+      schema_version: "0.2"
+      id: voice.plain
+      version: 0.2.0
+      criticality: recommended
+      authority:
+        mode: adaptable
+        propagation: shared
+    body: |
+      Prefer direct, concrete language.
+```
+
+Each item under `instructions` is a normal Rack module frontmatter object plus a plain-text `body`.
+
+This keeps the shared file close to Rack's canonical module semantics rather than inventing a second instruction language.
+
+## What the publisher controls
+
+The file publisher controls:
+
+- document ID;
+- document version;
+- title/description;
+- publisher attribution;
+- licence;
+- instruction content;
+- instruction criticality;
+- instruction authority;
+- binding rationale.
+
+A binding shared instruction must explain why it is binding.
+
+A `local-only` instruction cannot be published in a shared file. That is contradictory by definition and blocks the file.
+
+## What the receiver controls
+
+The shared file does **not** contain:
+
+- local source ID;
+- source precedence;
+- source relationship such as organisation/team/project;
+- trust/acceptance state;
+- local adaptations.
+
+Those belong to the receiving Rack.
+
+For example, the same published file could be attached by one user as:
+
+```text
+source id: good-ship-org
+relationship: organisation
+precedence: 10
+```
+
+and by another test project at a different precedence.
+
+This prevents a publisher from making itself more authoritative simply by editing its own transport file.
+
+## Materialisation
+
+The host reads the file and supplies receiver-owned source metadata.
+
+Conceptually:
+
+```ts
+materializeSharedPractice(fileContents, {
+  sourceId: "good-ship-org",
+  relationship: "organisation",
+  precedence: 10,
+  filePath: "/shared/good-ship.rack.yaml",
+})
+```
+
+returns:
+
+- parsed document metadata;
+- a `PracticeSource` of kind `shared-file`;
+- ordinary `RackModule[]`;
+- resolver-ready `PracticeCandidate[]`;
+- diagnostics;
+- a blocked/unblocked result.
+
+The modules receive deterministic synthetic source paths for internal provenance. The original file path remains on the source metadata.
+
+## Atomic safety
+
+Shared publication is atomic.
+
+If any instruction is invalid, the whole shared file is blocked. Rack must not apply the valid subset and silently ignore the rest.
+
+Iteration 17 blocks for at least:
+
+- unreadable YAML;
+- invalid envelope;
+- invalid module schema;
+- duplicate instruction IDs;
+- published `local-only` instructions;
+- binding instructions without a rationale;
+- invalid receiver-owned source metadata.
+
+This is deliberately stricter than importing a collection of unrelated local files because the shared file represents one published version of organisational practice.
+
+## Versioning
+
+The shared document has its own semantic `version`.
+
+This is distinct from:
+
+- the shared-file envelope `schema_version`;
+- each individual module's `harness.version`;
+- Rack application releases.
+
+The document version is retained in `PracticeSource.version` so later update review can compare the currently accepted source with an incoming publication.
+
+## No automatic updates yet
+
+Iteration 17 does not watch files or apply updates.
+
+Later desktop work will:
+
+1. remember a path the user explicitly attached;
+2. check that exact path when Rack opens;
+3. compare the file with the currently accepted version;
+4. show what changed;
+5. call out tightening changes separately;
+6. let the user accept or decline;
+7. remember a declined content version so it is not repeatedly offered.
+
+Updates must not silently rewrite local source.
+
+## Managed Rack
+
+Managed Practice can later publish/distribute the same logical document.
+
+That should be another materialisation transport, not a different authority model.
+
+The goal remains:
+
+```text
+shared file / Git / Managed Practice
+             ↓
+       PracticeSource
+             ↓
+          resolver
+             ↓
+      ordinary Rack project
+```
+
+## Privacy
+
+The shared file says what the publisher is sharing.
+
+It does not report back:
+
+- who adapted an adaptable instruction;
+- which optional practice a user kept;
+- which local-only instructions they have;
+- how often they opened the file;
+- whether they complied with a default.
+
+Rack can therefore support managed organisational practice without turning individual working practice into an activity dashboard.
