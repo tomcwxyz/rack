@@ -22,6 +22,8 @@ export type PracticeProjectResolutionOptions = {
 
 export type PracticeProfileChange = {
   profileId: string;
+  applicableBindingIds: string[];
+  applicableAdaptableDefaultIds: string[];
   addedBindingIds: string[];
   addedAdaptableDefaultIds: string[];
   overriddenExclusionIds: string[];
@@ -201,6 +203,8 @@ export const resolvePracticeProject = (
 
     profileChanges.push({
       profileId: profile.id,
+      applicableBindingIds: applicableIds,
+      applicableAdaptableDefaultIds: applicableAdaptableIds,
       addedBindingIds,
       addedAdaptableDefaultIds,
       overriddenExclusionIds,
