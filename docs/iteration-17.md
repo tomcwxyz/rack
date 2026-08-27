@@ -64,12 +64,25 @@ The receiver controls source identity, precedence and relationship.
 
 Those fields are intentionally absent from the shared file.
 
+### Incoming version comparison
+
+Compare the currently accepted and incoming materialised modules by ID.
+
+Ordinary additions, removals and content changes are reported separately from **tightening** changes. The first tightening classifier calls out:
+
+- a newly added binding instruction;
+- a new required instruction;
+- an adaptable instruction becoming binding;
+- increased instruction criticality;
+- a binding review date being removed;
+- a binding review date being pushed further out.
+
+This is local comparison metadata for the future update-review UI. It does not accept or apply an update automatically.
+
 ## Deferred
 
 - filesystem watching;
 - accepted-version state;
-- update diff/classification;
-- tightening review;
 - desktop attach/remove/update UI;
 - automatic injection of applicable binding instructions into Set-ups;
 - CLI export/publish command;
@@ -87,4 +100,5 @@ Those fields are intentionally absent from the shared file.
 7. local-only content cannot be published;
 8. binding shared content requires a rationale;
 9. resulting candidates can be handed directly to the Iteration 16 resolver;
-10. existing v0.1 local projects continue unchanged.
+10. ordinary incoming changes are distinguished from tightening changes;
+11. existing v0.1 local projects continue unchanged.

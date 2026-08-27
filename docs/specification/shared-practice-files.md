@@ -175,6 +175,21 @@ This is distinct from:
 
 The document version is retained in `PracticeSource.version` so later update review can compare the currently accepted source with an incoming publication.
 
+## Incoming version comparison
+
+Core can compare the currently accepted materialised modules with an incoming version before any update is applied.
+
+Every changed instruction is reported as added, removed or changed. A separate **tightening** flag is raised when the incoming publication:
+
+- adds a binding instruction;
+- adds a required instruction;
+- changes an adaptable instruction to binding;
+- increases criticality;
+- removes the review date from an existing binding instruction;
+- pushes a binding review date further into the future.
+
+The classifier is deliberately descriptive. It does not decide whether the user should accept the update.
+
 ## No automatic updates yet
 
 Iteration 17 does not watch files or apply updates.
@@ -183,11 +198,10 @@ Later desktop work will:
 
 1. remember a path the user explicitly attached;
 2. check that exact path when Rack opens;
-3. compare the file with the currently accepted version;
-4. show what changed;
-5. call out tightening changes separately;
-6. let the user accept or decline;
-7. remember a declined content version so it is not repeatedly offered.
+3. materialise the incoming file;
+4. use the core comparison to show what changed and what tightened;
+5. let the user accept or decline;
+6. remember a declined content version so it is not repeatedly offered.
 
 Updates must not silently rewrite local source.
 
