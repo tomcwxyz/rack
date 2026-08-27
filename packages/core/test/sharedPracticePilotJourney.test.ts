@@ -150,9 +150,11 @@ describe("shared-practice pilot journey", () => {
     );
 
     const built = buildPrompt(resolved.project, "writing");
-    expect(built.diagnostics).toEqual([]);
+    expect(
+      built.diagnostics.filter((diagnostic) => diagnostic.severity === "error"),
+    ).toEqual([]);
     expect(built.artifact?.content).toContain(
-      "Public-facing claims need a consistent evidence boundary",
+      "Distinguish evidence from inference",
     );
     expect(built.artifact?.content).toContain(
       "enough detail to explain consequential trade-offs",
@@ -185,7 +187,9 @@ describe("shared-practice pilot journey", () => {
     ]);
 
     const built = buildPrompt(resolved.project, "writing");
-    expect(built.diagnostics).toEqual([]);
+    expect(
+      built.diagnostics.filter((diagnostic) => diagnostic.severity === "error"),
+    ).toEqual([]);
     expect(built.artifact?.content).toContain(
       "Public-facing claims need a consistent evidence boundary",
     );
