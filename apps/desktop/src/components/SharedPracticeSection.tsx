@@ -15,6 +15,7 @@ import {
 } from "../sharedPractice.js";
 import { localCalendarDate } from "../date.js";
 import type { SharedPracticeLifecycleController } from "../useSharedPracticeLifecycle.js";
+import { SharedPracticePublisher } from "./SharedPracticePublisher.js";
 import "../shared-practice.css";
 
 type SharedPracticeSectionProps = {
@@ -175,6 +176,8 @@ export function SharedPracticeSection({
           </div>
         </div>
 
+        <SharedPracticePublisher project={project} onStatus={onStatus} />
+
         {lifecycle.loading ? (
           <div className="notice" role="status">
             Restoring shared-practice state…
@@ -291,6 +294,8 @@ export function SharedPracticeSection({
           </button>
         </div>
       </div>
+
+      <SharedPracticePublisher project={project} onStatus={onStatus} />
 
       <div className="shared-practice-source">
         <div>
