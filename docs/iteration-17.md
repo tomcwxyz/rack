@@ -79,12 +79,25 @@ Ordinary additions, removals and content changes are reported separately from **
 
 This is local comparison metadata for the future update-review UI. It does not accept or apply an update automatically.
 
+### Resolved project integration
+
+Combine the local Rack modules with external practice candidates before compilation.
+
+The local Rack is always treated as the nearest source for adaptable conflicts. Applicable binding instructions from shared-file/Git sources are added to the **resolved copy** of each Set-up even if the local profile never explicitly included them.
+
+If a local Set-up excludes an applicable binding shared instruction, the resolved copy removes that exclusion, includes the binding instruction and emits a warning. The user's YAML remains untouched.
+
+New adaptable shared instructions are **not** automatically injected in this iteration. Their activation/acceptance belongs in the later desktop shared-practice UX rather than being silently imposed.
+
+### File host boundary
+
+The Node host can read an explicitly attached shared-practice path, canonicalise it and materialise it through the same core parser. Desktop/Tauri attachment remains a later host integration.
+
 ## Deferred
 
 - filesystem watching;
 - accepted-version state;
 - desktop attach/remove/update UI;
-- automatic injection of applicable binding instructions into Set-ups;
 - CLI export/publish command;
 - Git transport;
 - Managed Practice transport.
@@ -101,4 +114,7 @@ This is local comparison metadata for the future update-review UI. It does not a
 8. binding shared content requires a rationale;
 9. resulting candidates can be handed directly to the Iteration 16 resolver;
 10. ordinary incoming changes are distinguished from tightening changes;
-11. existing v0.1 local projects continue unchanged.
+11. applicable shared bindings enter the resolved Set-up without changing local YAML;
+12. a local exclusion cannot suppress a binding shared instruction in the resolved build;
+13. new adaptable shared instructions are not silently auto-injected;
+14. existing v0.1 local projects continue unchanged.

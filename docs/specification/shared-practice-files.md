@@ -145,6 +145,22 @@ returns:
 
 The modules receive deterministic synthetic source paths for internal provenance. The original file path remains on the source metadata.
 
+The Node host also exposes a file reader for an explicitly attached path. It resolves the canonical filesystem path, verifies it is a regular file and then uses the same materialiser. Desktop/Tauri attachment will call into an equivalent host boundary later rather than teaching the compiler about filesystems.
+
+## Resolved Set-ups
+
+Shared-file materialisation produces candidates, not a second compiler path.
+
+Core combines those candidates with the local Rack through the Iteration 16 resolver. The local Rack is assigned the nearest precedence automatically, so adaptable conflicts still favour local practice.
+
+Binding shared instructions need stronger behaviour: when a winning binding instruction applies to a Set-up's domains, Rack adds its ID to the **resolved copy** of that Set-up before the existing compiler runs.
+
+If the local Set-up explicitly excludes that binding ID, the resolved copy removes the exclusion and emits a warning explaining what happened. The local source file remains unchanged.
+
+New adaptable shared instructions are not auto-injected in this iteration. They remain available in the resolved module set but require later activation/acceptance UX before entering a Set-up automatically.
+
+This fixes the important failure mode where an organisation publishes a new binding instruction with a new module ID but an existing user's local Set-up has never heard of that ID.
+
 ## Atomic safety
 
 Shared publication is atomic.

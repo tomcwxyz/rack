@@ -17,6 +17,11 @@ import {
   type ProjectSourceFile,
   type RackProject,
 } from "./index.js";
+import {
+  materializeSharedPractice,
+  type SharedPracticeMaterialization,
+  type SharedPracticeSourceOptions,
+} from "./sharedPractice.js";
 
 const collect = async (
   root: string,
@@ -66,6 +71,21 @@ export const openProject = async (
   projectPath: string,
 ): Promise<RackProject> =>
   parseProjectSnapshot(await readProjectSnapshot(projectPath));
+
+export const readSharedPracticeFile = async (
+  filePath: string,
+  options: Omit<SharedPracticeSourceOptions, "filePath">,
+): Promise<SharedPracticeMaterialization> => {
+  const absolute = await fs.realpath(filePath);
+  const metadata = await fs.stat(absolute);
+  if (!metadata.isFile()) {
+    throw new Error("Shared practice path must point to a regular file.");
+  }
+  return materializeSharedPractice(
+    await fs.readFile(absolute, "utf8"),
+    { ...options, filePath: absolute },
+  );
+};
 
 const assertProfileId = (profileId: string): void => {
   if (!/^[a-z][a-z0-9-]*$/.test(profileId)) {
