@@ -9,6 +9,7 @@ import {
   attachSharedPracticeContent,
   declineSharedPracticeUpdate,
   deriveSharedPracticeLifecycle,
+  reconsiderSharedPracticeUpdate,
   resolveAttachedSharedPractice,
 } from "./sharedPractice.js";
 
@@ -151,6 +152,20 @@ describe("shared practice lifecycle", () => {
     expect(lifecycle.incoming).toBeNull();
     expect(lifecycle.declinedCurrent).toBe(true);
     expect(lifecycle.accepted?.materialization.document?.version).toBe("0.1.0");
+  });
+
+  it("can explicitly reconsider an exact declined update", () => {
+    const state = acceptedStateFromFile(acceptedFile);
+    const incoming = {
+      path: acceptedFile.path,
+      content: shared.replace("version: 0.1.0", "version: 0.2.0"),
+    };
+    const declined = declineSharedPracticeUpdate(state, incoming);
+    const reconsidered = reconsiderSharedPracticeUpdate(declined);
+    const lifecycle = deriveSharedPracticeLifecycle(reconsidered, incoming);
+
+    expect(lifecycle.declinedCurrent).toBe(false);
+    expect(lifecycle.incoming?.materialization.document?.version).toBe("0.2.0");
   });
 
   it("offers a newer file after a previously declined file changes again", () => {
