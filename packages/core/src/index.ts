@@ -187,6 +187,7 @@ export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
 export * from "./practiceResolution.js";
 export * from "./profilePatching.js";
+export * from "./sharedPractice.js";
 export * from "./sourcePatching.js";
 export * from "./structuredPatching.js";
 export * from "./targetRegistry.js";
