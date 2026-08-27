@@ -203,3 +203,5 @@ export type RackModuleFrontmatter = z.infer<typeof moduleFrontmatterSchema>;
 export type RackModule = RackModuleFrontmatter & { path: string; body: string };
 export type DestinationId = z.infer<typeof destinationIdSchema>;
 export type AdapterCapabilityId = z.infer<typeof adapterCapabilityIdSchema>;
+
+export * from "./practice.js";
