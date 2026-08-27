@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "check": "turbo run check",
     "dev": "turbo run dev --parallel",
-    "dev:desktop": "pnpm --filter @rack/desktop dev",
+    "dev:desktop": "pnpm --filter @rack/desktop tauri dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "pnpm assets",
