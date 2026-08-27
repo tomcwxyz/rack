@@ -95,6 +95,61 @@ A binding shared instruction must explain why it is binding.
 
 A `local-only` instruction cannot be published in a shared file. That is contradictory by definition and blocks the file.
 
+## Publisher workflow
+
+Iteration 25 adds a CLI publisher workflow so creating a shared-practice file does not require hand-authoring the envelope.
+
+Publishing remains explicit.
+
+RACK does **not** publish a whole Set-up by default because Set-ups can contain local context or practice which was never intended for organisational distribution.
+
+A publisher selects instruction IDs one by one:
+
+```bash
+rack practice export . \
+  --id good-ship \
+  --version 1.0.0 \
+  --title "The Good Ship practice" \
+  --publisher "The Good Ship" \
+  --license CC-BY-4.0 \
+  --module guardrail.evidence \
+  --module voice.plain \
+  --output good-ship.rack.yaml
+```
+
+Without `--output`, the generated YAML is written to stdout so it can be reviewed before writing a file.
+
+When `--output` is supplied:
+
+- RACK will not replace an existing file unless `--force` is explicit;
+- even with `--force`, RACK refuses to replace a symlink or non-file;
+- replacement uses a temporary file and backup/restore sequence.
+
+Core constructs the publication, validates the shared-practice envelope and then round-trips the generated YAML through the normal receiver materialiser.
+
+If a receiver would reject the generated publication, the publisher blocks it too.
+
+Publishing blocks when, among other things:
+
+- no instructions were selected;
+- the same instruction was selected more than once;
+- a selected instruction does not exist;
+- a selected instruction ID is ambiguous;
+- a selected instruction is `local-only`;
+- publication metadata is invalid;
+- normal shared-practice materialisation rejects the resulting document.
+
+The publisher output is a normal version 0.1 shared-practice file. It does not introduce a separate publisher format.
+
+A publication can be checked independently:
+
+```bash
+rack practice inspect good-ship.rack.yaml
+rack practice inspect good-ship.rack.yaml --json
+```
+
+Inspection reports document metadata, instruction counts, binding/adaptable practice, experiments, review dates and diagnostics.
+
 ## What the receiver controls
 
 The shared file does **not** contain:
