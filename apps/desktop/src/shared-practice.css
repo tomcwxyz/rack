@@ -246,3 +246,16 @@
 .practice-review--due {
   font-weight: 700;
 }
+
+
+.practice-experiment-question,
+.shared-practice-experiment {
+  margin: 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.shared-practice-experiment {
+  grid-column: 1 / -1;
+}
