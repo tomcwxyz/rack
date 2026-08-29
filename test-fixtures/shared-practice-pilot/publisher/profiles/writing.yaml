@@ -1,0 +1,18 @@
+schema_version: "0.1"
+id: writing
+title: Writing
+description: Local publisher Set-up used to prepare shared working practice.
+domains: [writing]
+include:
+  - guardrail.evidence
+  - voice.plain
+  - method.decision-notes
+  - context.internal
+exclude: []
+overrides:
+  emit_priority: {}
+  target_waivers: {}
+budgets:
+  prompt:
+    recommended_tokens: 10000
+    maximum_tokens: 16000

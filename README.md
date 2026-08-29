@@ -16,30 +16,20 @@ A user can:
 - inspect exact Starter source, licence and attribution before copying anything into a Rack;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
-- maintain Set-up domains, local/shared instruction selection and destination token budgets through a guided form;
+- maintain Set-up domains, instruction selection and destination token budgets through a guided form;
 - review the exact source diff before a guided change is saved;
 - fall back to advanced source editing, with external-change protection;
-- attach an inspectable shared-practice file and keep an accepted local snapshot;
-- distinguish binding shared practice from adaptable defaults which can be changed or left out locally;
-- review incoming shared-practice updates, including tightening changes, before they apply;
-- mark practice for later review and describe adaptable instructions as experiments with explicit learning questions;
-- publish selected local practice as a validated shared-practice file from either the desktop or CLI;
 - compile a Set-up deterministically;
 - preview, copy and export generated instructions;
 - install managed local builds with provenance manifests, retained backups and drift detection;
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
-- run indicative Quick checks and repeated independently judged Reliable checks through the optional managed service;
-- perform build, check, Starter-library and shared-practice publishing operations through the CLI.
+- perform the same build, check and Starter-library operations through the CLI.
 
 The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
 
 ### Current development focus
 
-Iterations 1–8 established local source, compilation, portable destinations, guided creation/maintenance and the Starter library. Iterations 9–15 established the optional managed evaluation boundary: privacy-safe storage, model registry/preflight, explicit paid confirmation, rubric-backed Quick checks and Reliable repeated candidate/baseline evaluation with an independent judge and regression gate.
-
-Iterations 16–27 extend Rack from individual working practice into inspectable organisational practice without introducing a central control plane. Rack now has separate criticality and authority semantics, deterministic source resolution, shared-practice files, accepted-snapshot update review, binding and adaptable defaults, review dates, experiments, plain-language/accessibility guardrails, safe publishing through CLI and desktop, and local opt-out/adaptation of shared defaults.
-
-The current focus is to exercise that model with real pilot practice before adding more transport or administration. Local use remains account-free; managed evaluation remains optional.
+Iterations 1–8 established the local source format, compiler, managed builds, portable destinations, all three creation routes, loss-aware maintenance and the bundled Starter library. Iteration 9 established the optional managed-service boundary and privacy-safe synchronous checks. Iteration 10 added durable Reliable checks through Vercel Workflows. Iteration 11 added the provider-neutral model registry and metadata-only paid-evaluation preflight. Iteration 12 added the first explicit confirmed paid Quick execution boundary with exact model/cost confirmation, atomic budget reservation, provider-call idempotency and conservative accounting. Iteration 13 added one rubric-backed Quick judgement: a structured indicative pass/fail result that keeps provider/infrastructure failure distinct from behavioural failure. Iteration 14 brings that Quick path into the desktop through the optional Checks area: sign-in, one-case/rubric setup, metadata-only cost preflight, explicit paid confirmation and readable Pass/Fail/Incomplete results. Local Rack use remains account-free and does not depend on the service.
 
 ## Product shape
 
@@ -55,15 +45,9 @@ The bundled Starter library is another way into that same source model. Starter 
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
-Shared practice is a separate composition layer rather than copied organisational source. A Rack can accept a plain `.rack.yaml` publication distributed through an existing shared location. Binding instructions apply to relevant Set-ups; adaptable instructions arrive as defaults and can be adapted or left out locally. Incoming file changes are reviewed before they replace the accepted snapshot. The publisher does not receive opt-out, adaptation or compliance telemetry.
-
-Publishing follows the reverse boundary: Rack only publishes explicitly selected **local** instructions. It does not silently republish received practice or a complete Set-up.
-
 The optional managed service receives only explicit managed requests. It does not store Rack projects. Raw managed request/output/judge content has a maximum 24-hour retention window; durable evaluation, provider-call and reliable-workflow records contain identifiers/status/accounting metadata and a nullable behavioural verdict rather than prompt/output text. Paid model evaluation starts with a metadata-only preflight and requires a separate explicit confirmation whose resolved model and maximum retry exposure still match current deployment configuration and workspace limits.
 
-Quick model-backed evaluation is explicitly indicative: one repetition, no baseline or regression gate, and the selected model judges its own candidate output when a rubric is configured.
-
-Reliable evaluation is the stronger behavioural check: repeated candidate and baseline runs, an independent judge model/context, pass-rate comparison and a regression gate. Both paths remain optional managed actions; local authoring, composition and builds do not depend on the service.
+Quick model-backed evaluation is explicitly indicative: one repetition, no baseline or regression gate, and the selected model judges its own candidate output when a rubric is configured. Reliable independent judging, repeated candidate/baseline runs and regression gating remain the next evaluation stage.
 
 Supported destinations are:
 
@@ -82,15 +66,14 @@ This is a pnpm/Turborepo monorepo.
 - `apps/desktop` — Tauri and React desktop application, guided creation, maintenance, Starter library and optional managed Checks UI;
 - `apps/service` — optional Vercel managed-service functions, evaluation preflight/confirmation, reliable Workflows and retention boundary;
 - `packages/schemas` — source and generated-manifest schemas;
-- `packages/core` — project parsing, source patching, compilation, practice-source resolution, shared-practice publication/update comparison, review signals, adapters, build state and Starter import planning;
+- `packages/core` — project parsing, source patching, compilation, adapters, build state and Starter import planning;
 - `packages/starter` — separately licensed bundled Starter catalogue, source, templates and deterministic metadata;
 - `packages/registry` — provider-neutral stable model aliases, deployment mappings, capabilities and pricing metadata;
 - `packages/eval` — deterministic managed-evaluation planning and cost preflight;
 - `packages/model-runner` — provider-neutral model execution over direct Vercel AI SDK provider/OpenAI-compatible adapters;
 - `packages/managed` — managed-service contracts, quick/reliable checks, evaluation preflight/confirmation and desktop-consumable client;
 - `packages/database` — Drizzle schema/migrations and Neon persistence with authenticated, workflow and retention RLS boundaries;
-- `packages/cli` — validation, builds, checks, Starter-library workflows and shared-practice inspect/export;
-- `packages/copy-rules` — plain-language, British English and interface-copy regression rules;
+- `packages/cli` — `rack validate`, `rack build`, `rack check` and `rack library`;
 - `test-fixtures` — accepted source and golden destination packages;
 - `docs` — specification, ADRs and iteration notes.
 
@@ -131,19 +114,6 @@ pnpm --filter @rack/cli dev -- library show @rack-starter/method.source-assessme
 pnpm --filter @rack/cli dev -- library add --template evidence-review \
   --path test-fixtures/research-basic \
   --profile research
-```
-
-Inspect or publish shared practice:
-
-```bash
-pnpm --filter @rack/cli dev -- practice inspect organisation.rack.yaml
-
-pnpm --filter @rack/cli dev -- practice export . \
-  --id example-org \
-  --version 1.0.0 \
-  --title "Example organisation practice" \
-  --publisher "Practice team" \
-  --module guardrail.evidence
 ```
 
 The managed service is optional. Its deployment/environment and privacy boundary are documented in [`apps/service/README.md`](apps/service/README.md) and the iteration notes under [`docs/`](docs/).
