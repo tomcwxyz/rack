@@ -129,14 +129,15 @@ Do not publish a draft whose signing or notarisation job failed.
 
 ## Version bumping
 
-For the next pilot build, update all four locations together:
+For the next pilot build, use the version helper:
 
-- `apps/desktop/package.json`;
-- `apps/desktop/src-tauri/tauri.conf.json`;
-- `apps/desktop/src-tauri/Cargo.toml`;
-- the local `rack` package entry in `apps/desktop/src-tauri/Cargo.lock`.
+```bash
+pnpm desktop:version 0.1.0-pilot.2
+```
 
-Use SemVer pre-release versions during the private pilot, for example:
+It updates the desktop package, Tauri configuration, Rust package and Cargo lock together.
+
+Pilot versions must use the `x.y.z-pilot.N` form, for example:
 
 ```text
 0.1.0-pilot.2
