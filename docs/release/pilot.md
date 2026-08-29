@@ -148,6 +148,6 @@ The release-version test must pass before merging.
 
 ## Not included yet
 
-This workflow does not enable the Tauri updater.
+This workflow does not enable the Tauri updater. `uploadUpdaterJson` and `uploadUpdaterSignatures` are explicitly disabled in the release action.
 
 Pilot participants receive explicit installer releases. Automatic updater signing, update manifests and in-app update UX should be added as a separate change after the direct-release path is proven.
