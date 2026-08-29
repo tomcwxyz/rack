@@ -80,6 +80,10 @@ describe("pilot release workflow", () => {
         tagName: "rack-v__VERSION__",
         releaseDraft: true,
         prerelease: true,
+        uploadUpdaterJson: false,
+        uploadUpdaterSignatures: false,
+        releaseAssetNamePattern:
+          "[name]_[version]_[platform]_[arch][setup][ext]",
       }),
     );
   });
