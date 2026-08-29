@@ -120,7 +120,7 @@ Store:
 4. Choose **Run workflow** from `main`.
 5. Enter the exact current desktop version, for example `0.1.0-pilot.1`.
 6. Enter `RELEASE` in the confirmation field.
-7. Run the workflow.
+7. Run the workflow. The preflight re-runs `pnpm check` on the exact release commit before native signing/build jobs start.
 8. Review all three platform jobs.
 9. Inspect the resulting draft GitHub release and its assets.
 10. Test the installers on clean Windows and macOS machines before publishing the draft to pilot participants.
