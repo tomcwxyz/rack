@@ -1,0 +1,252 @@
+name: Pilot desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Desktop version to release (must match tauri.conf.json)"
+        required: true
+        type: string
+      confirm:
+        description: "Type RELEASE to confirm a signed draft pilot release"
+        required: true
+        type: string
+
+concurrency:
+  group: pilot-desktop-release
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Release preflight
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_VERSION: ${{ inputs.version }}
+      RELEASE_CONFIRMATION: ${{ inputs.confirm }}
+      WINDOWS_CERTIFICATE_SET: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+      WINDOWS_CERTIFICATE_PASSWORD_SET: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+      WINDOWS_TIMESTAMP_URL_SET: ${{ vars.WINDOWS_TIMESTAMP_URL != '' }}
+      APPLE_CERTIFICATE_SET: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      APPLE_CERTIFICATE_PASSWORD_SET: ${{ secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+      APPLE_API_KEY_SET: ${{ secrets.APPLE_API_KEY != '' }}
+      APPLE_API_ISSUER_SET: ${{ secrets.APPLE_API_ISSUER != '' }}
+      APPLE_API_KEY_BASE64_SET: ${{ secrets.APPLE_API_KEY_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Require main and explicit confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Pilot releases must be dispatched from main."
+            exit 1
+          fi
+
+          if [[ "$RELEASE_CONFIRMATION" != "RELEASE" ]]; then
+            echo "::error::Type RELEASE in the confirmation input."
+            exit 1
+          fi
+
+          actual_version="$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")"
+          if [[ "$EXPECTED_VERSION" != "$actual_version" ]]; then
+            echo "::error::Requested version $EXPECTED_VERSION does not match desktop version $actual_version."
+            exit 1
+          fi
+
+      - name: Require signing and notarisation configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          missing=()
+          [[ "$WINDOWS_CERTIFICATE_SET" != "true" ]] && missing+=("WINDOWS_CERTIFICATE secret")
+          [[ "$WINDOWS_CERTIFICATE_PASSWORD_SET" != "true" ]] && missing+=("WINDOWS_CERTIFICATE_PASSWORD secret")
+          [[ "$WINDOWS_TIMESTAMP_URL_SET" != "true" ]] && missing+=("WINDOWS_TIMESTAMP_URL repository variable")
+          [[ "$APPLE_CERTIFICATE_SET" != "true" ]] && missing+=("APPLE_CERTIFICATE secret")
+          [[ "$APPLE_CERTIFICATE_PASSWORD_SET" != "true" ]] && missing+=("APPLE_CERTIFICATE_PASSWORD secret")
+          [[ "$APPLE_API_KEY_SET" != "true" ]] && missing+=("APPLE_API_KEY secret")
+          [[ "$APPLE_API_ISSUER_SET" != "true" ]] && missing+=("APPLE_API_ISSUER secret")
+          [[ "$APPLE_API_KEY_BASE64_SET" != "true" ]] && missing+=("APPLE_API_KEY_BASE64 secret")
+
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Pilot release configuration is incomplete: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            exit 1
+          fi
+
+          echo "Signing and notarisation configuration is present."
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Re-run repository checks for the release commit
+        run: pnpm check
+
+  publish:
+    name: ${{ matrix.label }}
+    needs: preflight
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            label: Windows x64
+            args: "--bundles nsis,msi --config src-tauri/release.windows.json"
+            macos: false
+          - platform: macos-latest
+            label: macOS Apple Silicon
+            args: "--target aarch64-apple-darwin --bundles app,dmg"
+            macos: true
+          - platform: macos-latest
+            label: macOS Intel
+            args: "--target x86_64-apple-darwin --bundles app,dmg"
+            macos: true
+
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.macos && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "apps/desktop/src-tauri -> target"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release version
+        run: pnpm --filter @rack/desktop exec vitest run src/releaseVersion.test.ts
+
+      - name: Import Windows signing certificate
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $certificatePath = Join-Path $env:RUNNER_TEMP "rack-code-signing.pfx"
+          [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          $certificate = Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+
+          if (-not $certificate.Thumbprint) {
+            throw "The imported Windows certificate did not expose a thumbprint."
+          }
+
+          $config = @{
+            bundle = @{
+              windows = @{
+                certificateThumbprint = $certificate.Thumbprint
+                digestAlgorithm = "sha256"
+                timestampUrl = $env:WINDOWS_TIMESTAMP_URL
+              }
+            }
+          }
+
+          $config | ConvertTo-Json -Depth 6 | Set-Content -Path "apps/desktop/src-tauri/release.windows.json" -Encoding utf8
+          Remove-Item $certificatePath -Force
+
+      - name: Import macOS Developer ID certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          certificate_path="$RUNNER_TEMP/rack-developer-id.p12"
+          keychain_path="$RUNNER_TEMP/rack-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$certificate_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security import "$certificate_path" -k "$keychain_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
+          security list-keychain -d user -s "$keychain_path"
+
+          signing_identity="$(
+            security find-identity -v -p codesigning "$keychain_path" |
+              sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' |
+              head -n 1
+          )"
+
+          if [[ -z "$signing_identity" ]]; then
+            echo "::error::No Developer ID Application identity was found in APPLE_CERTIFICATE."
+            exit 1
+          fi
+
+          echo "APPLE_SIGNING_IDENTITY=$signing_identity" >> "$GITHUB_ENV"
+          rm -f "$certificate_path"
+
+      - name: Prepare macOS notarisation key
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY}.p8"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$api_key_path"
+          chmod 600 "$api_key_path"
+          echo "APPLE_API_KEY_PATH=$api_key_path" >> "$GITHUB_ENV"
+
+      - name: Build signed pilot installers and draft release
+        uses: tauri-apps/tauri-action@action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
+          CI: true
+        with:
+          projectPath: apps/desktop
+          tagName: rack-v__VERSION__
+          releaseName: "Rack __VERSION__ · pilot"
+          releaseBody: |
+            Private pilot build of Rack.
+
+            This release is created as a draft and pre-release. Review the generated installers and signing/notarisation results before publishing it to pilot participants.
+          releaseDraft: true
+          prerelease: true
+          releaseAssetNamePattern: "[name]_[version]_[platform]_[arch][setup][ext]"
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          args: ${{ matrix.args }}
