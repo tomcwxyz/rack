@@ -42,14 +42,14 @@ describe("pilot release workflow", () => {
     expect(preflight).toBeDefined();
     expect(preflight?.env).toEqual(
       expect.objectContaining({
-        WINDOWS_CERTIFICATE: expect.any(String),
-        WINDOWS_CERTIFICATE_PASSWORD: expect.any(String),
-        WINDOWS_TIMESTAMP_URL: expect.any(String),
-        APPLE_CERTIFICATE: expect.any(String),
-        APPLE_CERTIFICATE_PASSWORD: expect.any(String),
-        APPLE_API_KEY: expect.any(String),
-        APPLE_API_ISSUER: expect.any(String),
-        APPLE_API_KEY_BASE64: expect.any(String),
+        WINDOWS_CERTIFICATE_SET: expect.any(String),
+        WINDOWS_CERTIFICATE_PASSWORD_SET: expect.any(String),
+        WINDOWS_TIMESTAMP_URL_SET: expect.any(String),
+        APPLE_CERTIFICATE_SET: expect.any(String),
+        APPLE_CERTIFICATE_PASSWORD_SET: expect.any(String),
+        APPLE_API_KEY_SET: expect.any(String),
+        APPLE_API_ISSUER_SET: expect.any(String),
+        APPLE_API_KEY_BASE64_SET: expect.any(String),
       }),
     );
   });
