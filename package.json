@@ -5,21 +5,19 @@
   "description": "Build your AI working practices once, then use and test them across different AI tools.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.15.0",
-  "engines": {
-    "node": ">=22.12.0"
-  },
+  "engines": { "node": ">=22.12.0" },
   "scripts": {
     "assets": "node scripts/generate-assets.cjs",
     "build": "turbo run build",
     "check": "turbo run check",
     "dev": "turbo run dev --parallel",
     "dev:desktop": "pnpm --filter @rack/desktop tauri dev",
+    "desktop:version": "node scripts/set-desktop-version.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "pnpm assets",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
-    "desktop:version": "node scripts/set-desktop-version.mjs"
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
