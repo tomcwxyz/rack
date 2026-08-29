@@ -94,6 +94,11 @@ describe("pilot release workflow", () => {
       .filter(Boolean);
 
     expect(names).toContain("Import Windows signing certificate");
+    const windowsStep = (workflow.jobs?.publish?.steps ?? []).find(
+      (step) => step.name === "Import Windows signing certificate",
+    ) as (Step & { run?: string }) | undefined;
+    expect(windowsStep?.run).toContain("wixVersion");
+    expect(windowsStep?.run).toContain("version = $wixVersion");
     expect(names).toContain("Import macOS Developer ID certificate");
     expect(names).toContain("Prepare macOS notarisation key");
   });
