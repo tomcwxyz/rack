@@ -48,7 +48,8 @@ The temporary override sets:
 
 - the imported certificate thumbprint;
 - SHA-256 signing;
-- the configured timestamp URL.
+- the configured timestamp URL;
+- a WiX-compatible numeric installer version derived from the pilot version (for example `0.1.0-pilot.1` → `0.1.0.1`).
 
 The workflow refuses to build a pilot release if the certificate or timestamp configuration is absent.
 
