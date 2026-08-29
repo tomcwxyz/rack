@@ -246,4 +246,7 @@ jobs:
             This release is created as a draft and pre-release. Review the generated installers and signing/notarisation results before publishing it to pilot participants.
           releaseDraft: true
           prerelease: true
+          releaseAssetNamePattern: "[name]_[version]_[platform]_[arch][setup][ext]"
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
           args: ${{ matrix.args }}
