@@ -23,14 +23,14 @@ jobs:
     env:
       EXPECTED_VERSION: ${{ inputs.version }}
       RELEASE_CONFIRMATION: ${{ inputs.confirm }}
-      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-      WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-      APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+      WINDOWS_CERTIFICATE_SET: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+      WINDOWS_CERTIFICATE_PASSWORD_SET: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+      WINDOWS_TIMESTAMP_URL_SET: ${{ vars.WINDOWS_TIMESTAMP_URL != '' }}
+      APPLE_CERTIFICATE_SET: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      APPLE_CERTIFICATE_PASSWORD_SET: ${{ secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+      APPLE_API_KEY_SET: ${{ secrets.APPLE_API_KEY != '' }}
+      APPLE_API_ISSUER_SET: ${{ secrets.APPLE_API_ISSUER != '' }}
+      APPLE_API_KEY_BASE64_SET: ${{ secrets.APPLE_API_KEY_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -61,14 +61,14 @@ jobs:
           set -euo pipefail
 
           missing=()
-          [[ -z "$WINDOWS_CERTIFICATE" ]] && missing+=("WINDOWS_CERTIFICATE secret")
-          [[ -z "$WINDOWS_CERTIFICATE_PASSWORD" ]] && missing+=("WINDOWS_CERTIFICATE_PASSWORD secret")
-          [[ -z "$WINDOWS_TIMESTAMP_URL" ]] && missing+=("WINDOWS_TIMESTAMP_URL repository variable")
-          [[ -z "$APPLE_CERTIFICATE" ]] && missing+=("APPLE_CERTIFICATE secret")
-          [[ -z "$APPLE_CERTIFICATE_PASSWORD" ]] && missing+=("APPLE_CERTIFICATE_PASSWORD secret")
-          [[ -z "$APPLE_API_KEY" ]] && missing+=("APPLE_API_KEY secret")
-          [[ -z "$APPLE_API_ISSUER" ]] && missing+=("APPLE_API_ISSUER secret")
-          [[ -z "$APPLE_API_KEY_BASE64" ]] && missing+=("APPLE_API_KEY_BASE64 secret")
+          [[ "$WINDOWS_CERTIFICATE_SET" != "true" ]] && missing+=("WINDOWS_CERTIFICATE secret")
+          [[ "$WINDOWS_CERTIFICATE_PASSWORD_SET" != "true" ]] && missing+=("WINDOWS_CERTIFICATE_PASSWORD secret")
+          [[ "$WINDOWS_TIMESTAMP_URL_SET" != "true" ]] && missing+=("WINDOWS_TIMESTAMP_URL repository variable")
+          [[ "$APPLE_CERTIFICATE_SET" != "true" ]] && missing+=("APPLE_CERTIFICATE secret")
+          [[ "$APPLE_CERTIFICATE_PASSWORD_SET" != "true" ]] && missing+=("APPLE_CERTIFICATE_PASSWORD secret")
+          [[ "$APPLE_API_KEY_SET" != "true" ]] && missing+=("APPLE_API_KEY secret")
+          [[ "$APPLE_API_ISSUER_SET" != "true" ]] && missing+=("APPLE_API_ISSUER secret")
+          [[ "$APPLE_API_KEY_BASE64_SET" != "true" ]] && missing+=("APPLE_API_KEY_BASE64 secret")
 
           if (( ${#missing[@]} > 0 )); then
             printf '::error::Pilot release configuration is incomplete: %s\n' "$(IFS=', '; echo "${missing[*]}")"
