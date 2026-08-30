@@ -7,6 +7,7 @@ import {
   type ProjectSnapshot,
   type RackProject,
 } from "@rack/core";
+import { MaterialImport } from "./MaterialImport.js";
 import { SourceDiffReview } from "./SourceDiffReview.js";
 
 type ContextModule = Extract<
@@ -198,6 +199,20 @@ export function GuidedContextEditor({
                   placeholder="A short explanation of what this instruction contains."
                 />
               </label>
+
+              <div className="field field--wide material-import-slot">
+                <span>Already have this context in a document?</span>
+                <small>
+                  Import Word, PowerPoint, spreadsheet, OpenDocument, RTF, EPUB,
+                  CSV or a text-based PDF. Rack converts it locally and lets you
+                  review the Markdown first.
+                </small>
+                <MaterialImport
+                  buttonLabel="Import existing material"
+                  hasExistingContent={draft.body.trim().length > 0}
+                  onUse={(material) => update("body", material.markdown)}
+                />
+              </div>
 
               <label className="field field--wide">
                 <span>Context the AI should understand</span>
