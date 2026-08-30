@@ -14,6 +14,7 @@ import {
   type CreationStep,
   type PracticeChoice,
 } from "./PracticeProposition.js";
+import { MaterialImport } from "./MaterialImport.js";
 import "../proposition-creation.css";
 
 type CodingRouteProps = {
@@ -181,6 +182,19 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
                 required
               />
             </label>
+
+            <div className="field field--wide material-import-slot">
+              <span>Start from existing material</span>
+              <small>
+                Import a technical brief, architecture note, specification or
+                other local document and use its reviewed Markdown as project context.
+              </small>
+              <MaterialImport
+                buttonLabel="Import into project context"
+                hasExistingContent={draft.projectContext.trim().length > 0}
+                onUse={(material) => update("projectContext", material.markdown)}
+              />
+            </div>
 
             <label className="field field--wide">
               <span>What stack and constraints should it respect?</span>
