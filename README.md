@@ -11,6 +11,7 @@ Rack is in active pre-release development. The repository contains a working loc
 A user can:
 
 - choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
+- import existing Word, PowerPoint, spreadsheet, OpenDocument, RTF, EPUB, CSV and text-based PDF material locally as editable Markdown during creation or context maintenance;
 - review every proposed instruction before Rack writes local files;
 - browse a bundled Starter library of reusable instructions and six starting templates;
 - inspect exact Starter source, licence and attribution before copying anything into a Rack;
