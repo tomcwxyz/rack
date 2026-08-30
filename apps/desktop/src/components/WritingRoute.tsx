@@ -19,6 +19,7 @@ import {
   type CreationStep,
   type PracticeChoice,
 } from "./PracticeProposition.js";
+import { MaterialImport } from "./MaterialImport.js";
 import "../proposition-creation.css";
 
 type WritingRouteProps = {
@@ -193,6 +194,21 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
                 required
               />
             </label>
+
+            <div className="field field--wide material-import-slot">
+              <span>Start from existing material</span>
+              <small>
+                Have a strategy, brief, policy or other document already? Convert
+                it locally and use the reviewed Markdown as work context.
+              </small>
+              <MaterialImport
+                buttonLabel="Import into work context"
+                hasExistingContent={draft.organisationContext.trim().length > 0}
+                onUse={(material) =>
+                  update("organisationContext", material.markdown)
+                }
+              />
+            </div>
 
             <label className="field field--wide">
               <span>Who is the writing normally for?</span>
