@@ -14,6 +14,7 @@ import {
   type CreationStep,
   type PracticeChoice,
 } from "./PracticeProposition.js";
+import { MaterialImport } from "./MaterialImport.js";
 import "../proposition-creation.css";
 
 type ResearchRouteProps = {
@@ -186,6 +187,21 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
                 required
               />
             </label>
+
+            <div className="field field--wide material-import-slot">
+              <span>Start from existing material</span>
+              <small>
+                Import a brief, strategy, report or other source locally and use
+                the reviewed Markdown as decision and organisation context.
+              </small>
+              <MaterialImport
+                buttonLabel="Import into decision context"
+                hasExistingContent={draft.organisationContext.trim().length > 0}
+                onUse={(material) =>
+                  update("organisationContext", material.markdown)
+                }
+              />
+            </div>
 
             <label className="field field--wide">
               <span>What question, decision or uncertainty should it investigate?</span>

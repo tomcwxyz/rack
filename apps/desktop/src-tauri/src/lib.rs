@@ -1,3 +1,4 @@
+mod document_import;
 mod generated;
 mod starter;
 
@@ -593,6 +594,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
+            document_import::import_document,
             read_shared_practice_file,
             read_shared_practice_state,
             write_shared_practice_state,
