@@ -91,6 +91,15 @@ export function MaterialImport({
     setError(null);
   };
 
+  const useMaterial = () => {
+    if (!material || !reviewMarkdown.trim()) return;
+    onUse({
+      ...material,
+      markdown: reviewMarkdown,
+    });
+    cancel();
+  };
+
   return (
     <div className="material-import">
       {!material ? (
@@ -145,12 +154,7 @@ export function MaterialImport({
               className="primary-action"
               type="button"
               disabled={!reviewMarkdown.trim()}
-              onClick={() =>
-                onUse({
-                  ...material,
-                  markdown: reviewMarkdown,
-                })
-              }
+              onClick={useMaterial}
             >
               Use this material
             </button>
