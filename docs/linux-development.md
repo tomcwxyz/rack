@@ -1,8 +1,30 @@
-# Linux desktop development
+# Linux desktop development and support
 
-Linux desktop support is experimental.
+## Status
 
-Rack has been tested successfully using the Debian Linux development environment on ChromeOS (Crostini), including launching the native Tauri application, creating a Rack project and saving it locally.
+Linux desktop support is **currently experimental**, but it is now a Phase 3 priority and a **supported-pilot target** rather than a later nice-to-have.
+
+Rack has already been tested successfully using the Debian Linux development environment on ChromeOS (Crostini), including launching the native Tauri application, creating a Rack project and saving it locally.
+
+The Phase 3 goal is to make Linux a normal pilot platform alongside Windows and macOS. Until the acceptance criteria below are met, the application should continue to describe Linux support as experimental.
+
+## Phase 3 support target
+
+Iteration 32 should establish the first supported Linux pilot baseline.
+
+Required before changing the support label:
+
+- an automated Linux desktop build on the release path;
+- a reproducible installable x86_64 package suitable for common Debian/Ubuntu systems;
+- a deliberate decision on the first direct-distribution formats, with `.deb` and AppImage as the baseline candidates;
+- native smoke coverage for launch, create/open, edit/save, Starter use, build/export/install and restart persistence;
+- TOPO local discovery, permission and context exchange tested on Linux;
+- release checksums/provenance and installation documentation;
+- no Linux-only weakening of Rack's local file, privacy or permission boundaries.
+
+FIELD STATION's Debian/Flatpak packaging experiments are useful implementation evidence and should be reviewed before building a second solution from scratch. They are reference material, not a reason to import FIELD STATION's product or schema changes.
+
+Arm64 and Flatpak are desirable follow-ons. They should be pulled into the supported baseline when CI/release reliability is good enough rather than being allowed to block the first useful Linux pilot package.
 
 ## Requirements
 
@@ -62,6 +84,8 @@ For Linux changes, check at least:
 - Starter library opens;
 - destination builds can be generated;
 - generated files can be exported or installed;
-- local project state survives restart.
+- local project state survives restart;
+- TOPO discovery distinguishes waiting, permission-needed and connected states;
+- reviewed TOPO context can be used without becoming canonical Rack source.
 
-ChromeOS/Crostini is useful for Linux functional testing but should not be treated as a native Linux performance benchmark.
+ChromeOS/Crostini remains useful for functional testing but should not be treated as the supported Linux performance or packaging benchmark.

@@ -38,15 +38,15 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–8 established local source, compilation, portable destinations, guided creation/maintenance and the Starter library. Iterations 9–15 established the optional managed evaluation boundary: privacy-safe storage, model registry/preflight, explicit paid confirmation, rubric-backed Quick checks and Reliable repeated candidate/baseline evaluation with an independent judge and regression gate.
+Iterations 1–15 established portable local working practice and the optional managed evaluation boundary. Iterations 16–31 extended Rack into shared organisational practice, pilot-ready distribution and explicit verification planning, including the first bounded semantic verification gate.
 
-Iterations 16–29 extend Rack from individual working practice into inspectable organisational practice and a supported private-pilot distribution path without introducing a central control plane. Rack now has separate criticality and authority semantics, deterministic source resolution, shared-practice files, accepted-snapshot update review, binding and adaptable defaults, review dates, experiments, plain-language/accessibility guardrails, safe publishing through CLI and desktop, local opt-out/adaptation of shared defaults, and signed pilot release tooling.
+The latest work has also proved a local TOPO → Rack context path. Rack can discover a running TOPO desktop, request purpose-bound context with explicit local permission, let the person review what will be used, and keep that context separate from canonical Rack practice.
 
-Iteration 30 adds the first verification-planning layer. Active practice can distinguish AI guidance from automatic checks, bounded AI judgement and human review through an inspectable, target-neutral plan.
+Rack is now in **Phase 3 — put practice into context**. The priority is to harden the TOPO/Rack pairing, improve the ordinary UX around context and practice, deliver context appropriately into AI hosts and agents, and complete verification from deterministic checks through to host-level gates.
 
-Iteration 31 adds the first executable semantic gate. A user can select one configured judgement question, supply only the evidence it requires, review cost metadata, explicitly confirm the paid call and receive pass, fail or uncertain from a fresh bounded model context. Malformed or failed execution remains incomplete rather than being treated as a pass.
+Linux has been promoted in this phase from a later experimental platform to a **supported-pilot target**. It remains experimental in the current release until the Phase 3 packaging, smoke-test and paired-TOPO acceptance criteria are met.
 
-The current focus is to exercise the organisational-practice model with real pilot practice while completing deterministic verification and host integration. Local use remains account-free; managed evaluation and managed semantic verification remain optional.
+See [`docs/roadmap.md`](docs/roadmap.md) for the active roadmap and [`docs/ux-direction.md`](docs/ux-direction.md) for the current UX direction.
 
 ## Product shape
 
@@ -160,6 +160,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for repository conventions and pull-req
 ## Continuous integration
 
 Linux type checks, tests and builds run on pull requests and pushes. Windows desktop smoke checks run only when desktop dependency paths change. macOS smoke checks run after desktop-related changes reach `main` or through a deliberate manual full-suite run. Server-only managed-service changes do not trigger paid desktop runners. Work should be prepared locally and pushed as a coherent review batch rather than as a series of small CI-triggering commits.
+
+Linux desktop packaging and native smoke coverage are now a Phase 3 priority. The current Linux development path is documented in [`docs/linux-development.md`](docs/linux-development.md); supported-pilot status is only reached once the roadmap acceptance criteria are met.
 
 ## Licence
 

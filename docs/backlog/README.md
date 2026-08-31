@@ -1,6 +1,10 @@
 # Initial implementation backlog
 
+> **Historical backlog.** These milestones describe the original implementation sequence and are substantially complete. The active roadmap is now [`docs/roadmap.md`](../roadmap.md).
+
 ## Delivery milestones
+
+The original M0–M4 sequence is retained here as implementation history rather than the current priority order.
 
 - **M0 — Engineering foundation:** repository, decisions, schemas and fixtures support parallel implementation.
 - **M1 — Guided vertical slice:** a non-technical user can create, edit and export a small Writing Rack locally.

@@ -76,15 +76,28 @@ That is intentional. RACK has several distinct practice concepts:
 
 Forcing one of these into the OOS `Practice` primitive before we understand the semantic boundary would repeat the mistake the protocol is meant to avoid.
 
-## Next implementation step
+## Current status and next phase
 
-The next step is to use a `ContextSnapshot` in a controlled build/execution path and record its identity/digest in build provenance.
+The original proof sequence is complete:
 
-The initial rule should be:
+- `ContextSnapshot` can influence a controlled prompt build without becoming canonical Rack source;
+- build provenance records the context identity/digest;
+- a local TOPO transport exists;
+- the TOPO → Rack context exchange has been proved;
+- the desktop can discover TOPO automatically and expose clear permission/connection states;
+- reviewed TOPO memory can be used during Rack creation as well as prompt builds.
 
-> context may influence an execution, but it does not become canonical RACK source.
+The next work is therefore product hardening rather than more Organisational OS protocol design.
 
-After that, implement a local TOPO transport and prove the first TOPO → RACK context exchange.
+Phase 3 should:
+
+1. make paired TOPO/Rack use reliable across Windows, macOS and Linux;
+2. make context requirements purpose-bound and task-aware rather than generic prompt decoration;
+3. use TOPO first for context Rack can reasonably know, then ask the person only for genuine gaps;
+4. define host-appropriate transient context delivery for Claude Code, Codex, OpenCode and agent runtimes;
+5. preserve the rule that context can influence work without silently becoming practice.
+
+Broader Organisational OS design is intentionally paused while TOPO and Rack generate implementation evidence. RACK should not add an OOS `Practice` primitive merely to make the protocol look complete.
 
 ## Local alpha workflow
 
