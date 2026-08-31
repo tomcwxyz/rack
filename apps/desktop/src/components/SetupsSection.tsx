@@ -67,9 +67,11 @@ export function SetupsSection({
                   <dt>Verification</dt>
                   <dd>
                     {configuredChecks > 0
-                      ? `${configuredChecks} configured`
+                      ? verification.counts.unconfigured > 0
+                        ? `${configuredChecks} configured · ${verification.counts.unconfigured} need set-up`
+                        : `${configuredChecks} configured`
                       : verification.counts.unconfigured > 0
-                        ? "Needs set-up"
+                        ? `${verification.counts.unconfigured} need set-up`
                         : "Guidance only"}
                   </dd>
                 </div>
@@ -98,6 +100,9 @@ export function SetupsSection({
                     : verification.counts.unconfigured > 0
                       ? "Verification is declared, but the checks still need to be configured."
                       : "This Set-up currently relies on guidance rather than a verification gate."}
+                  {configuredChecks > 0 && verification.counts.unconfigured > 0
+                    ? ` · ${verification.counts.unconfigured} declared check${verification.counts.unconfigured === 1 ? "" : "s"} still need set-up`
+                    : ""}
                   {verification.counts.taskSuites > 0
                     ? ` · ${verification.counts.taskSuites} acceptance suite${verification.counts.taskSuites === 1 ? "" : "s"} referenced`
                     : ""}
