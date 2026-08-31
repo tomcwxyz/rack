@@ -60,6 +60,7 @@ describe("pilot release workflow", () => {
       "Windows x64",
       "macOS Apple Silicon",
       "macOS Intel",
+      "Linux x64",
     ]);
     expect(matrix.some((entry) => String(entry.platform).includes("ubuntu"))).toBe(
       false,
