@@ -157,6 +157,9 @@ export const parseOosContextPacket = (
 
   const subject = stringField(packet, "subject");
   const purpose = stringField(packet, "purpose");
+  const provenance = asRecord(packet.provenance, "provenance");
+  const createdBy = asRecord(provenance.created_by, "provenance.created_by");
+  const sourceId = stringField(createdBy, "id");
 
   if (expected?.subject !== undefined && expected.subject !== subject) {
     throw new Error(
@@ -172,7 +175,7 @@ export const parseOosContextPacket = (
 
   return {
     id: stringField(packet, "id"),
-    sourceId: stringField(packet, "requested_by"),
+    sourceId,
     subject,
     purpose,
     objects: contextObjects(packet.objects),
@@ -180,7 +183,7 @@ export const parseOosContextPacket = (
     generatedAt: stringField(packet, "generated_at"),
     expiresAt: nullableStringField(packet, "expires_at"),
     permissions: stringArrayField(packet, "permissions"),
-    provenance: asRecord(packet.provenance, "provenance"),
+    provenance,
     extensions: asRecord(packet.extensions, "extensions"),
   };
 };

@@ -66,6 +66,20 @@ export const buildManifestSchema = z
         module_ids: z.array(z.string()).default([]),
       })
       .strict(),
+    context: z
+      .object({
+        source: z.string().min(1),
+        packet_id: z.string().min(1),
+        digest: sha256DigestSchema,
+        subject: z.string().min(1),
+        purpose: z.string().min(1),
+        generated_at: z.string().datetime({ offset: true }),
+        expires_at: z.string().datetime({ offset: true }).nullable(),
+        permissions: z.array(z.string()).default([]),
+        object_ids: z.array(z.string()).default([]),
+      })
+      .strict()
+      .optional(),
     artifacts: z
       .array(artifactSchema)
       .min(1)
