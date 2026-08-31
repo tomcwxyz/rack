@@ -124,3 +124,33 @@ The generated `build.json` records only context provenance needed to reproduce a
 The canonical Rack source digest remains unchanged by context.
 
 This alpha deliberately supports the generic prompt destination only. We should test the semantics before deciding how context should be represented in destination-specific packages.
+
+## Desktop-to-desktop local context
+
+The desktop alpha no longer needs to read TOPO's store or know the TOPO CLI path.
+
+When the TOPO desktop is running it publishes an authenticated loopback-only discovery record at:
+
+~~~text
+~/.topo/oos-local.json
+~~~
+
+Rack reads that discovery record, validates that it points to 127.0.0.1, checks TOPO's advertised capabilities, and can request a purpose-bound Context Packet through the local endpoint.
+
+The Rack desktop keeps this opt-in:
+
+1. open the **TOPO organisational context** panel for a prompt build;
+2. explicitly enable TOPO context;
+3. set the subject and purpose;
+4. preview the selected Context Packet;
+5. build with that snapshot.
+
+Rack does not silently fetch memory when the panel is disabled.
+
+The local endpoint is read-only and TOPO fixes its disclosure ceiling to ordinary + personal memory. A requesting application cannot ask this transport to elevate into sensitive or restricted memory.
+
+Context remains transient generated material. The build manifest records the context digest and packet provenance while canonical Rack source remains unchanged.
+
+A context digest is based on the selected context content rather than the packet's random ID or generation timestamp. Re-requesting identical context therefore remains current; changing the selected memory marks the managed build stale.
+
+The CLI transport remains useful for development and automation. The desktop transport is the preferred local-alpha UX once both applications are installed.
