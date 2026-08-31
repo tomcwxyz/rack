@@ -5,14 +5,17 @@ import path from "node:path";
 import process from "node:process";
 import { Command } from "commander";
 import {
+  createOosContextSource,
   parseTargetId,
   type DestinationId,
 } from "@rack/core";
 import {
+  attachContextToPromptBuild,
   inspectTargetBuild,
   prepareTargetBuild,
 } from "@rack/core/build";
 import {
+  createTopoCliContextTransport,
   installTargetBuild,
   openProject,
   readInstalledTargetBuild,
@@ -91,6 +94,11 @@ program
   .option("--target <id>", "Destination to build", "prompt")
   .option("--output <path>", "Write a one-file destination to this path")
   .option("--install", "Install a managed build into the Rack generated folder")
+  .option("--context-subject <subject>", "Resolve purpose-bound context from local TOPO")
+  .option("--context-purpose <purpose>", "Why this build needs TOPO context")
+  .option("--context-max-items <number>", "Maximum TOPO context objects", "20")
+  .option("--topo-store <path>", "TOPO SQLite store path")
+  .option("--topo-command <command>", "TOPO CLI executable", "topo")
   .option("--json", "Print machine-readable JSON")
   .action(
     async (
@@ -101,6 +109,11 @@ program
         output?: string;
         install?: boolean;
         json?: boolean;
+        contextSubject?: string;
+        contextPurpose?: string;
+        contextMaxItems: string;
+        topoStore?: string;
+        topoCommand: string;
       },
     ) => {
       try {
@@ -114,7 +127,35 @@ program
 
         const target: DestinationId = parseTargetId(options.target);
         const project = await openProject(projectPath);
-        const build = await prepareTargetBuild(project, options.profile, target);
+        let build = await prepareTargetBuild(project, options.profile, target);
+
+        const hasContextSubject = Boolean(options.contextSubject);
+        const hasContextPurpose = Boolean(options.contextPurpose);
+        if (hasContextSubject !== hasContextPurpose) {
+          throw new Error("--context-subject and --context-purpose must be supplied together.");
+        }
+        if (hasContextSubject && hasContextPurpose) {
+          if (target !== "prompt") {
+            throw new Error("TOPO context is only supported for --target prompt in this alpha.");
+          }
+          const maxItems = Number(options.contextMaxItems);
+          if (!Number.isInteger(maxItems) || maxItems < 1 || maxItems > 200) {
+            throw new Error("--context-max-items must be an integer between 1 and 200.");
+          }
+          const source = createOosContextSource({
+            transport: createTopoCliContextTransport({
+              command: options.topoCommand,
+              storePath: options.topoStore,
+            }),
+          });
+          const snapshot = await source.resolve({
+            subject: options.contextSubject!,
+            purpose: options.contextPurpose!,
+            profileId: options.profile,
+            maxItems,
+          });
+          build = await attachContextToPromptBuild(build, snapshot);
+        }
         const hasErrors = build.diagnostics.some(
           (item) => item.severity === "error",
         );
@@ -221,6 +262,52 @@ program
       }
     },
   );
+
+
+const contextCommand = program
+  .command("context")
+  .description("Inspect purpose-bound organisational context.");
+
+contextCommand
+  .command("topo")
+  .description("Preview a Context Packet from local TOPO.")
+  .requiredOption("--subject <subject>", "Context subject")
+  .requiredOption("--purpose <purpose>", "Why the context is needed")
+  .option("--max-items <number>", "Maximum context objects", "20")
+  .option("--topo-store <path>", "TOPO SQLite store path")
+  .option("--topo-command <command>", "TOPO CLI executable", "topo")
+  .action(async (options: {
+    subject: string;
+    purpose: string;
+    maxItems: string;
+    topoStore?: string;
+    topoCommand: string;
+  }) => {
+    try {
+      const maxItems = Number(options.maxItems);
+      if (!Number.isInteger(maxItems) || maxItems < 1 || maxItems > 200) {
+        throw new Error("--max-items must be an integer between 1 and 200.");
+      }
+      const source = createOosContextSource({
+        transport: createTopoCliContextTransport({
+          command: options.topoCommand,
+          storePath: options.topoStore,
+        }),
+      });
+      const snapshot = await source.resolve({
+        subject: options.subject,
+        purpose: options.purpose,
+        maxItems,
+      });
+      process.stdout.write(`${JSON.stringify(snapshot, null, 2)}\n`);
+      process.exitCode = 0;
+    } catch (error) {
+      process.stderr.write(
+        `${error instanceof Error ? error.message : "Unable to resolve TOPO context."}\n`,
+      );
+      process.exitCode = 3;
+    }
+  });
 
 program
   .command("check")
