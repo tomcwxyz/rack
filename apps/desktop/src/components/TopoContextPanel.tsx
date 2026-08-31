@@ -209,7 +209,7 @@ export function TopoContextPanel({
                 publish(next, null);
               }}
             />
-            <span>Use TOPO memory in this prompt build</span>
+            <span>Use TOPO memory in this build</span>
           </label>
 
           {enabled ? (
