@@ -171,7 +171,7 @@ export const buildVerificationPlan = (
         code: "RACK-VERIFY-001",
         severity: "warning",
         title: "Verification is declared but not configured",
-        message: `${module.title} requests an ${expected.label}, but does not yet define how Rack should perform it. The instruction still applies; this does not become an executable check until a verification step is configured.`,
+        message: `${module.title} requests an ${expected.label}, but does not yet define how Rack should perform it. The instruction still applies; Rack cannot include this declaration as a concrete verification step until it is configured.`,
         filePaths: [module.path],
         moduleIds: [module.harness.id],
       });
