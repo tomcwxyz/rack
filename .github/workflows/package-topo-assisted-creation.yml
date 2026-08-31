@@ -1,0 +1,63 @@
+name: package-topo-assisted-creation
+
+on:
+  push:
+    branches:
+      - package/topo-visible-alpha
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows installer
+        working-directory: apps/desktop
+        run: pnpm exec tauri build --bundles nsis
+
+      - name: Stage installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $version = node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version"
+          $sha = git rev-parse HEAD
+          $installer = Get-ChildItem "apps/desktop/src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "RACK NSIS installer was not produced." }
+          $name = "Rack-$version-windows-x64-unsigned-topo-assisted.exe"
+          Copy-Item $installer.FullName "dist/$name"
+          $hash = Get-FileHash "dist/$name" -Algorithm SHA256
+          "$($hash.Hash.ToLower())  $name" | Set-Content "dist/SHA256SUMS.txt" -Encoding ascii
+          @"
+          RACK TOPO-assisted creation paired alpha refresh
+
+          version: $version
+          commit: $sha
+
+          This unsigned test build keeps TOPO visible during creation and adds reviewed TOPO-assisted context.
+          "@ | Set-Content "dist/README.txt" -Encoding utf8
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rack-topo-assisted-creation-windows-x64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
