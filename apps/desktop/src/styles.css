@@ -667,6 +667,125 @@ pre {
   gap: 6px;
 }
 
+.topo-context-panel {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgb(255 253 247 / 78%);
+}
+
+.topo-context-heading,
+.topo-context-actions,
+.topo-context-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topo-context-heading {
+  align-items: flex-start;
+}
+
+.topo-context-heading h3 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.topo-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--ground);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.topo-status--available {
+  color: var(--moss);
+  background: var(--moss-soft);
+}
+
+.topo-context-toggle {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.topo-context-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.topo-context-fields {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.topo-context-actions {
+  margin-top: 14px;
+  justify-content: flex-start;
+}
+
+.topo-context-actions > span,
+.topo-context-unavailable > span,
+.topo-context-unavailable > small,
+.topo-context-empty {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.topo-context-unavailable {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ground);
+}
+
+.topo-context-unavailable > small {
+  white-space: nowrap;
+}
+
+.topo-context-empty {
+  margin: 14px 0 0;
+}
+
+.topo-context-error {
+  margin: 14px 0 0;
+}
+
+.topo-context-items {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--ground);
+}
+
+.topo-context-items li {
+  margin: 0;
+}
+
+.topo-context-items code {
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #472378;
+  background: var(--accent-soft);
+  font-size: 0.7rem;
+}
+
 .preview-layout {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);

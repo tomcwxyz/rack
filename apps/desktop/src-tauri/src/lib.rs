@@ -1,6 +1,7 @@
 mod document_import;
 mod generated;
 mod starter;
+mod topo_local;
 
 use serde::{Deserialize, Serialize};
 use std::{
@@ -605,7 +606,9 @@ pub fn run() {
             write_generated_file,
             starter::apply_starter_import,
             generated::read_generated_prompt_build,
-            generated::install_generated_prompt_build
+            generated::install_generated_prompt_build,
+            topo_local::topo_local_status,
+            topo_local::topo_local_context
         ])
         .run(tauri::generate_context!())
         .expect("error while running Rack");

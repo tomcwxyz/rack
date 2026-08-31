@@ -347,6 +347,7 @@ program
                 status: inspection.status,
                 sourceChanged: inspection.sourceChanged,
                 rendererChanged: inspection.rendererChanged,
+                contextChanged: inspection.contextChanged,
                 outputModified: inspection.outputModified,
                 diagnostics: inspection.diagnostics,
               },
@@ -358,7 +359,7 @@ program
           const messages: Record<typeof inspection.status, string> = {
             missing: `No managed ${target} build exists yet.`,
             current: `The generated ${target} package is current.`,
-            stale: `The Rack source or ${target} adapter changed after the package was built.`,
+            stale: `The Rack source, organisational context or ${target} adapter changed after the package was built.`,
             modified: `The generated ${target} package was edited outside Rack.`,
             "stale-and-modified":
               `The Rack changed and the generated ${target} package was also edited outside Rack.`,
