@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   attachContextToPromptBuild,
+  inspectPreparedTargetBuild,
   type PreparedTargetBuild,
 } from "./build.js";
 import type { ContextSnapshot } from "./contextSources.js";
@@ -121,6 +122,61 @@ describe("context-aware prompt builds", () => {
       "system-prompt.md",
       "build.json",
     ]);
+  });
+
+
+
+  it("keeps the context digest stable when only packet identity and generation time change", async () => {
+    const first = await attachContextToPromptBuild(baseBuild(), snapshot);
+    const second = await attachContextToPromptBuild(baseBuild(), {
+      ...snapshot,
+      id: "ctx-2",
+      generatedAt: "2026-08-31T09:05:00Z",
+      provenance: {
+        ...snapshot.provenance,
+        source_id: "topo:context:ctx-2",
+        created_at: "2026-08-31T09:05:00Z",
+      },
+    });
+
+    expect(first.manifest?.context?.packet_id).not.toBe(
+      second.manifest?.context?.packet_id,
+    );
+    expect(first.manifest?.context?.digest).toBe(
+      second.manifest?.context?.digest,
+    );
+  });
+
+  it("marks an installed build stale when the selected context content changes", async () => {
+    const first = await attachContextToPromptBuild(baseBuild(), snapshot);
+    const changed = await attachContextToPromptBuild(baseBuild(), {
+      ...snapshot,
+      objects: [
+        {
+          ...snapshot.objects[0]!,
+          value: {
+            key: "writing.locale",
+            value: "en-US",
+            confidence: 1,
+          },
+        },
+      ],
+    });
+
+    const installed = {
+      manifestContent: first.manifestContent,
+      artifactContents: Object.fromEntries(
+        first.targetBuild.artifacts.map((artifact) => [
+          artifact.path,
+          artifact.content,
+        ]),
+      ),
+    };
+    const inspection = await inspectPreparedTargetBuild(changed, installed);
+
+    expect(inspection.contextChanged).toBe(true);
+    expect(inspection.status).toBe("stale");
+    expect(inspection.sourceChanged).toBe(false);
   });
 
   it("refuses to apply context to non-prompt targets", async () => {
