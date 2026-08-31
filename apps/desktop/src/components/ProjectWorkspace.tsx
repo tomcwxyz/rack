@@ -12,6 +12,7 @@ import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
 import { SharedPracticeSection } from "./SharedPracticeSection.js";
+import { VerificationSection } from "./VerificationSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 
 type WorkspaceSection =
@@ -19,6 +20,7 @@ type WorkspaceSection =
   | "shared"
   | "setups"
   | "preview"
+  | "verify"
   | "checks"
   | "library";
 type GuidedModule = Extract<
@@ -163,6 +165,13 @@ export function ProjectWorkspace({
             Preview and export
           </button>
           <button
+            className={`nav-item ${section === "verify" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => setSection("verify")}
+          >
+            Verify work
+          </button>
+          <button
             className={`nav-item ${section === "checks" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => setSection("checks")}
@@ -245,6 +254,14 @@ export function ProjectWorkspace({
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
             onStatus={setActionStatus}
+          />
+        ) : null}
+
+        {section === "verify" ? (
+          <VerificationSection
+            project={effectiveProject}
+            selectedProfile={selectedProfile}
+            onProfileChange={setSelectedProfile}
           />
         ) : null}
 
