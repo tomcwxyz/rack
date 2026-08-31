@@ -178,7 +178,17 @@ export const attachContextToPromptBuild = async (
     };
   }
 
-  const contextDigest = await sha256Text(canonicalJson(snapshot));
+  const contextDigest = await sha256Text(
+    canonicalJson({
+      sourceId: snapshot.sourceId,
+      subject: snapshot.subject,
+      purpose: snapshot.purpose,
+      objects: snapshot.objects,
+      evidenceRefs: snapshot.evidenceRefs,
+      expiresAt: snapshot.expiresAt,
+      permissions: snapshot.permissions,
+    }),
+  );
   const artifacts = await Promise.all(nextArtifacts.map(artifactManifestEntry));
   const manifest = buildManifestSchema.parse({
     ...build.manifest,
@@ -369,6 +379,7 @@ export type TargetBuildInspection = {
   status: BuildInspectionStatus;
   sourceChanged: boolean;
   rendererChanged: boolean;
+  contextChanged: boolean;
   outputModified: boolean;
   current: PreparedTargetBuild;
   installedManifest: BuildManifest | null;
@@ -389,6 +400,7 @@ export const inspectPreparedTargetBuild = async (
       status: "missing",
       sourceChanged: false,
       rendererChanged: false,
+      contextChanged: false,
       outputModified: false,
       current,
       installedManifest: null,
@@ -406,6 +418,7 @@ export const inspectPreparedTargetBuild = async (
       status: "invalid",
       sourceChanged: false,
       rendererChanged: false,
+      contextChanged: false,
       outputModified: hasInstalledArtifact,
       current,
       installedManifest: null,
@@ -429,6 +442,7 @@ export const inspectPreparedTargetBuild = async (
       status: "invalid",
       sourceChanged: false,
       rendererChanged: false,
+      contextChanged: false,
       outputModified: false,
       current,
       installedManifest,
@@ -453,6 +467,8 @@ export const inspectPreparedTargetBuild = async (
   const rendererChanged =
     installedManifest.compiler.version !== current.manifest.compiler.version ||
     installedManifest.adapter.version !== current.manifest.adapter.version;
+  const contextChanged =
+    installedManifest.context?.digest !== current.manifest.context?.digest;
   const outputChecks = await Promise.all(
     installedManifest.artifacts.map(async (artifact) => {
       const content = installed.artifactContents[artifact.path] ?? null;
@@ -460,7 +476,7 @@ export const inspectPreparedTargetBuild = async (
     }),
   );
   const outputModified = outputChecks.some(Boolean);
-  const stale = sourceChanged || rendererChanged;
+  const stale = sourceChanged || rendererChanged || contextChanged;
   const status: BuildInspectionStatus = stale
     ? outputModified
       ? "stale-and-modified"
@@ -473,6 +489,7 @@ export const inspectPreparedTargetBuild = async (
     status,
     sourceChanged,
     rendererChanged,
+    contextChanged,
     outputModified,
     current,
     installedManifest,
