@@ -277,3 +277,54 @@ jobs:
           uploadUpdaterJson: false
           uploadUpdaterSignatures: false
           args: ${{ matrix.args }}
+
+  checksums:
+    name: Publish release checksums
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download draft release artefacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets
+
+      - name: Create SHA-256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f release-assets/SHA256SUMS.txt
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f -printf '%f\n' |
+              sort |
+              while IFS= read -r file; do
+                sha256sum "$file"
+              done
+          ) > SHA256SUMS.txt
+
+          if [[ ! -s SHA256SUMS.txt ]]; then
+            echo "::error::No pilot release artefacts were available to checksum."
+            exit 1
+          fi
+
+          cat SHA256SUMS.txt
+
+      - name: Upload SHA-256 manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

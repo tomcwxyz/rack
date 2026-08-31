@@ -48,5 +48,7 @@ describe("desktop release version", () => {
     expect(pilotReleaseWorkflow).toContain('--bundles deb,appimage');
     expect(pilotReleaseWorkflow).toContain("libwebkit2gtk-4.1-dev");
     expect(pilotReleaseWorkflow).toContain("patchelf");
+    expect(pilotReleaseWorkflow).toContain("Publish release checksums");
+    expect(pilotReleaseWorkflow).toContain("SHA256SUMS.txt");
   });
 });

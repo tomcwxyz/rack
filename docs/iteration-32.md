@@ -44,6 +44,10 @@ Iteration 32 separates invalid discovery into a **connection issue** state while
 
 The ordinary UI uses shared plain-language state/copy helpers so the creation and build surfaces do not drift.
 
+### Release provenance
+
+After all platform jobs complete, the release workflow downloads the draft artefacts, creates a deterministic `SHA256SUMS.txt` manifest and uploads it back to the same draft release. An empty artefact set fails closed rather than publishing an empty manifest.
+
 ### Tests
 
 The first slice adds coverage that:
@@ -72,7 +76,7 @@ FIELD STATION's Debian/Flatpak work remains useful implementation evidence. Flat
 - run a paired TOPO/RACK Linux acceptance journey against the installed applications;
 - test reconnection when TOPO restarts or rotates its discovery token;
 - test stale/expired Context Packets in the desktop journey;
-- add release checksums/provenance suitable for pilot distribution;
+- add richer release provenance beyond the SHA-256 artefact manifest;
 - document Linux installation/uninstallation and known distribution constraints;
 - decide whether Flatpak joins the first supported pilot or the immediate follow-on.
 
