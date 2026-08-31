@@ -192,6 +192,21 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
 
     match get_capabilities(&discovery) {
         Ok(capabilities) => {
+            let sharing_enabled = capabilities
+                .get("extensions")
+                .and_then(Value::as_object)
+                .and_then(|extensions| extensions.get("sharing_enabled"))
+                .and_then(Value::as_bool);
+
+            if sharing_enabled == Some(false) {
+                return Ok(TopoLocalStatus {
+                    available: false,
+                    node_id: Some(discovery.node.id),
+                    version: Some(discovery.node.version),
+                    message: "TOPO is running, but Local app access is off. Enable it in TOPO's Context preview panel.".to_owned(),
+                });
+            }
+
             let provides_context = capabilities
                 .get("queries")
                 .and_then(Value::as_array)
