@@ -2,7 +2,6 @@ import {
   destinationIdSchema,
   slugSchema,
   verificationEvidenceSchema,
-  type DestinationId,
   type VerificationEvidence,
 } from "@rack/schemas";
 import { z } from "zod";
@@ -130,7 +129,7 @@ export const buildVerificationJudgementPreflight = (
     mode: "quick",
     rackFingerprint: parsed.rackFingerprint,
     profileId: parsed.profileId,
-    target: parsed.target satisfies DestinationId,
+    target: parsed.target,
     generatorAlias: parsed.modelAlias,
     caseCount: 1,
     judgeCallsPerOutput: 0,
@@ -154,7 +153,7 @@ export const prepareVerificationJudgement = async (
 
 const unwrapCodeFence = (value: string): string => {
   const trimmed = value.trim();
-  const fenced = trimmed.match(/^\`\`\`(?:json)?\\s*([\\s\\S]*?)\\s*\`\`\`$/i);
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
   return fenced?.[1]?.trim() ?? trimmed;
 };
 
