@@ -137,15 +137,22 @@ When the TOPO desktop is running it publishes an authenticated loopback-only dis
 
 Rack reads that discovery record, validates that it points to 127.0.0.1, checks TOPO's advertised capabilities, and can request a purpose-bound Context Packet through the local endpoint.
 
-The Rack desktop keeps this opt-in:
+The desktop connection is deliberately zero-config:
 
-1. open the **TOPO organisational context** panel for a prompt build;
-2. explicitly enable TOPO context;
-3. set the subject and purpose;
-4. preview the selected Context Packet;
-5. build with that snapshot.
+1. open TOPO;
+2. choose **Allow local tools** for the current TOPO session;
+3. open Rack.
 
-Rack does not silently fetch memory when the panel is disabled.
+Rack watches for TOPO automatically and moves between **Waiting for TOPO**, **Permission needed** and **Connected** without requiring a manual refresh or any transport configuration.
+
+Using memory in a particular build remains explicit:
+
+1. enable **Use TOPO memory in this prompt build**;
+2. describe **Context for** and **What are you doing?**;
+3. review the selected context;
+4. build with that reviewed snapshot.
+
+Those plain-language fields map to the OOS subject and purpose semantics. Rack does not silently fetch memory when the feature is disabled.
 
 The local endpoint is read-only and TOPO fixes its disclosure ceiling to ordinary + personal memory. A requesting application cannot ask this transport to elevate into sensitive or restricted memory.
 
