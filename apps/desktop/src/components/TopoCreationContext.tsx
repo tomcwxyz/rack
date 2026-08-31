@@ -98,7 +98,7 @@ export function TopoCreationContext({
   };
 
   return (
-    <section className="topo-creation-context" aria-label="Use TOPO context">
+    <section className="topo-creation-context field--wide" aria-label="Use TOPO context">
       <div className="topo-creation-heading">
         <div>
           <p className="eyebrow">TOPO memory</p>
