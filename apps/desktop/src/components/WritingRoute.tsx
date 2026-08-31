@@ -20,6 +20,7 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type WritingRouteProps = {
@@ -49,6 +50,7 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
   const [evidenceChoice, setEvidenceChoice] = useState<PracticeChoice>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [topoSubject, setTopoSubject] = useState("project:my-writing-rack");
 
   const update = (
     key: keyof WritingDraft,
@@ -194,6 +196,20 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
                 required
               />
             </label>
+
+            <TopoCreationContext
+              subject={topoSubject}
+              purpose="create a writing Rack: establish organisational context"
+              onSubjectChange={setTopoSubject}
+              onUse={(text) =>
+                update(
+                  "organisationContext",
+                  draft.organisationContext.trim()
+                    ? draft.organisationContext.trim() + "\n\n" + text
+                    : text,
+                )
+              }
+            />
 
             <div className="field field--wide material-import-slot">
               <span>Start from existing material</span>
