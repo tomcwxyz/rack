@@ -391,4 +391,58 @@ mod tests {
         );
     }
 
+    #[test]
+    fn loopback_request_uses_current_token_and_purpose_bound_body() {
+        use std::net::TcpListener;
+        use std::thread;
+
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let token = "b".repeat(64);
+        let expected_token = token.clone();
+
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+
+            let mut buffer = [0_u8; 8192];
+            let read = stream.read(&mut buffer).unwrap();
+            let request = String::from_utf8_lossy(&buffer[..read]);
+
+            assert!(request.starts_with("POST /v0/context HTTP/1.1"));
+            assert!(request.contains(&format!(
+                "Authorization: Bearer {expected_token}"
+            )));
+            assert!(request.contains("\"subject\":\"project:rack\""));
+            assert!(request.contains("\"purpose\":\"prepare implementation\""));
+
+            let body = r#"{"ok":true}"#;
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(),
+                body
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+            stream.flush().unwrap();
+        });
+
+        let mut local = discovery(&format!("http://127.0.0.1:{port}"));
+        local.token = token;
+        let result = http_json(
+            &local,
+            "POST",
+            "/v0/context",
+            Some(&json!({
+                "subject": "project:rack",
+                "purpose": "prepare implementation"
+            })),
+        )
+        .unwrap();
+
+        assert_eq!(result, json!({ "ok": true }));
+        server.join().unwrap();
+    }
+
 }
