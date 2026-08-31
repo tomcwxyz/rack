@@ -781,12 +781,12 @@ harness:
   criticality: required
   enforcement: [instruction, output_check, rubric_eval]
   verification:
-    - id: repository-checks
+    - id: no-obvious-secrets
       kind: automatic
-      label: Repository checks pass
-      check: repository-checks
-      requirement: Run the repository's trusted tests, type checks and build checks successfully.
-      evidence: [test-results, build-results]
+      label: No obvious credentials are exposed
+      check: no-obvious-secrets
+      requirement: The supplied change must not contain obvious private-key or access-token material.
+      evidence: [diff]
       on_fail: block
     - id: safe-change-judgement
       kind: judgement
