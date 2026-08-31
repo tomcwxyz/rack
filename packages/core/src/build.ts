@@ -376,13 +376,11 @@ export type TargetBuildInspection = {
 };
 export type PromptBuildInspection = TargetBuildInspection;
 
-export const inspectTargetBuild = async (
-  project: RackProject,
-  profileId: string,
-  target: DestinationId,
+export const inspectPreparedTargetBuild = async (
+  current: PreparedTargetBuild,
   installed: InstalledTargetBuild,
 ): Promise<TargetBuildInspection> => {
-  const current = await prepareTargetBuild(project, profileId, target);
+  const target = current.target;
   const hasInstalledArtifact = Object.values(installed.artifactContents).some(
     (content) => content !== null,
   );
@@ -481,6 +479,17 @@ export const inspectTargetBuild = async (
     diagnostics: current.diagnostics,
   };
 };
+
+export const inspectTargetBuild = async (
+  project: RackProject,
+  profileId: string,
+  target: DestinationId,
+  installed: InstalledTargetBuild,
+): Promise<TargetBuildInspection> =>
+  inspectPreparedTargetBuild(
+    await prepareTargetBuild(project, profileId, target),
+    installed,
+  );
 
 export const inspectPromptBuild = async (
   project: RackProject,
