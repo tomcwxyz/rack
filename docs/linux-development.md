@@ -10,7 +10,7 @@ The Phase 3 goal is to make Linux a normal pilot platform alongside Windows and 
 
 ## Phase 3 support target
 
-Iteration 32 should establish the first supported Linux pilot baseline.
+Iteration 32 is establishing the first supported Linux pilot baseline. Native Linux CI plus `.deb`/AppImage bundle construction are now part of the first implementation slice; installed-app paired testing remains before the support label changes.
 
 Required before changing the support label:
 
