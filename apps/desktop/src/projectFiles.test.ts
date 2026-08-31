@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTarget,
+  buildVerificationPlan,
+  executeAutomaticVerification,
   parseProjectSnapshot,
   type DestinationId,
   type ProjectSnapshot,
@@ -250,6 +252,29 @@ describe("guided Rack proposal builders", () => {
     expect(build.artifacts[0]?.content).toContain(
       "Never expose secrets, and never claim a verification step ran when it did not.",
     );
+  });
+
+  it("gives guided Coding a Rack-owned deterministic secret check", () => {
+    const proposal = buildCodingRackFiles(codingDraft);
+    const project = parseProjectSnapshot(toSnapshot(proposal));
+    const plan = buildVerificationPlan(project, "coding");
+    const step = plan.steps.find((item) => item.kind === "automatic");
+
+    expect(step).toEqual(
+      expect.objectContaining({
+        check: "no-obvious-secrets",
+        evidence: ["diff"],
+        onFail: "block",
+      }),
+    );
+
+    const result = executeAutomaticVerification(step!, [
+      {
+        kind: "diff",
+        content: "+ const apiKey = process.env.OPENAI_API_KEY;",
+      },
+    ]);
+    expect(result.status).toBe("pass");
   });
 
   it("builds deterministic Coding source for every supported coding host", () => {
