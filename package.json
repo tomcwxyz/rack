@@ -12,6 +12,7 @@
     "check": "turbo run check",
     "dev": "turbo run dev --parallel",
     "dev:desktop": "pnpm --filter @rack/desktop tauri dev",
+    "desktop:version": "node scripts/set-desktop-version.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "pnpm assets",

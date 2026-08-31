@@ -1,6 +1,6 @@
 [package]
 name = "rack"
-version = "0.0.0"
+version = "0.1.0-pilot.1"
 description = "Build your AI working practices."
 authors = ["The Good Ship"]
 edition = "2021"
