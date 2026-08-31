@@ -62,9 +62,9 @@ describe("pilot release workflow", () => {
       "macOS Intel",
       "Linux x64",
     ]);
-    expect(matrix.some((entry) => String(entry.platform).includes("ubuntu"))).toBe(
-      false,
-    );
+    const linux = matrix.find((entry) => entry.label === "Linux x64");
+    expect(linux?.platform).toBe("ubuntu-22.04");
+    expect(linux?.args).toBe("--bundles deb,appimage");
   });
 
   it("pins Tauri Action and only creates draft pre-releases", () => {
