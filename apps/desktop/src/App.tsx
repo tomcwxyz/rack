@@ -80,17 +80,51 @@ export function App() {
     };
 
     return (
-      <main className="standalone-workspace">
-        {creating === "choose" ? (
-          <RouteChooser
-            onCancel={() => setCreating(null)}
-            onSelect={setCreating}
-          />
-        ) : null}
-        {creating === "writing" ? <WritingRoute {...routeProps} /> : null}
-        {creating === "research" ? <ResearchRoute {...routeProps} /> : null}
-        {creating === "coding" ? <CodingRoute {...routeProps} /> : null}
-      </main>
+      <div className="app-shell app-shell--creation">
+        <aside className="sidebar">
+          <button
+            className="wordmark wordmark--button"
+            type="button"
+            onClick={() => setCreating(null)}
+            aria-label="Rack home"
+          >
+            rack
+          </button>
+          <nav aria-label="Creation navigation">
+            <button
+              className="nav-item nav-item--active"
+              type="button"
+              onClick={() => setCreating("choose")}
+            >
+              Create a Rack
+            </button>
+          </nav>
+          <div className="sidebar-footer">
+            <TopoConnectionIndicator compact />
+            <p className="sidebar-note">
+              TOPO stays visible while you create this Rack.
+            </p>
+            <button
+              className="sidebar-link"
+              type="button"
+              onClick={() => setCreating(null)}
+            >
+              Back to Rack home
+            </button>
+          </div>
+        </aside>
+        <main className="workspace creation-workspace">
+          {creating === "choose" ? (
+            <RouteChooser
+              onCancel={() => setCreating(null)}
+              onSelect={setCreating}
+            />
+          ) : null}
+          {creating === "writing" ? <WritingRoute {...routeProps} /> : null}
+          {creating === "research" ? <ResearchRoute {...routeProps} /> : null}
+          {creating === "coding" ? <CodingRoute {...routeProps} /> : null}
+        </main>
+      </div>
     );
   }
 
