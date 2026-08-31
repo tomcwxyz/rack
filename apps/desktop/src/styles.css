@@ -944,6 +944,120 @@ pre {
   font-size: 0.82rem;
 }
 
+.creation-workspace {
+  width: min(1120px, calc(100vw - 230px));
+}
+
+.topo-creation-context {
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid #cdbce9;
+  border-radius: 16px;
+  background: rgb(245 239 253 / 72%);
+}
+
+.topo-creation-heading,
+.topo-creation-request,
+.topo-creation-review-heading,
+.topo-creation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.topo-creation-heading > div {
+  min-width: 0;
+}
+
+.topo-creation-heading strong {
+  display: block;
+}
+
+.topo-creation-heading > span,
+.topo-creation-review-heading small,
+.topo-creation-actions > span,
+.topo-creation-context > p,
+.topo-creation-empty {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.topo-creation-context > p,
+.topo-creation-empty {
+  margin: 0;
+}
+
+.topo-creation-request {
+  align-items: end;
+}
+
+.topo-creation-request .field {
+  flex: 1 1 420px;
+}
+
+.topo-creation-review {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.topo-creation-review ul {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.topo-creation-review li {
+  margin: 0;
+}
+
+.topo-creation-review li label {
+  padding: 10px 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fffefa;
+}
+
+.topo-creation-review li input {
+  margin-top: 3px;
+}
+
+.topo-creation-review li span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.topo-creation-review li strong {
+  font-size: 0.8rem;
+}
+
+.topo-creation-review li small {
+  max-height: 9em;
+  overflow: auto;
+  color: var(--muted);
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.topo-creation-actions {
+  justify-content: flex-start;
+}
+
+.topo-creation-error {
+  margin: 0;
+}
+
 .material-import-slot {
   padding: 16px 18px;
   border: 1px dashed #bfb5a4;

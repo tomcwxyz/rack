@@ -15,6 +15,7 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type CodingRouteProps = {
@@ -43,6 +44,7 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
   const [safetyChoice, setSafetyChoice] = useState<PracticeChoice>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [topoSubject, setTopoSubject] = useState("project:my-coding-rack");
 
   const update = (key: keyof CodingDraft, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -182,6 +184,20 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
                 required
               />
             </label>
+
+            <TopoCreationContext
+              subject={topoSubject}
+              purpose="create a coding Rack: establish project context"
+              onSubjectChange={setTopoSubject}
+              onUse={(text) =>
+                update(
+                  "projectContext",
+                  draft.projectContext.trim()
+                    ? draft.projectContext.trim() + "\n\n" + text
+                    : text,
+                )
+              }
+            />
 
             <div className="field field--wide material-import-slot">
               <span>Start from existing material</span>
