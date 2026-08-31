@@ -89,3 +89,58 @@ For Linux changes, check at least:
 - reviewed TOPO context can be used without becoming canonical Rack source.
 
 ChromeOS/Crostini remains useful for functional testing but should not be treated as the supported Linux performance or packaging benchmark.
+
+## Pilot installation
+
+The supported-pilot release target provides two direct Linux artefacts.
+
+### Verify the download
+
+Download the release artefact you intend to use and `SHA256SUMS.txt` into the same folder.
+
+Then run:
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+```
+
+Do not install or run an artefact whose checksum does not match the published manifest.
+
+### Debian / Ubuntu package
+
+For Debian 12, Ubuntu 22.04 or a compatible Debian-based system:
+
+```bash
+sudo apt install ./<rack-package>.deb
+```
+
+Using `apt install` rather than `dpkg -i` lets the package manager resolve runtime dependencies normally.
+
+To remove the package:
+
+```bash
+sudo apt remove rack
+```
+
+RACK project folders and TOPO data are separate from the application package and are not removed by uninstalling the application.
+
+### AppImage
+
+The AppImage is the portable direct-download option:
+
+```bash
+chmod +x ./<rack-package>.AppImage
+./<rack-package>.AppImage
+```
+
+It does not need a system-wide install. Remove the downloaded AppImage when you no longer want it.
+
+Desktop-menu integration varies by distribution and is not required for the pilot.
+
+## Linux compatibility notes
+
+The first supported-pilot build baseline is Ubuntu 22.04 / Debian 12 because it is old enough to avoid needlessly raising the glibc floor while still providing WebKitGTK 4.1 for Tauri v2.
+
+Linux GUI applications do not reliably inherit the interactive shell `PATH`. Future local AI-host detection must therefore use platform-aware discovery rather than assuming that a command visible in `.bashrc` or `.zshrc` is visible to the desktop application.
+
+Flatpak and arm64 remain immediate follow-on targets. They should not create a second RACK product or source model; only packaging and platform integration should differ.
