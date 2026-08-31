@@ -57,6 +57,7 @@ describe("Organisational OS context source", () => {
 
     expect(snapshot).toMatchObject({
       id: "ctx-1",
+      sourceId: "topo",
       subject: "project:rack",
       purpose: "review implementation",
       permissions: ["local-use-only"],
