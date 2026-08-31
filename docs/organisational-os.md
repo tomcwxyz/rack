@@ -85,3 +85,20 @@ The initial rule should be:
 > context may influence an execution, but it does not become canonical RACK source.
 
 After that, implement a local TOPO transport and prove the first TOPO → RACK context exchange.
+
+## First local transport: TOPO CLI
+
+For the first interoperability proof, the Node-specific RACK boundary can use TOPO's machine-readable CLI command:
+
+~~~sh
+topo --store ~/.topo/topo.sqlite oos context \
+  --subject project:rack \
+  --purpose "review implementation" \
+  --requester rack
+~~~
+
+createTopoCliContextTransport() invokes that command with execFile, not a shell, and returns the resulting packet to the existing OOS ContextSource.
+
+This is deliberately temporary plumbing. It proves that two independently useful local-first applications can exchange context through the shared protocol before we build a Bridge or settle on MCP/native transport.
+
+The transport currently rejects free-text context queries rather than silently ignoring them because the first TOPO CLI surface only supports subject/purpose and bounded item count.
