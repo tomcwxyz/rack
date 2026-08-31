@@ -2734,6 +2734,7 @@ name = "rack"
 version = "0.1.0-pilot.1"
 dependencies = [
  "anydoc",
+ "dirs",
  "serde",
  "serde_json",
  "tauri",
