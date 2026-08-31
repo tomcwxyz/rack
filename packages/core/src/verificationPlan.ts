@@ -93,7 +93,7 @@ const planStep = (
       requirement: step.requirement,
       question: null,
       prompt: null,
-      requiredForCompletion: step.on_fail === "block",
+      requiredForCompletion: step.on_fail !== "warn",
     };
   }
 
@@ -106,7 +106,8 @@ const planStep = (
       requirement: null,
       question: step.question,
       prompt: null,
-      requiredForCompletion: step.on_fail === "block",
+      requiredForCompletion:
+        step.on_fail !== "warn" || step.on_uncertain !== "warn",
     };
   }
 
