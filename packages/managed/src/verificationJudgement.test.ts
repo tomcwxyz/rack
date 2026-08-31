@@ -79,12 +79,7 @@ describe("bounded verification judgement", () => {
 
   it("accepts one JSON code fence and rejects prose or invalid verdicts", () => {
     expect(
-      parseVerificationJudgement(
-        ```\`\`\`json
-{"verdict":"uncertain","reason":"Evidence is incomplete.","evidence":[]}
-\`\`\```,
-      ),
-    ).toEqual({
+      parseVerificationJudgement(\n        "```json\\n{\\\"verdict\\\":\\\"uncertain\\\",\\\"reason\\\":\\\"Evidence is incomplete.\\\",\\\"evidence\\\":[]}\\n```",\n      ),\n    ).toEqual({
       verdict: "uncertain",
       reason: "Evidence is incomplete.",
       evidence: [],
