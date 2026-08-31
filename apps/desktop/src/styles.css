@@ -306,6 +306,86 @@ pre {
   background: var(--moss-soft);
 }
 
+
+.topo-connection-indicator {
+  width: 100%;
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  background: rgb(255 253 247 / 78%);
+  text-align: left;
+}
+
+.topo-connection-indicator--button {
+  cursor: pointer;
+}
+
+.topo-connection-indicator--button:hover {
+  border-color: #b799ea;
+  background: var(--paper);
+}
+
+.topo-connection-indicator--compact {
+  padding: 11px 12px;
+  margin-bottom: 18px;
+}
+
+.topo-connection-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topo-connection-title > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.topo-connection-title strong {
+  font-size: 0.82rem;
+}
+
+.topo-connection-mark {
+  width: 27px;
+  height: 27px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #472378;
+  background: var(--accent-soft);
+  font-family: Georgia, serif;
+  font-weight: 700;
+}
+
+.topo-connection-state {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.topo-connection-state--connected {
+  color: var(--moss);
+  font-weight: 700;
+}
+
+.topo-connection-indicator p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.topo-connection-action {
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .welcome-header {
   display: flex;
   justify-content: space-between;

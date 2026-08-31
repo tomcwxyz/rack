@@ -14,6 +14,7 @@ import { SetupsSection } from "./SetupsSection.js";
 import { SharedPracticeSection } from "./SharedPracticeSection.js";
 import { VerificationSection } from "./VerificationSection.js";
 import { SourceEditor } from "./SourceEditor.js";
+import { TopoConnectionIndicator } from "./TopoConnectionIndicator.js";
 
 type WorkspaceSection =
   | "rack"
@@ -187,6 +188,10 @@ export function ProjectWorkspace({
           </button>
         </nav>
         <div className="sidebar-footer">
+          <TopoConnectionIndicator
+            compact
+            onOpenContext={() => setSection("preview")}
+          />
           <p className="sidebar-note">Build your AI working practices.</p>
           <button className="sidebar-link" type="button" onClick={onOpenAnother}>
             Open another Rack
