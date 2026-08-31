@@ -9,6 +9,7 @@ const readJson = (path: string) =>
 
 const desktopPackage = readJson("../package.json");
 const tauriConfig = readJson("../src-tauri/tauri.conf.json");
+const linuxTauriConfig = readJson("../src-tauri/tauri.linux.conf.json");
 const cargoToml = readFileSync(
   new URL("../src-tauri/Cargo.toml", import.meta.url),
   "utf8",
@@ -44,6 +45,11 @@ describe("desktop release version", () => {
     expect(tauriVersion).toBe(packageVersion);
     expect(cargoVersion).toBe(packageVersion);
     expect(lockedRackVersion).toBe(packageVersion);
+  });
+
+  it("provides an explicit square PNG bundle icon for Linux", () => {
+    const bundle = linuxTauriConfig.bundle as { icon?: string[] };
+    expect(bundle.icon).toEqual(["icons/icon.png"]);
   });
 
   it("keeps Linux in the supported pilot release matrix", () => {
