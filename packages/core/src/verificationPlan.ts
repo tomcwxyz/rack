@@ -214,6 +214,39 @@ export const buildVerificationPlan = (
   };
 };
 
+export type VerificationJudgementVerdict = "pass" | "fail" | "uncertain";
+export type VerificationGateDecision =
+  | "continue"
+  | "block"
+  | "warn"
+  | "human_review"
+  | "incomplete";
+
+const gateDecisionFromAction = (
+  action: VerificationFailureAction,
+): Exclude<VerificationGateDecision, "continue" | "incomplete"> => action;
+
+export const resolveVerificationJudgementGate = (
+  step: VerificationPlanStep,
+  verdict: VerificationJudgementVerdict | null,
+): VerificationGateDecision => {
+  if (step.kind !== "judgement") {
+    throw new Error("Only judgement verification steps produce an AI judgement gate.");
+  }
+  if (verdict === null) return "incomplete";
+  if (verdict === "pass") return "continue";
+  if (verdict === "fail") {
+    if (!step.onFail) {
+      throw new Error("A judgement verification step must define fail behaviour.");
+    }
+    return gateDecisionFromAction(step.onFail);
+  }
+  if (!step.onUncertain) {
+    throw new Error("A judgement verification step must define uncertain behaviour.");
+  }
+  return gateDecisionFromAction(step.onUncertain);
+};
+
 export const verificationApplicationLabels = (
   module: RackModule,
 ): string[] => {
