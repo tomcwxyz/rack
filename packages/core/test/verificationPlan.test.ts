@@ -3,6 +3,7 @@ import {
   buildVerificationPlan,
   parseProjectSnapshot,
   verificationApplicationLabels,
+  resolveVerificationJudgementGate,
 } from "../src/index.js";
 
 const manifest = {
@@ -326,4 +327,63 @@ Make the change.
       }),
     );
   });
+  it("maps semantic verdicts onto the configured gate without treating uncertainty as pass", () => {
+    const project = parseProjectSnapshot({
+      root: "/gate-decision",
+      manifest,
+      modules: [
+        {
+          path: "modules/guardrails/gate.md",
+          content: `---
+type: guardrail
+title: Semantic gate
+harness:
+  schema_version: "0.2"
+  id: guardrail.change-safety
+  version: 0.2.0
+  applies_to: [code]
+  enforcement: [instruction, rubric_eval]
+  verification:
+    - id: semantic-check
+      kind: judgement
+      label: Check meaning
+      question: Does this satisfy the intended practice?
+      evidence: [output]
+      on_fail: block
+      on_uncertain: human_review
+  rules: []
+---
+Verify the meaning of the completed work.
+`,
+        },
+        {
+          path: "modules/tasks/change.md",
+          content: `---
+type: task
+title: Make a change
+harness:
+  schema_version: "0.1"
+  id: task.change
+  version: 0.1.0
+  applies_to: [code]
+  trigger:
+    label: Make a change
+---
+Make the change.
+`,
+        },
+      ],
+      profiles: [profile],
+    });
+
+    const step = buildVerificationPlan(project, "coding").steps[0];
+    expect(step?.kind).toBe("judgement");
+    expect(resolveVerificationJudgementGate(step!, "pass")).toBe("continue");
+    expect(resolveVerificationJudgementGate(step!, "fail")).toBe("block");
+    expect(resolveVerificationJudgementGate(step!, "uncertain")).toBe(
+      "human_review",
+    );
+    expect(resolveVerificationJudgementGate(step!, null)).toBe("incomplete");
+  });
+
 });
