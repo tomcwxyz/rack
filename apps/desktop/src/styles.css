@@ -737,10 +737,26 @@ pre {
 }
 
 .topo-context-actions > span,
-.topo-context-unavailable > span {
+.topo-context-unavailable > span,
+.topo-context-unavailable > small,
+.topo-context-empty {
   color: var(--muted);
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.topo-context-unavailable {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--ground);
+}
+
+.topo-context-unavailable > small {
+  white-space: nowrap;
+}
+
+.topo-context-empty {
+  margin: 14px 0 0;
 }
 
 .topo-context-error {
