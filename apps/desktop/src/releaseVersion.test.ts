@@ -17,6 +17,10 @@ const cargoLock = readFileSync(
   new URL("../src-tauri/Cargo.lock", import.meta.url),
   "utf8",
 );
+const pilotReleaseWorkflow = readFileSync(
+  new URL("../../../.github/workflows/pilot-release.yml", import.meta.url),
+  "utf8",
+);
 
 const packageVersion = desktopPackage.version as string;
 const tauriVersion = tauriConfig.version as string;
@@ -37,5 +41,12 @@ describe("desktop release version", () => {
     expect(tauriVersion).toBe(packageVersion);
     expect(cargoVersion).toBe(packageVersion);
     expect(lockedRackVersion).toBe(packageVersion);
+  });
+
+  it("keeps Linux in the supported pilot release matrix", () => {
+    expect(pilotReleaseWorkflow).toContain("label: Linux x64");
+    expect(pilotReleaseWorkflow).toContain('--bundles deb,appimage');
+    expect(pilotReleaseWorkflow).toContain("libwebkit2gtk-4.1-dev");
+    expect(pilotReleaseWorkflow).toContain("patchelf");
   });
 });
