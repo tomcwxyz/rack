@@ -3,7 +3,7 @@ name: package-topo-assisted-creation
 on:
   push:
     branches:
-      - package/topo-visible-alpha
+      - package/topo-assisted-creation
   workflow_dispatch:
 
 permissions:
