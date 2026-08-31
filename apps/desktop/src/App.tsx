@@ -14,6 +14,7 @@ import {
   type CreationRouteId,
 } from "./components/RouteChooser.js";
 import { WritingRoute } from "./components/WritingRoute.js";
+import { TopoConnectionIndicator } from "./components/TopoConnectionIndicator.js";
 
 type CreationState = "choose" | CreationRouteId | null;
 
@@ -106,6 +107,8 @@ export function App() {
           <span>{openError}</span>
         </div>
       ) : null}
+
+      <TopoConnectionIndicator />
 
       <section className="welcome-hero">
         <div>
