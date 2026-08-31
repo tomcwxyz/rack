@@ -16,9 +16,10 @@ const root = process.cwd();
 const replaceOnce = (path, pattern, replacement) => {
   const absolute = resolve(root, path);
   const current = readFileSync(absolute, "utf8");
-  const matches = current.match(pattern);
-  if (!matches || matches.length !== 1) {
-    throw new Error(`Expected exactly one version match in ${path}.`);
+  const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+  const count = [...current.matchAll(new RegExp(pattern.source, flags))].length;
+  if (count !== 1) {
+    throw new Error(`Expected exactly one version match in ${path}; found ${count}.`);
   }
   writeFileSync(absolute, current.replace(pattern, replacement));
 };
