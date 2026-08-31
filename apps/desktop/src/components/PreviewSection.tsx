@@ -8,11 +8,17 @@ import {
   type RackProject,
 } from "@rack/core";
 import {
-  inspectTargetBuild,
+  attachContextToPromptBuild,
+  inspectPreparedTargetBuild,
   prepareTargetBuild,
   type InstalledTargetBuild,
+  type PreparedTargetBuild,
   type TargetBuildInspection,
 } from "@rack/core/build";
+import {
+  TopoContextPanel,
+  type TopoContextSelection,
+} from "./TopoContextPanel.js";
 
 type PreviewSectionProps = {
   project: RackProject;
@@ -59,24 +65,60 @@ export function PreviewSection({
   const [selectedArtifactPath, setSelectedArtifactPath] = useState<string | null>(
     null,
   );
+  const [topoContext, setTopoContext] = useState<TopoContextSelection>({
+    enabled: false,
+    snapshot: null,
+  });
+  const [contextualBuild, setContextualBuild] =
+    useState<PreparedTargetBuild | null>(null);
+  const previewTargetBuild = contextualBuild?.targetBuild ?? targetBuild;
   const selectedArtifact =
-    targetBuild.artifacts.find(
+    previewTargetBuild.artifacts.find(
       (artifact) => artifact.path === selectedArtifactPath,
-    ) ?? targetBuild.artifacts[0] ?? null;
+    ) ?? previewTargetBuild.artifacts[0] ?? null;
   const [inspection, setInspection] = useState<TargetBuildInspection | null>(null);
   const [checking, setChecking] = useState(true);
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
 
   useEffect(() => {
-    setSelectedArtifactPath(targetBuild.artifacts[0]?.path ?? null);
-  }, [targetBuild]);
+    setSelectedArtifactPath(previewTargetBuild.artifacts[0]?.path ?? null);
+  }, [previewTargetBuild]);
+
+  const prepareCurrentBuild = useCallback(async (): Promise<PreparedTargetBuild> => {
+    let prepared = await prepareTargetBuild(project, selectedProfile, target);
+    if (!topoContext.enabled) return prepared;
+
+    if (target !== "prompt") {
+      throw new Error(
+        "TOPO context is only supported for the prompt destination in this alpha.",
+      );
+    }
+    if (!topoContext.snapshot) {
+      throw new Error("Preview TOPO context before building with it.");
+    }
+
+    prepared = await attachContextToPromptBuild(prepared, topoContext.snapshot);
+    return prepared;
+  }, [project, selectedProfile, target, topoContext]);
 
   const refreshBuildState = useCallback(async () => {
     setChecking(true);
     setBuildError(null);
+
+    if (topoContext.enabled && !topoContext.snapshot) {
+      setInspection(null);
+      setContextualBuild(null);
+      setChecking(false);
+      return;
+    }
+
     try {
-      const artifactPaths = targetBuild.artifacts.map((artifact) => artifact.path);
+      const prepared = await prepareCurrentBuild();
+      setContextualBuild(topoContext.enabled ? prepared : null);
+      const artifactPaths = prepared.previewTargetBuild.artifacts.map(
+        (artifact) => artifact.path,
+      );
       const installed = await invoke<InstalledTargetBuild>(
         "read_generated_prompt_build",
         {
@@ -86,11 +128,10 @@ export function PreviewSection({
           artifactPaths,
         },
       );
-      setInspection(
-        await inspectTargetBuild(project, selectedProfile, target, installed),
-      );
+      setInspection(await inspectPreparedTargetBuild(prepared, installed));
     } catch (reason) {
       setInspection(null);
+      setContextualBuild(null);
       setBuildError(
         reason instanceof Error
           ? reason.message
@@ -101,7 +142,14 @@ export function PreviewSection({
     } finally {
       setChecking(false);
     }
-  }, [project, selectedProfile, target, targetBuild.artifacts]);
+  }, [
+    prepareCurrentBuild,
+    project.root,
+    selectedProfile,
+    target,
+    topoContext.enabled,
+    topoContext.snapshot,
+  ]);
 
   useEffect(() => {
     void refreshBuildState();
@@ -133,11 +181,7 @@ export function PreviewSection({
     setBuilding(true);
     setBuildError(null);
     try {
-      const prepared = await prepareTargetBuild(
-        project,
-        selectedProfile,
-        target,
-      );
+      const prepared = await prepareCurrentBuild();
       if (!prepared.manifest || prepared.outputFiles.length === 0) {
         const message = prepared.diagnostics
           .filter((item) => item.severity === "error")
@@ -146,7 +190,7 @@ export function PreviewSection({
         throw new Error(message || "This Set-up cannot be built yet.");
       }
 
-      const artifactPaths = prepared.targetBuild.artifacts.map(
+      const artifactPaths = prepared.previewTargetBuild.artifacts.map(
         (artifact) => artifact.path,
       );
       const result = await invoke<InstallResult>(
@@ -178,12 +222,15 @@ export function PreviewSection({
     }
   };
 
-  const buildErrors = targetBuild.diagnostics.filter(
+  const buildErrors = previewTargetBuild.diagnostics.filter(
     (item) => item.severity === "error",
   );
   const preparedErrors =
     inspection?.current.diagnostics.filter((item) => item.severity === "error") ?? [];
-  const blocked = buildErrors.length > 0 || preparedErrors.length > 0;
+  const blocked =
+    buildErrors.length > 0 ||
+    preparedErrors.length > 0 ||
+    (topoContext.enabled && !topoContext.snapshot);
 
   return (
     <section aria-labelledby="preview-heading">
@@ -224,6 +271,14 @@ export function PreviewSection({
         </div>
       </div>
 
+      {target === "prompt" ? (
+        <TopoContextPanel
+          projectName={project.manifest?.name ?? "rack"}
+          onChange={setTopoContext}
+          onStatus={onStatus}
+        />
+      ) : null}
+
       {buildError ? (
         <div className="notice notice--error" role="alert">
           <strong>Generated build problem</strong>
@@ -259,7 +314,7 @@ export function PreviewSection({
                 </span>
                 <span className="build-meta">
                   {inspection?.current.estimatedTokens != null
-                    ? `About ${inspection.current.estimatedTokens.toLocaleString()} tokens · ${targetBuild.artifacts.length} ${targetBuild.artifacts.length === 1 ? "file" : "files"}`
+                    ? `About ${inspection.current.estimatedTokens.toLocaleString()} tokens · ${previewTargetBuild.artifacts.length} ${previewTargetBuild.artifacts.length === 1 ? "file" : "files"}`
                     : "Package estimate pending"}
                 </span>
               </div>
@@ -278,11 +333,11 @@ export function PreviewSection({
             </button>
           </div>
 
-          {targetBuild.degradations.length > 0 ? (
+          {previewTargetBuild.degradations.length > 0 ? (
             <aside className="degradation-panel" aria-label="Destination changes">
               <p className="eyebrow">What changes for this destination</p>
               <ul>
-                {targetBuild.degradations.map((degradation) => (
+                {previewTargetBuild.degradations.map((degradation) => (
                   <li key={`${degradation.capability}-${degradation.title}`}>
                     <strong>{degradation.title}.</strong>{" "}
                     {degradation.explanation}
@@ -303,7 +358,7 @@ export function PreviewSection({
           ) : null}
 
           <div className="package-files" aria-label="Generated package files">
-            {targetBuild.artifacts.map((artifact) => (
+            {previewTargetBuild.artifacts.map((artifact) => (
               <button
                 className={`package-file ${selectedArtifact.path === artifact.path ? "package-file--active" : ""}`}
                 type="button"
@@ -319,9 +374,9 @@ export function PreviewSection({
           <div className="preview-layout">
             <aside className="contribution-panel">
               <p className="eyebrow">What is carried across</p>
-              <h3>{targetBuild.compiled?.modules.length ?? 0} instructions</h3>
+              <h3>{previewTargetBuild.compiled?.modules.length ?? 0} instructions</h3>
               <ol>
-                {targetBuild.compiled?.modules.map((module) => (
+                {previewTargetBuild.compiled?.modules.map((module) => (
                   <li key={module.harness.id}>
                     <strong>{module.title}</strong>
                     <code>{module.harness.id}</code>
