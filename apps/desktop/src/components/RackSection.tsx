@@ -28,6 +28,12 @@ const typeLabels: Record<string, string> = {
 
 const guidedTypes = new Set(["context", "voice", "guardrail", "task"]);
 
+const verificationKindLabels = {
+  automatic: "automatic check",
+  judgement: "AI judgement",
+  human: "human review",
+} as const;
+
 export function RackSection({
   project,
   onGuidedEdit,
@@ -152,6 +158,38 @@ export function RackSection({
                 {modules.map((module) => {
                   const review = reviewByModuleId.get(module.harness.id);
                   const experiment = module.harness.experiment;
+                  const applicationLabels = [
+                    ...(module.harness.enforcement.includes("instruction")
+                      ? ["AI guidance"]
+                      : []),
+                    ...(module.harness.enforcement.includes("host_policy")
+                      ? ["host rule"]
+                      : []),
+                  ];
+                  const configuredKinds = new Set(
+                    (module.harness.verification ?? []).map((step) => step.kind),
+                  );
+                  const checkLabels: string[] = (
+                    module.harness.verification ?? []
+                  ).map((step) => verificationKindLabels[step.kind]);
+                  if (
+                    module.harness.enforcement.includes("output_check") &&
+                    !configuredKinds.has("automatic")
+                  ) {
+                    checkLabels.push("automatic check · not configured");
+                  }
+                  if (
+                    module.harness.enforcement.includes("rubric_eval") &&
+                    !configuredKinds.has("judgement")
+                  ) {
+                    checkLabels.push("AI judgement · not configured");
+                  }
+                  if (
+                    module.harness.enforcement.includes("human_review") &&
+                    !configuredKinds.has("human")
+                  ) {
+                    checkLabels.push("human review · not configured");
+                  }
                   return (
                   <article className="instruction-card" key={module.harness.id}>
                     <div className="card-meta">
@@ -180,6 +218,20 @@ export function RackSection({
                         {experiment.question}
                       </p>
                     ) : null}
+                    <div className="practice-verification-summary">
+                      <p>
+                        <strong>How this is applied:</strong>{" "}
+                        {applicationLabels.length > 0
+                          ? applicationLabels.join(" · ")
+                          : "Not added to AI guidance"}
+                      </p>
+                      <p>
+                        <strong>How this is checked:</strong>{" "}
+                        {checkLabels.length > 0
+                          ? checkLabels.join(" · ")
+                          : "Guidance only"}
+                      </p>
+                    </div>
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">

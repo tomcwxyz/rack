@@ -196,3 +196,4 @@ export * from "./sharedPracticeDiff.js";
 export * from "./sourcePatching.js";
 export * from "./structuredPatching.js";
 export * from "./targetRegistry.js";
+export * from "./verificationPlan.js";
