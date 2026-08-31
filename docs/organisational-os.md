@@ -85,3 +85,42 @@ The initial rule should be:
 > context may influence an execution, but it does not become canonical RACK source.
 
 After that, implement a local TOPO transport and prove the first TOPO → RACK context exchange.
+
+## Local alpha workflow
+
+RACK can now preview purpose-bound context from local TOPO:
+
+~~~sh
+rack context topo \
+  --subject project:rack \
+  --purpose "prepare implementation"
+~~~
+
+For the first controlled integration, TOPO context can be attached to a **prompt** build:
+
+~~~sh
+rack build . \
+  --profile coding \
+  --target prompt \
+  --context-subject project:rack \
+  --context-purpose "prepare implementation" \
+  --install
+~~~
+
+Optional `--topo-store` and `--topo-command` flags select a specific TOPO store or CLI executable.
+
+The generated prompt receives an explicit **Organisational context** section after the Rack instructions. Context is transient generated material: it does not become a Rack module, Set-up or source file.
+
+The generated `build.json` records only context provenance needed to reproduce and audit use:
+
+- provider node;
+- Context Packet ID;
+- context digest;
+- subject and purpose;
+- generation/expiry time;
+- permissions;
+- included object IDs.
+
+The canonical Rack source digest remains unchanged by context.
+
+This alpha deliberately supports the generic prompt destination only. We should test the semantics before deciding how context should be represented in destination-specific packages.
