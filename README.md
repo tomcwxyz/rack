@@ -31,6 +31,7 @@ A user can:
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
 - run indicative Quick checks and repeated independently judged Reliable checks through the optional managed service;
 - define and inspect target-neutral Verification Plans which distinguish automatic checks, bounded AI judgement and human review from ordinary prompt guidance;
+- verify supplied work against configured semantic practice through a fresh bounded model call, with metadata-only cost preflight and explicit paid confirmation;
 - perform build, check, Starter-library and shared-practice publishing operations through the CLI.
 
 The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
@@ -41,9 +42,11 @@ Iterations 1–8 established local source, compilation, portable destinations, g
 
 Iterations 16–29 extend Rack from individual working practice into inspectable organisational practice and a supported private-pilot distribution path without introducing a central control plane. Rack now has separate criticality and authority semantics, deterministic source resolution, shared-practice files, accepted-snapshot update review, binding and adaptable defaults, review dates, experiments, plain-language/accessibility guardrails, safe publishing through CLI and desktop, local opt-out/adaptation of shared defaults, and signed pilot release tooling.
 
-Iteration 30 adds the first verification-planning layer. Active practice can now distinguish AI guidance from automatic checks, bounded AI judgement and human review. The plan is inspectable and target-neutral; execution remains deliberately deferred until trusted verifier and bounded-judgement execution are added.
+Iteration 30 adds the first verification-planning layer. Active practice can distinguish AI guidance from automatic checks, bounded AI judgement and human review through an inspectable, target-neutral plan.
 
-The current focus is to exercise the organisational-practice model with real pilot practice while completing the path from instructions to reliable verification. Local use remains account-free; managed evaluation remains optional.
+Iteration 31 adds the first executable semantic gate. A user can select one configured judgement question, supply only the evidence it requires, review cost metadata, explicitly confirm the paid call and receive pass, fail or uncertain from a fresh bounded model context. Malformed or failed execution remains incomplete rather than being treated as a pass.
+
+The current focus is to exercise the organisational-practice model with real pilot practice while completing deterministic verification and host integration. Local use remains account-free; managed evaluation and managed semantic verification remain optional.
 
 ## Product shape
 
