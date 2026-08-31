@@ -34,6 +34,7 @@ struct DiscoveryNode {
 #[serde(rename_all = "camelCase")]
 pub struct TopoLocalStatus {
     available: bool,
+    state: &'static str,
     node_id: Option<String>,
     version: Option<String>,
     message: String,
@@ -183,6 +184,7 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
         Err(error) => {
             return Ok(TopoLocalStatus {
                 available: false,
+                state: "not-running",
                 node_id: None,
                 version: None,
                 message: error,
@@ -201,9 +203,10 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
             if sharing_enabled == Some(false) {
                 return Ok(TopoLocalStatus {
                     available: false,
+                    state: "sharing-off",
                     node_id: Some(discovery.node.id),
                     version: Some(discovery.node.version),
-                    message: "TOPO is running, but Local app access is off. Enable it in TOPO's Context preview panel.".to_owned(),
+                    message: "TOPO is open. Allow local tools in TOPO and Rack will connect automatically.".to_owned(),
                 });
             }
 
@@ -214,14 +217,16 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
             if !provides_context {
                 return Ok(TopoLocalStatus {
                     available: false,
+                    state: "unsupported",
                     node_id: Some(discovery.node.id),
                     version: Some(discovery.node.version),
-                    message: "TOPO is running but does not advertise context queries.".to_owned(),
+                    message: "TOPO is open but this version does not offer local context to Rack.".to_owned(),
                 });
             }
 
             Ok(TopoLocalStatus {
                 available: true,
+                state: "connected",
                 node_id: Some(discovery.node.id),
                 version: Some(discovery.node.version),
                 message: "TOPO local context is available.".to_owned(),
@@ -229,6 +234,7 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
         }
         Err(error) => Ok(TopoLocalStatus {
             available: false,
+            state: "unreachable",
             node_id: Some(discovery.node.id),
             version: Some(discovery.node.version),
             message: error,
