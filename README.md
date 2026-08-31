@@ -11,7 +11,6 @@ Rack is in active pre-release development. The repository contains a working loc
 A user can:
 
 - choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
-- import existing Word, PowerPoint, spreadsheet, OpenDocument, RTF, EPUB, CSV and text-based PDF material locally as editable Markdown during creation or context maintenance;
 - review every proposed instruction before Rack writes local files;
 - browse a bundled Starter library of reusable instructions and six starting templates;
 - inspect exact Starter source, licence and attribution before copying anything into a Rack;
@@ -30,6 +29,7 @@ A user can:
 - install managed local builds with provenance manifests, retained backups and drift detection;
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
 - run indicative Quick checks and repeated independently judged Reliable checks through the optional managed service;
+- define and inspect target-neutral Verification Plans which distinguish automatic checks, bounded AI judgement and human review from ordinary prompt guidance;
 - perform build, check, Starter-library and shared-practice publishing operations through the CLI.
 
 The accepted v0.1 specification, Architecture Decision Records and implementation notes live in [`docs/`](docs/).
@@ -38,9 +38,11 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 Iterations 1–8 established local source, compilation, portable destinations, guided creation/maintenance and the Starter library. Iterations 9–15 established the optional managed evaluation boundary: privacy-safe storage, model registry/preflight, explicit paid confirmation, rubric-backed Quick checks and Reliable repeated candidate/baseline evaluation with an independent judge and regression gate.
 
-Iterations 16–27 extend Rack from individual working practice into inspectable organisational practice without introducing a central control plane. Rack now has separate criticality and authority semantics, deterministic source resolution, shared-practice files, accepted-snapshot update review, binding and adaptable defaults, review dates, experiments, plain-language/accessibility guardrails, safe publishing through CLI and desktop, and local opt-out/adaptation of shared defaults.
+Iterations 16–29 extend Rack from individual working practice into inspectable organisational practice and a supported private-pilot distribution path without introducing a central control plane. Rack now has separate criticality and authority semantics, deterministic source resolution, shared-practice files, accepted-snapshot update review, binding and adaptable defaults, review dates, experiments, plain-language/accessibility guardrails, safe publishing through CLI and desktop, local opt-out/adaptation of shared defaults, and signed pilot release tooling.
 
-The current focus is to exercise that model with real pilot practice before adding more transport or administration. Local use remains account-free; managed evaluation remains optional.
+Iteration 30 adds the first verification-planning layer. Active practice can now distinguish AI guidance from automatic checks, bounded AI judgement and human review. The plan is inspectable and target-neutral; execution remains deliberately deferred until trusted verifier and bounded-judgement execution are added.
+
+The current focus is to exercise the organisational-practice model with real pilot practice while completing the path from instructions to reliable verification. Local use remains account-free; managed evaluation remains optional.
 
 ## Product shape
 
