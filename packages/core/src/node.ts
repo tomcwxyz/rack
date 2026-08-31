@@ -289,3 +289,5 @@ export const installPromptBuild = async (
   projectPath: string,
   build: PreparedPromptBuild,
 ): Promise<PromptBuildInstallResult> => installTargetBuild(projectPath, build);
+
+export * from "./oosNode.js";
