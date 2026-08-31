@@ -10,8 +10,16 @@ export type TopoContextSelection = {
   snapshot: ContextSnapshot | null;
 };
 
+type TopoConnectionState =
+  | "not-running"
+  | "sharing-off"
+  | "unsupported"
+  | "connected"
+  | "unreachable";
+
 type TopoLocalStatus = {
   available: boolean;
+  state: TopoConnectionState;
   nodeId: string | null;
   version: string | null;
   message: string;
@@ -29,7 +37,7 @@ export function TopoContextPanel({
   onStatus,
 }: TopoContextPanelProps) {
   const [status, setStatus] = useState<TopoLocalStatus | null>(null);
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [enabled, setEnabled] = useState(false);
   const [subject, setSubject] = useState("project:" + projectName);
   const [purpose, setPurpose] = useState("prepare this Rack build");
@@ -44,13 +52,14 @@ export function TopoContextPanel({
     [onChange],
   );
 
-  const checkTopo = useCallback(async () => {
-    setChecking(true);
+  const checkTopo = useCallback(async (quiet = false) => {
+    if (!quiet) setChecking(true);
     try {
       setStatus(await invoke<TopoLocalStatus>("topo_local_status"));
     } catch (reason) {
       setStatus({
         available: false,
+        state: "unreachable",
         nodeId: null,
         version: null,
         message:
@@ -61,19 +70,30 @@ export function TopoContextPanel({
               : "Rack could not check TOPO.",
       });
     } finally {
-      setChecking(false);
+      if (!quiet) setChecking(false);
     }
   }, []);
 
   useEffect(() => {
     void checkTopo();
+    const timer = window.setInterval(() => {
+      void checkTopo(true);
+    }, 2500);
+    return () => window.clearInterval(timer);
   }, [checkTopo]);
 
   useEffect(() => {
     setSubject("project:" + projectName);
     setSnapshot(null);
     publish(enabled, null);
-  }, [projectName]);
+  }, [projectName, publish]);
+
+  useEffect(() => {
+    if (status && !status.available && snapshot) {
+      setSnapshot(null);
+      publish(enabled, null);
+    }
+  }, [enabled, publish, snapshot, status]);
 
   const clearSnapshot = () => {
     setSnapshot(null);
@@ -83,7 +103,7 @@ export function TopoContextPanel({
 
   const requestContext = async () => {
     if (!subject.trim() || !purpose.trim()) {
-      setError("Give TOPO a subject and a purpose before requesting context.");
+      setError("Tell Rack what this context is for before reviewing it.");
       return;
     }
 
@@ -118,54 +138,62 @@ export function TopoContextPanel({
             ? reason
             : "Rack could not request TOPO context.",
       );
+      void checkTopo(true);
     } finally {
       setLoading(false);
     }
   };
 
   const statusText = checking
-    ? "Checking…"
-    : status?.available
-      ? "Available" + (status.version ? " · " + status.version : "")
-      : "Not available";
+    ? "Looking for TOPO…"
+    : status?.state === "connected"
+      ? "Connected" + (status.version ? " · " + status.version : "")
+      : status?.state === "sharing-off"
+        ? "Permission needed"
+        : status?.state === "unsupported"
+          ? "Update needed"
+          : status?.state === "unreachable"
+            ? "Reconnecting…"
+            : "Waiting for TOPO";
+
+  const unavailableMessage =
+    status?.state === "not-running"
+      ? "Open TOPO on this computer. Rack will notice it automatically."
+      : status?.state === "sharing-off"
+        ? "TOPO is open. In TOPO, choose Allow local tools. Rack will connect automatically."
+        : status?.state === "unreachable"
+          ? "Rack found TOPO but cannot reach it yet. It will keep trying automatically."
+          : status?.message ??
+            "Open TOPO and Rack will connect automatically when local context is available.";
 
   return (
     <aside className="topo-context-panel" aria-label="TOPO organisational context">
       <div className="topo-context-heading">
         <div>
-          <p className="eyebrow">Organisational context · TOPO</p>
-          <h3>Use current local memory in this build</h3>
+          <p className="eyebrow">TOPO memory</p>
+          <h3>Connect context from TOPO</h3>
         </div>
         <span
           className={
             "topo-status" +
             (status?.available ? " topo-status--available" : "")
           }
+          aria-live="polite"
         >
           {statusText}
         </span>
       </div>
 
       <p className="muted-copy">
-        Rack asks the running TOPO desktop for purpose-bound context. It does
-        not read TOPO's database. This local connection can share ordinary and
-        personal memory only; sensitive and restricted memory stays in TOPO.
+        TOPO and Rack stay separate. When you choose to use memory here, Rack
+        asks TOPO for only the context relevant to this build. Sensitive and
+        restricted memory stays in TOPO.
       </p>
 
       {!status?.available ? (
         <div className="topo-context-unavailable">
-          <span>
-            {status?.message ??
-              "Open TOPO desktop to make local context available."}
-          </span>
-          <button
-            className="quiet-action"
-            type="button"
-            onClick={() => void checkTopo()}
-            disabled={checking}
-          >
-            Check again
-          </button>
+          <span>{unavailableMessage}</span>
+          <small>Connection is checked automatically.</small>
         </div>
       ) : (
         <>
@@ -181,14 +209,14 @@ export function TopoContextPanel({
                 publish(next, null);
               }}
             />
-            <span>Include TOPO context in this prompt build</span>
+            <span>Use TOPO memory in this prompt build</span>
           </label>
 
           {enabled ? (
             <>
               <div className="topo-context-fields">
                 <label className="field">
-                  <span>Subject</span>
+                  <span>Context for</span>
                   <input
                     value={subject}
                     onChange={(event) => {
@@ -199,7 +227,7 @@ export function TopoContextPanel({
                   />
                 </label>
                 <label className="field">
-                  <span>Purpose</span>
+                  <span>What are you doing?</span>
                   <input
                     value={purpose}
                     onChange={(event) => {
@@ -219,17 +247,19 @@ export function TopoContextPanel({
                   onClick={() => void requestContext()}
                 >
                   {loading
-                    ? "Requesting…"
+                    ? "Asking TOPO…"
                     : snapshot
                       ? "Refresh context"
-                      : "Preview context"}
+                      : "Review context"}
                 </button>
                 {snapshot ? (
                   <span>
-                    {snapshot.objects.length} selected · packet {snapshot.id}
+                    {snapshot.objects.length} selected · ready for this build
                   </span>
                 ) : (
-                  <span>Preview exactly what TOPO would supply before building.</span>
+                  <span>
+                    Review what TOPO selected before it affects generated output.
+                  </span>
                 )}
               </div>
 
@@ -251,6 +281,10 @@ export function TopoContextPanel({
                     </li>
                   ))}
                 </ul>
+              ) : snapshot ? (
+                <p className="topo-context-empty">
+                  TOPO found no shareable memory for this subject and purpose.
+                </p>
               ) : null}
             </>
           ) : null}
