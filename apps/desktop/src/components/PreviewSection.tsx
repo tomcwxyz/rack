@@ -85,6 +85,13 @@ export function PreviewSection({
     setSelectedArtifactPath(previewTargetBuild.artifacts[0]?.path ?? null);
   }, [previewTargetBuild]);
 
+  useEffect(() => {
+    if (target !== "prompt") {
+      setTopoContext({ enabled: false, snapshot: null });
+      setContextualBuild(null);
+    }
+  }, [target]);
+
   const prepareCurrentBuild = useCallback(async (): Promise<PreparedTargetBuild> => {
     let prepared = await prepareTargetBuild(project, selectedProfile, target);
     if (!topoContext.enabled) return prepared;
