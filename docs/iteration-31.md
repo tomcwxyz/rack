@@ -89,6 +89,8 @@ The verification question and evidence are not included in preflight.
 
 After the user explicitly confirms the displayed cost, one fresh managed call receives the bounded question and evidence.
 
+Rack rejects a question/evidence bundle locally if the assembled managed prompt would exceed 240,000 characters, keeping it below the existing confirmation contract before any paid request is attempted.
+
 The existing transient-content retention boundary applies. No Rack project is uploaded.
 
 ## Desktop
