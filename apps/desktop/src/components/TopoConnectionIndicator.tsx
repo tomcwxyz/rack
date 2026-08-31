@@ -1,20 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
-type TopoConnectionState =
-  | "not-running"
-  | "sharing-off"
-  | "unsupported"
-  | "connected"
-  | "unreachable";
-
-type TopoLocalStatus = {
-  available: boolean;
-  state: TopoConnectionState;
-  nodeId: string | null;
-  version: string | null;
-  message: string;
-};
+import {
+  topoStatusLabel,
+  topoStatusMessage,
+  type TopoLocalStatus,
+} from "../topoStatus.js";
 
 type TopoConnectionIndicatorProps = {
   compact?: boolean;
@@ -54,27 +44,8 @@ export function TopoConnectionIndicator({
     return () => window.clearInterval(timer);
   }, [refresh]);
 
-  const stateLabel =
-    status?.state === "connected"
-      ? "Connected"
-      : status?.state === "sharing-off"
-        ? "Permission needed"
-        : status?.state === "unsupported"
-          ? "Update needed"
-          : status?.state === "unreachable"
-            ? "Reconnecting"
-            : "Not connected";
-
-  const message =
-    status?.state === "connected"
-      ? "TOPO is available on this computer."
-      : status?.state === "sharing-off"
-        ? "TOPO is open. Choose Allow local tools in TOPO."
-        : status?.state === "unsupported"
-          ? "TOPO is open, but this version cannot share context with Rack."
-          : status?.state === "unreachable"
-            ? "Rack found TOPO and is trying to reconnect."
-            : "Open TOPO and Rack will find it automatically.";
+  const stateLabel = topoStatusLabel(status);
+  const message = topoStatusMessage(status);
 
   const body = (
     <>

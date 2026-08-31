@@ -4,25 +4,15 @@ import {
   parseOosContextPacket,
   type ContextSnapshot,
 } from "@rack/core";
+import {
+  topoStatusLabel,
+  topoStatusMessage,
+  type TopoLocalStatus,
+} from "../topoStatus.js";
 
 export type TopoContextSelection = {
   enabled: boolean;
   snapshot: ContextSnapshot | null;
-};
-
-type TopoConnectionState =
-  | "not-running"
-  | "sharing-off"
-  | "unsupported"
-  | "connected"
-  | "unreachable";
-
-type TopoLocalStatus = {
-  available: boolean;
-  state: TopoConnectionState;
-  nodeId: string | null;
-  version: string | null;
-  message: string;
 };
 
 type TopoContextPanelProps = {
@@ -59,7 +49,7 @@ export function TopoContextPanel({
     } catch (reason) {
       setStatus({
         available: false,
-        state: "unreachable",
+        state: "discovery-error",
         nodeId: null,
         version: null,
         message:
@@ -144,27 +134,8 @@ export function TopoContextPanel({
     }
   };
 
-  const statusText = checking
-    ? "Looking for TOPO…"
-    : status?.state === "connected"
-      ? "Connected" + (status.version ? " · " + status.version : "")
-      : status?.state === "sharing-off"
-        ? "Permission needed"
-        : status?.state === "unsupported"
-          ? "Update needed"
-          : status?.state === "unreachable"
-            ? "Reconnecting…"
-            : "Waiting for TOPO";
-
-  const unavailableMessage =
-    status?.state === "not-running"
-      ? "Open TOPO on this computer. Rack will notice it automatically."
-      : status?.state === "sharing-off"
-        ? "TOPO is open. In TOPO, choose Allow local tools. Rack will connect automatically."
-        : status?.state === "unreachable"
-          ? "Rack found TOPO but cannot reach it yet. It will keep trying automatically."
-          : status?.message ??
-            "Open TOPO and Rack will connect automatically when local context is available.";
+  const statusText = topoStatusLabel(status, checking);
+  const unavailableMessage = topoStatusMessage(status);
 
   return (
     <aside className="topo-context-panel" aria-label="TOPO organisational context">
