@@ -1,9 +1,16 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{fs, path::{Path, PathBuf}, time::Duration};
+use std::{
+    fs,
+    io::{Read, Write},
+    net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream},
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 const DISCOVERY_PROTOCOL: &str = "oos-local/0.1";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(3);
+const MAX_RESPONSE_BYTES: u64 = 2 * 1024 * 1024;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,18 +44,19 @@ fn discovery_path() -> Result<PathBuf, String> {
     Ok(home.join(".topo").join("oos-local.json"))
 }
 
-fn validate_loopback_endpoint(endpoint: &str) -> Result<(), String> {
+fn loopback_port(endpoint: &str) -> Result<u16, String> {
     let port = endpoint
         .strip_prefix("http://127.0.0.1:")
         .ok_or_else(|| "TOPO local discovery did not point to a loopback HTTP endpoint.".to_owned())?;
 
-    if port.is_empty()
-        || port.contains('/')
-        || port.parse::<u16>().ok().filter(|value| *value > 0).is_none()
-    {
+    if port.is_empty() || port.contains('/') {
         return Err("TOPO local discovery contained an invalid loopback port.".to_owned());
     }
-    Ok(())
+
+    port.parse::<u16>()
+        .ok()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| "TOPO local discovery contained an invalid loopback port.".to_owned())
 }
 
 fn read_discovery_from(path: &Path) -> Result<DiscoveryFile, String> {
@@ -83,10 +91,13 @@ fn read_discovery_from(path: &Path) -> Result<DiscoveryFile, String> {
     if discovery.token.len() < 32 {
         return Err("TOPO local discovery token is invalid.".to_owned());
     }
-    if discovery.pid == 0 || discovery.started_at.trim().is_empty() || discovery.node.name.trim().is_empty() {
+    if discovery.pid == 0
+        || discovery.started_at.trim().is_empty()
+        || discovery.node.name.trim().is_empty()
+    {
         return Err("TOPO local discovery metadata is incomplete.".to_owned());
     }
-    validate_loopback_endpoint(&discovery.endpoint)?;
+    loopback_port(&discovery.endpoint)?;
     Ok(discovery)
 }
 
@@ -94,28 +105,75 @@ fn read_discovery() -> Result<DiscoveryFile, String> {
     read_discovery_from(&discovery_path()?)
 }
 
-fn agent() -> ureq::Agent {
-    ureq::AgentBuilder::new()
-        .timeout_connect(REQUEST_TIMEOUT)
-        .timeout_read(REQUEST_TIMEOUT)
-        .timeout_write(REQUEST_TIMEOUT)
-        .build()
-}
+fn http_json(
+    discovery: &DiscoveryFile,
+    method: &str,
+    path: &str,
+    body: Option<&Value>,
+) -> Result<Value, String> {
+    let port = loopback_port(&discovery.endpoint)?;
+    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+    let mut stream = TcpStream::connect_timeout(&address, REQUEST_TIMEOUT)
+        .map_err(|error| format!("TOPO local endpoint is unavailable: {error}"))?;
+    stream
+        .set_read_timeout(Some(REQUEST_TIMEOUT))
+        .map_err(|error| format!("Could not configure TOPO read timeout: {error}"))?;
+    stream
+        .set_write_timeout(Some(REQUEST_TIMEOUT))
+        .map_err(|error| format!("Could not configure TOPO write timeout: {error}"))?;
 
-fn response_json(response: ureq::Response) -> Result<Value, String> {
-    response
-        .into_json::<Value>()
+    let body_text = body
+        .map(serde_json::to_string)
+        .transpose()
+        .map_err(|error| format!("Could not encode TOPO request: {error}"))?
+        .unwrap_or_default();
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nAuthorization: Bearer {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        discovery.token,
+        body_text.len(),
+        body_text,
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("Could not send TOPO local request: {error}"))?;
+    stream
+        .flush()
+        .map_err(|error| format!("Could not finish TOPO local request: {error}"))?;
+
+    let mut response = Vec::new();
+    stream
+        .take(MAX_RESPONSE_BYTES + 1)
+        .read_to_end(&mut response)
+        .map_err(|error| format!("Could not read TOPO local response: {error}"))?;
+    if response.len() as u64 > MAX_RESPONSE_BYTES {
+        return Err("TOPO local response exceeded Rack's 2 MiB limit.".to_owned());
+    }
+
+    let text = String::from_utf8(response)
+        .map_err(|error| format!("TOPO local response was not UTF-8: {error}"))?;
+    let (headers, body) = text
+        .split_once("\r\n\r\n")
+        .ok_or_else(|| "TOPO local endpoint returned an invalid HTTP response.".to_owned())?;
+    let status = headers
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .and_then(|value| value.parse::<u16>().ok())
+        .ok_or_else(|| "TOPO local endpoint returned an invalid HTTP status.".to_owned())?;
+
+    if !(200..300).contains(&status) {
+        return Err(format!(
+            "TOPO local endpoint returned HTTP {status}: {}",
+            body.trim()
+        ));
+    }
+
+    serde_json::from_str(body)
         .map_err(|error| format!("TOPO local endpoint returned invalid JSON: {error}"))
 }
 
 fn get_capabilities(discovery: &DiscoveryFile) -> Result<Value, String> {
-    let url = format!("{}/v0/capabilities", discovery.endpoint);
-    let response = agent()
-        .get(&url)
-        .set("Authorization", &format!("Bearer {}", discovery.token))
-        .call()
-        .map_err(|error| format!("TOPO local endpoint is unavailable: {error}"))?;
-    response_json(response)
+    http_json(discovery, "GET", "/v0/capabilities", None)
 }
 
 #[tauri::command]
@@ -177,21 +235,19 @@ pub fn topo_local_context(
     }
 
     let discovery = read_discovery()?;
-    let url = format!("{}/v0/context", discovery.endpoint);
-    let response = agent()
-        .post(&url)
-        .set("Authorization", &format!("Bearer {}", discovery.token))
-        .send_json(json!({
+    http_json(
+        &discovery,
+        "POST",
+        "/v0/context",
+        Some(&json!({
             "subject": subject,
             "purpose": purpose,
             "requested_by": "rack",
             "wanted": {
                 "max_items": max_items
             }
-        }))
-        .map_err(|error| format!("TOPO context request failed: {error}"))?;
-
-    response_json(response)
+        })),
+    )
 }
 
 #[cfg(test)]
@@ -213,20 +269,33 @@ mod tests {
         }
     }
 
+    fn test_directory() -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("rack-topo-local-{}-{nonce}", std::process::id()))
+    }
+
     #[test]
     fn only_loopback_discovery_is_accepted() {
-        assert!(validate_loopback_endpoint("http://127.0.0.1:49152").is_ok());
-        assert!(validate_loopback_endpoint("http://localhost:49152").is_err());
-        assert!(validate_loopback_endpoint("http://192.168.1.10:49152").is_err());
-        assert!(validate_loopback_endpoint("https://127.0.0.1:49152").is_err());
-        assert!(validate_loopback_endpoint("http://127.0.0.1:49152/other").is_err());
+        assert!(loopback_port("http://127.0.0.1:49152").is_ok());
+        assert!(loopback_port("http://localhost:49152").is_err());
+        assert!(loopback_port("http://192.168.1.10:49152").is_err());
+        assert!(loopback_port("https://127.0.0.1:49152").is_err());
+        assert!(loopback_port("http://127.0.0.1:49152/other").is_err());
     }
 
     #[test]
     fn discovery_requires_private_permissions_on_unix() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("oos-local.json");
-        fs::write(&path, serde_json::to_vec(&discovery("http://127.0.0.1:49152")).unwrap()).unwrap();
+        let directory = test_directory();
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("oos-local.json");
+        fs::write(
+            &path,
+            serde_json::to_vec(&discovery("http://127.0.0.1:49152")).unwrap(),
+        )
+        .unwrap();
 
         #[cfg(unix)]
         {
@@ -236,5 +305,7 @@ mod tests {
             fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
             assert!(read_discovery_from(&path).is_ok());
         }
+
+        let _ = fs::remove_dir_all(directory);
     }
 }
