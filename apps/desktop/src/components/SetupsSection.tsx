@@ -1,4 +1,8 @@
-import { buildPrompt, type RackProject } from "@rack/core";
+import {
+  buildPrompt,
+  buildVerificationPlan,
+  type RackProject,
+} from "@rack/core";
 
 type RackProfile = RackProject["profiles"][number];
 
@@ -32,9 +36,14 @@ export function SetupsSection({
       <div className="setup-grid">
         {project.profiles.map((profile) => {
           const build = buildPrompt(project, profile.id);
-          const blocked = build.diagnostics.some(
-            (item) => item.severity === "error",
-          );
+          const verification = buildVerificationPlan(project, profile.id);
+          const blocked =
+            build.diagnostics.some((item) => item.severity === "error") ||
+            verification.blocked;
+          const configuredChecks =
+            verification.counts.automatic +
+            verification.counts.judgement +
+            verification.counts.human;
           return (
             <article
               className={`setup-card ${selectedProfile === profile.id ? "setup-card--selected" : ""}`}
@@ -55,10 +64,45 @@ export function SetupsSection({
                   <dd>{Object.keys(profile.budgets).length}</dd>
                 </div>
                 <div>
+                  <dt>Verification</dt>
+                  <dd>
+                    {configuredChecks > 0
+                      ? `${configuredChecks} configured`
+                      : verification.counts.unconfigured > 0
+                        ? "Needs set-up"
+                        : "Guidance only"}
+                  </dd>
+                </div>
+                <div>
                   <dt>Status</dt>
                   <dd>{blocked ? "Blocked" : "Ready"}</dd>
                 </div>
               </dl>
+              <div className="setup-verification-summary">
+                <strong>How this is checked</strong>
+                <p className="muted-copy">
+                  {configuredChecks > 0
+                    ? [
+                        verification.counts.automatic > 0
+                          ? `${verification.counts.automatic} automatic`
+                          : null,
+                        verification.counts.judgement > 0
+                          ? `${verification.counts.judgement} AI judgement`
+                          : null,
+                        verification.counts.human > 0
+                          ? `${verification.counts.human} human review`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : verification.counts.unconfigured > 0
+                      ? "Verification is declared, but the checks still need to be configured."
+                      : "This Set-up currently relies on guidance rather than a verification gate."}
+                  {verification.counts.taskSuites > 0
+                    ? ` · ${verification.counts.taskSuites} acceptance suite${verification.counts.taskSuites === 1 ? "" : "s"} referenced`
+                    : ""}
+                </p>
+              </div>
               <div className="setup-actions">
                 <div className="card-actions">
                   <button
