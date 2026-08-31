@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildVerificationJudgementPreflight,
   buildVerificationJudgementPrompt,
+  MAX_VERIFICATION_PROMPT_CHARACTERS,
   parseVerificationJudgement,
   VERIFICATION_JUDGE_SYSTEM,
 } from "./verificationJudgement.js";
@@ -57,6 +58,25 @@ describe("bounded verification judgement", () => {
     expect(result.request.candidateInputTokensPerCase).toBeGreaterThan(0);
     expect(JSON.stringify(result.request)).not.toContain("A small source change.");
     expect(JSON.stringify(result.request)).not.toContain("Is the change safe?");
+  });
+
+
+  it("rejects evidence which would exceed the managed confirmation payload", () => {
+    expect(() =>
+      buildVerificationJudgementPreflight({
+        rackFingerprint: fingerprint,
+        profileId: "coding",
+        modelAlias: "standard",
+        question: "Is the change safe?",
+        evidence: [
+          { kind: "source", content: "a".repeat(100_000) },
+          { kind: "diff", content: "b".repeat(100_000) },
+          { kind: "output", content: "c".repeat(50_000) },
+        ],
+      }),
+    ).toThrow(
+      `${MAX_VERIFICATION_PROMPT_CHARACTERS.toLocaleString("en-GB")}-character managed limit`,
+    );
   });
 
   it.each([
