@@ -118,6 +118,8 @@ export const buildVerificationJudgementPrompt = (input: {
 const utf8Length = (value: string): number =>
   new TextEncoder().encode(value).length;
 
+export const MAX_VERIFICATION_PROMPT_CHARACTERS = 240_000;
+
 export const buildVerificationJudgementPreflight = (
   input: VerificationJudgementInput,
 ): {
@@ -131,6 +133,12 @@ export const buildVerificationJudgementPreflight = (
     evidence: parsed.evidence,
   });
   const system = VERIFICATION_JUDGE_SYSTEM;
+
+  if (prompt.length > MAX_VERIFICATION_PROMPT_CHARACTERS) {
+    throw new Error(
+      `Verification question and evidence exceed Rack's ${MAX_VERIFICATION_PROMPT_CHARACTERS.toLocaleString("en-GB")}-character managed limit.`,
+    );
+  }
 
   const request = evaluationPreflightRequestSchema.parse({
     schemaVersion: "0.1",
