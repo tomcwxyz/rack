@@ -15,7 +15,12 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 anydoc = "=0.2.4"
+dirs = "6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+ureq = { version = "2.12", features = ["json"] }
+
+[dev-dependencies]
+tempfile = "3"
