@@ -102,8 +102,22 @@ fn read_discovery_from(path: &Path) -> Result<DiscoveryFile, String> {
     Ok(discovery)
 }
 
+fn read_discovery_optional_from(path: &Path) -> Result<Option<DiscoveryFile>, String> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => read_discovery_from(path).map(Some),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("Could not inspect TOPO local discovery: {error}")),
+    }
+}
+
+fn read_discovery_optional() -> Result<Option<DiscoveryFile>, String> {
+    read_discovery_optional_from(&discovery_path()?)
+}
+
 fn read_discovery() -> Result<DiscoveryFile, String> {
-    read_discovery_from(&discovery_path()?)
+    read_discovery_optional()?.ok_or_else(|| {
+        "TOPO local discovery is unavailable. Open TOPO and allow local tools.".to_owned()
+    })
 }
 
 fn http_json(
@@ -177,14 +191,46 @@ fn get_capabilities(discovery: &DiscoveryFile) -> Result<Value, String> {
     http_json(discovery, "GET", "/v0/capabilities", None)
 }
 
+fn capability_state(capabilities: &Value) -> &'static str {
+    let sharing_enabled = capabilities
+        .get("extensions")
+        .and_then(Value::as_object)
+        .and_then(|extensions| extensions.get("sharing_enabled"))
+        .and_then(Value::as_bool);
+
+    if sharing_enabled == Some(false) {
+        return "sharing-off";
+    }
+
+    let provides_context = capabilities
+        .get("queries")
+        .and_then(Value::as_array)
+        .is_some_and(|items| items.iter().any(|item| item.as_str() == Some("context")));
+
+    if provides_context {
+        "connected"
+    } else {
+        "unsupported"
+    }
+}
+
 #[tauri::command]
 pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
-    let discovery = match read_discovery() {
-        Ok(discovery) => discovery,
-        Err(error) => {
+    let discovery = match read_discovery_optional() {
+        Ok(Some(discovery)) => discovery,
+        Ok(None) => {
             return Ok(TopoLocalStatus {
                 available: false,
                 state: "not-running",
+                node_id: None,
+                version: None,
+                message: "TOPO is not sharing local connection information yet.".to_owned(),
+            })
+        }
+        Err(error) => {
+            return Ok(TopoLocalStatus {
+                available: false,
+                state: "discovery-error",
                 node_id: None,
                 version: None,
                 message: error,
@@ -193,45 +239,29 @@ pub fn topo_local_status() -> Result<TopoLocalStatus, String> {
     };
 
     match get_capabilities(&discovery) {
-        Ok(capabilities) => {
-            let sharing_enabled = capabilities
-                .get("extensions")
-                .and_then(Value::as_object)
-                .and_then(|extensions| extensions.get("sharing_enabled"))
-                .and_then(Value::as_bool);
-
-            if sharing_enabled == Some(false) {
-                return Ok(TopoLocalStatus {
-                    available: false,
-                    state: "sharing-off",
-                    node_id: Some(discovery.node.id),
-                    version: Some(discovery.node.version),
-                    message: "TOPO is open. Allow local tools in TOPO and Rack will connect automatically.".to_owned(),
-                });
-            }
-
-            let provides_context = capabilities
-                .get("queries")
-                .and_then(Value::as_array)
-                .is_some_and(|items| items.iter().any(|item| item.as_str() == Some("context")));
-            if !provides_context {
-                return Ok(TopoLocalStatus {
-                    available: false,
-                    state: "unsupported",
-                    node_id: Some(discovery.node.id),
-                    version: Some(discovery.node.version),
-                    message: "TOPO is open but this version does not offer local context to Rack.".to_owned(),
-                });
-            }
-
-            Ok(TopoLocalStatus {
+        Ok(capabilities) => match capability_state(&capabilities) {
+            "sharing-off" => Ok(TopoLocalStatus {
+                available: false,
+                state: "sharing-off",
+                node_id: Some(discovery.node.id),
+                version: Some(discovery.node.version),
+                message: "TOPO is open. Allow local tools in TOPO and Rack will connect automatically.".to_owned(),
+            }),
+            "connected" => Ok(TopoLocalStatus {
                 available: true,
                 state: "connected",
                 node_id: Some(discovery.node.id),
                 version: Some(discovery.node.version),
                 message: "TOPO local context is available.".to_owned(),
-            })
-        }
+            }),
+            _ => Ok(TopoLocalStatus {
+                available: false,
+                state: "unsupported",
+                node_id: Some(discovery.node.id),
+                version: Some(discovery.node.version),
+                message: "TOPO is open but this version does not offer local context to Rack.".to_owned(),
+            }),
+        },
         Err(error) => Ok(TopoLocalStatus {
             available: false,
             state: "unreachable",
@@ -329,4 +359,36 @@ mod tests {
 
         let _ = fs::remove_dir_all(directory);
     }
+    #[test]
+    fn missing_discovery_is_not_treated_as_invalid_discovery() {
+        let directory = test_directory();
+        let path = directory.join("oos-local.json");
+        assert!(read_discovery_optional_from(&path).unwrap().is_none());
+    }
+
+    #[test]
+    fn capability_state_distinguishes_permission_support_and_connection() {
+        assert_eq!(
+            capability_state(&json!({
+                "queries": ["context"],
+                "extensions": { "sharing_enabled": false }
+            })),
+            "sharing-off"
+        );
+        assert_eq!(
+            capability_state(&json!({
+                "queries": ["status"],
+                "extensions": { "sharing_enabled": true }
+            })),
+            "unsupported"
+        );
+        assert_eq!(
+            capability_state(&json!({
+                "queries": ["context"],
+                "extensions": { "sharing_enabled": true }
+            })),
+            "connected"
+        );
+    }
+
 }
