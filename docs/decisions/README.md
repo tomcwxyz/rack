@@ -22,5 +22,6 @@ Rack uses ADRs for decisions that change canonical project semantics, dependency
 16. Signed, user-controlled desktop updates
 17. Six-week structured private pilot
 18. Semantic changes require ADRs and versioning
+19. Instruction, verification and evaluation remain separate; shared verification declarations cannot ship executable code
 
-Individual ADR files will be split out as the first implementation work begins. Accepted decisions must not be silently reversed in implementation tickets.
+Individual ADR files record the decisions which have moved from product specification into implementation. Accepted decisions must not be silently reversed in implementation tickets.
