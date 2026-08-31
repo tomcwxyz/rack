@@ -31,6 +31,9 @@ const lockedRackVersion =
     /\[\[package\]\]\nname = "rack"\nversion = "([^"]+)"/,
   )?.[1] ?? "";
 
+const publishJob =
+  pilotReleaseWorkflow.split("\n  publish:")[1]?.split("\n  checksums:")[0] ?? "";
+
 const semver =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -46,8 +49,9 @@ describe("desktop release version", () => {
   it("keeps Linux in the supported pilot release matrix", () => {
     expect(pilotReleaseWorkflow).toContain("label: Linux x64");
     expect(pilotReleaseWorkflow).toContain('--bundles deb,appimage');
-    expect(pilotReleaseWorkflow).toContain("libwebkit2gtk-4.1-dev");
-    expect(pilotReleaseWorkflow).toContain("patchelf");
+    expect(publishJob).toContain("Install Linux desktop dependencies");
+    expect(publishJob).toContain("libwebkit2gtk-4.1-dev");
+    expect(publishJob).toContain("patchelf");
     expect(pilotReleaseWorkflow).toContain("Publish release checksums");
     expect(pilotReleaseWorkflow).toContain("SHA256SUMS.txt");
   });
