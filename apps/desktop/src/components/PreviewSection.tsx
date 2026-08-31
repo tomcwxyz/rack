@@ -116,7 +116,7 @@ export function PreviewSection({
     try {
       const prepared = await prepareCurrentBuild();
       setContextualBuild(topoContext.enabled ? prepared : null);
-      const artifactPaths = prepared.previewTargetBuild.artifacts.map(
+      const artifactPaths = prepared.targetBuild.artifacts.map(
         (artifact) => artifact.path,
       );
       const installed = await invoke<InstalledTargetBuild>(
@@ -190,7 +190,7 @@ export function PreviewSection({
         throw new Error(message || "This Set-up cannot be built yet.");
       }
 
-      const artifactPaths = prepared.previewTargetBuild.artifacts.map(
+      const artifactPaths = prepared.targetBuild.artifacts.map(
         (artifact) => artifact.path,
       );
       const result = await invoke<InstallResult>(
