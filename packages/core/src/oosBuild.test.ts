@@ -68,7 +68,7 @@ const baseBuild = (): PreparedTargetBuild =>
     estimatedTokens: 1,
     diagnostics: [],
     degradations: [],
-  }) as PreparedTargetBuild;
+  }) as unknown as PreparedTargetBuild;
 
 const snapshot: ContextSnapshot = {
   id: "ctx-1",
