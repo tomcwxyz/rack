@@ -21,9 +21,11 @@ describe("bounded verification judgement", () => {
     expect(prompt).toContain(
       "Do the tests meaningfully exercise the changed behaviour?",
     );
-    expect(prompt).toContain("## Change diff");
+    expect(prompt).toContain('<evidence index="1" kind="diff">');
+    expect(prompt).toContain("Evidence type: Change diff");
     expect(prompt).toContain("Added validation and a new error branch.");
-    expect(prompt).toContain("## Test results");
+    expect(prompt).toContain('<evidence index="2" kind="test-results">');
+    expect(prompt).toContain("Evidence type: Test results");
     expect(prompt).toContain("12 tests passed.");
     expect(prompt).not.toContain("conversation");
   });
