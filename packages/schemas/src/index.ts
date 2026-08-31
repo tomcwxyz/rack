@@ -31,6 +31,59 @@ export const adapterCapabilityIdSchema = z.enum([
   "onDemandModules",
 ]);
 
+export const enforcementModeSchema = z.enum([
+  "instruction",
+  "output_check",
+  "rubric_eval",
+  "adversarial_eval",
+  "host_policy",
+  "human_review",
+]);
+
+export const verificationEvidenceSchema = z.enum([
+  "output",
+  "diff",
+  "test-results",
+  "build-results",
+  "task-input",
+  "source",
+]);
+
+export const verificationFailureActionSchema = z.enum([
+  "block",
+  "warn",
+  "human_review",
+]);
+
+const verificationBase = {
+  id: slugSchema,
+  label: z.string().min(1).max(160),
+  evidence: z.array(verificationEvidenceSchema).default([]),
+};
+
+export const verificationStepSchema = z.discriminatedUnion("kind", [
+  z.object({
+    ...verificationBase,
+    kind: z.literal("automatic"),
+    check: slugSchema,
+    requirement: z.string().min(1).max(2_000),
+    on_fail: verificationFailureActionSchema.default("block"),
+  }).strict(),
+  z.object({
+    ...verificationBase,
+    kind: z.literal("judgement"),
+    question: z.string().min(1).max(4_000),
+    on_fail: verificationFailureActionSchema.default("block"),
+    on_uncertain: verificationFailureActionSchema.default("human_review"),
+  }).strict(),
+  z.object({
+    ...verificationBase,
+    kind: z.literal("human"),
+    prompt: z.string().min(1).max(4_000),
+    required_for_completion: z.boolean().default(true),
+  }).strict(),
+]);
+
 const dependencySchema = z.object({ id: moduleIdSchema, version: z.string().optional() }).strict();
 const sourceSchema = z.object({
   origin: z.string().default("local"),
@@ -53,9 +106,8 @@ const commonHarness = {
   criticality: z.enum(["required", "recommended", "optional"]).default("recommended"),
   authority: practiceAuthoritySchema.optional(),
   experiment: practiceExperimentSchema.optional(),
-  enforcement: z.array(z.enum([
-    "instruction", "output_check", "rubric_eval", "adversarial_eval", "host_policy",
-  ])).min(1).default(["instruction"]),
+  enforcement: z.array(enforcementModeSchema).min(1).default(["instruction"]),
+  verification: z.array(verificationStepSchema).optional(),
   capabilities: capabilitiesSchema.default({ required: [] }),
   emit: emitSchema.default({ priority: 50, targets: "all" }),
   source: sourceSchema.default({ origin: "local", license: null }),
@@ -174,6 +226,29 @@ export const moduleFrontmatterSchema = moduleFrontmatterBaseSchema.superRefine(
           message: "experiment requires module schema_version 0.2.",
         });
       }
+      if ((module.harness.verification?.length ?? 0) > 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "verification"],
+          message: "verification requires module schema_version 0.2.",
+        });
+      }
+    }
+
+    for (const [index, step] of (module.harness.verification ?? []).entries()) {
+      const requiredMode =
+        step.kind === "automatic"
+          ? "output_check"
+          : step.kind === "judgement"
+            ? "rubric_eval"
+            : "human_review";
+      if (!module.harness.enforcement.includes(requiredMode)) {
+        context.addIssue({
+          code: "custom",
+          path: ["harness", "verification", index, "kind"],
+          message: `${step.kind} verification requires enforcement to include ${requiredMode}.`,
+        });
+      }
     }
 
     if (module.harness.experiment !== undefined) {
@@ -248,5 +323,9 @@ export type RackModuleFrontmatter = z.infer<typeof moduleFrontmatterSchema>;
 export type RackModule = RackModuleFrontmatter & { path: string; body: string };
 export type DestinationId = z.infer<typeof destinationIdSchema>;
 export type AdapterCapabilityId = z.infer<typeof adapterCapabilityIdSchema>;
+export type EnforcementMode = z.infer<typeof enforcementModeSchema>;
+export type VerificationEvidence = z.infer<typeof verificationEvidenceSchema>;
+export type VerificationFailureAction = z.infer<typeof verificationFailureActionSchema>;
+export type VerificationStep = z.infer<typeof verificationStepSchema>;
 
 export * from "./practice.js";
