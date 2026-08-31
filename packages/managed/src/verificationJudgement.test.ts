@@ -77,15 +77,7 @@ describe("bounded verification judgement", () => {
     });
   });
 
-  it("accepts one JSON code fence and rejects prose or invalid verdicts", () => {
-    expect(
-      parseVerificationJudgement(\n        "```json\\n{\\\"verdict\\\":\\\"uncertain\\\",\\\"reason\\\":\\\"Evidence is incomplete.\\\",\\\"evidence\\\":[]}\\n```",\n      ),\n    ).toEqual({
-      verdict: "uncertain",
-      reason: "Evidence is incomplete.",
-      evidence: [],
-    });
-
-    expect(parseVerificationJudgement("I think it passes.")).toBeNull();
+  it("accepts one JSON code fence and rejects prose or invalid verdicts", () => {\n    expect(\n      parseVerificationJudgement(\n        "```json\\n{\\\"verdict\\\":\\\"uncertain\\\",\\\"reason\\\":\\\"Evidence is incomplete.\\\",\\\"evidence\\\":[]}\\n```",\n      ),\n    ).toEqual({\n      verdict: "uncertain",\n      reason: "Evidence is incomplete.",\n      evidence: [],\n    });\n    expect(parseVerificationJudgement("I think it passes.")).toBeNull();
     expect(
       parseVerificationJudgement(
         '{"verdict":"maybe","reason":"Unsure","evidence":[]}',
