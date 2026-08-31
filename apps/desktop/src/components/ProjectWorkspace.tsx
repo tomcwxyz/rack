@@ -176,7 +176,7 @@ export function ProjectWorkspace({
             type="button"
             onClick={() => setSection("checks")}
           >
-            Checks
+            Test Rack
           </button>
           <button
             className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
