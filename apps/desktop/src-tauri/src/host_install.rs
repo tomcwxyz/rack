@@ -806,6 +806,53 @@ mod tests {
     }
 
     #[test]
+    fn install_update_and_remove_keep_work_files_separate_from_rack_source() {
+        let (rack, work) = fixture_root("roundtrip");
+        let first = vec![file("CLAUDE.md", "first")];
+
+        let installed = install_host_files(
+            rack.to_string_lossy().to_string(),
+            work.to_string_lossy().to_string(),
+            "claude-code".to_string(),
+            "coding".to_string(),
+            first,
+            true,
+        )
+        .unwrap();
+        assert_eq!(installed.status, "installed");
+        assert_eq!(fs::read_to_string(work.join("CLAUDE.md")).unwrap(), "first");
+        assert!(!rack.join("CLAUDE.md").exists());
+        assert!(state_path(&rack, "claude-code", "coding").is_file());
+
+        let updated = install_host_files(
+            rack.to_string_lossy().to_string(),
+            work.to_string_lossy().to_string(),
+            "claude-code".to_string(),
+            "coding".to_string(),
+            vec![file("CLAUDE.md", "second")],
+            true,
+        )
+        .unwrap();
+        let backup = PathBuf::from(updated.backup_directory.unwrap());
+        assert_eq!(fs::read_to_string(backup.join("CLAUDE.md")).unwrap(), "first");
+        assert_eq!(fs::read_to_string(work.join("CLAUDE.md")).unwrap(), "second");
+
+        let removed = remove_host_install(
+            rack.to_string_lossy().to_string(),
+            work.to_string_lossy().to_string(),
+            "claude-code".to_string(),
+            "coding".to_string(),
+            true,
+        )
+        .unwrap();
+        assert_eq!(removed.status, "removed");
+        assert!(!work.join("CLAUDE.md").exists());
+        assert!(!state_path(&rack, "claude-code", "coding").exists());
+
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
     fn state_is_bound_to_one_selected_work_project() {
         let (rack, work) = fixture_root("target");
         let other = rack.parent().unwrap().join("other-work");
