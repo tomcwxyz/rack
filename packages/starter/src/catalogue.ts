@@ -4,7 +4,7 @@ import {
   type RackModuleFrontmatter,
 } from "@rack/schemas";
 
-export const STARTER_CATALOGUE_VERSION = "0.1.0";
+export const STARTER_CATALOGUE_VERSION = "0.2.0";
 export const STARTER_CONTENT_LICENSE = "CC BY 4.0";
 export const STARTER_SOURCE_ORIGIN = "rack-starter";
 export const starterCatalogueMetadata = {
