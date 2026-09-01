@@ -38,14 +38,14 @@ Commands are constructed by Rack itself as:
 
 <manager> run <recognised-script>
 
-and displayed before execution.
+and displayed before execution. Rack also shows the actual repository-defined script body plus any matching pre/post lifecycle scripts (for example pretest and posttest) that the package manager may invoke.
 
 ## Confirmation and plan integrity
 
 Inspection returns the exact command list plus a fingerprint derived from:
 
 - canonical selected work-project path;
-- current package.json;
+- current package.json, including the reviewed script and lifecycle definitions;
 - selected package manager;
 - recognised script set.
 
