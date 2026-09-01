@@ -45,6 +45,11 @@ const plan = (steps: VerificationPlanStep[]): VerificationPlan => ({
 });
 
 describe("target-neutral verification completion gate", () => {
+  it("does not call an empty verification plan a pass", () => {
+    const gate = resolveVerificationCompletionGate(plan([]), []);
+    expect(gate.status).toBe("incomplete");
+    expect(gate.warnings[0]).toContain("No concrete verification steps");
+  });
   it("does not pass when a required automatic result is missing", () => {
     expect(resolveVerificationCompletionGate(plan([step()]), []).status).toBe(
       "incomplete",
@@ -104,6 +109,24 @@ describe("target-neutral verification completion gate", () => {
     ]);
     expect(gate.status).toBe("pass");
     expect(gate.warnings).toHaveLength(1);
+  });
+
+  it("keeps declared-but-unconfigured verification incomplete", () => {
+    const configured = step();
+    const incompletePlan = {
+      ...plan([configured]),
+      unconfigured: [
+        {
+          moduleId: "module",
+          moduleTitle: "Module",
+          mode: "human_review" as const,
+        },
+      ],
+    };
+    const gate = resolveVerificationCompletionGate(incompletePlan, [
+      { stepId: configured.id, outcome: "pass" },
+    ]);
+    expect(gate.status).toBe("incomplete");
   });
 
   it("uses fail before review, uncertainty and incomplete", () => {
