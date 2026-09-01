@@ -76,12 +76,15 @@ FIELD STATION was an important design experiment during this phase. RACK adopted
 
 The TOPO → RACK connection has now been proved. The goal is to make that useful in ordinary work and across real AI hosts.
 
-Phase 3 now has four first-class product tracks which should move together rather than becoming isolated features:
+Phase 3 now has five first-class product tracks which should move together rather than becoming isolated features:
 
 1. **Useful Starter practice** — deepen the Writing, Research and especially Coding packs so a new Rack begins with strong, inspectable working practice rather than generic prompt advice.
 2. **Host discovery and hand-off** — detect likely local AI tools safely, model their real capabilities, and show a reviewed installation/hand-off plan instead of treating every host as a text-file destination.
 3. **Verification** — complete the path from declared practice through trusted deterministic checks, fresh bounded judgement and explicit human review to a defensible completion decision.
 4. **Purpose-bound context** — let TOPO provide transient context without copying memory into canonical Rack practice or persistent host instructions.
+5. **Evaluation and governance boundaries** — evaluate practice rather than people, preserve personal context as personal context, and prevent implicit movement of context or behavioural exhaust across inside/between/beneath/around relationships.
+
+The relationship model is non-hierarchical: **inside** (personal/local), **between** (teams, projects and collaborations), **beneath** (infrastructure and verification machinery), and **around** (networks, standards and wider ecosystems). These are overlapping relationship lenses, not ranks or automatic inheritance boundaries.
 
 The intended host model is:
 
@@ -178,13 +181,17 @@ Scope:
 - keep deterministic and semantic verification distinct;
 - never accept a shell command, script body or plug-in supplied by Starter/shared practice as a verifier.
 
-#### Iteration 36 — complete verification gates and cross-host conformance
+#### Iteration 36 — complete verification gates, governance boundaries and cross-host conformance
 
 Outcome: automatic checks, bounded AI judgement and explicit human review combine into one target-neutral completion decision, and RACK can show whether the same practice survives translation across hosts.
 
 Scope:
 
 - combine Verification Plan results;
+- keep the unit of organisational evaluation as practice/version + scenario/task + host/adapter rather than an individual;
+- keep live verification task-local by default and produce artefact attestations rather than individual performance histories where assurance must travel;
+- prohibit automatic reporting of personal adaptations, TOPO context, prompts, conversations or individual verification histories;
+- add explicit context-flow checks so task context cannot silently become Rack source, standing host practice, shared practice, evaluation evidence or organisational analytics;
 - preserve pass/fail/uncertain/incomplete semantics;
 - make model/provider independence explicit where independent judgement is claimed;
 - add host hooks only where they can respect RACK's gate semantics;
