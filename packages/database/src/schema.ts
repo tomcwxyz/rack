@@ -83,7 +83,7 @@ export const managedRuns = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull(),
+    userId: text("user_id"),
     kind: text("kind").notNull(),
     rackFingerprint: text("rack_fingerprint").notNull(),
     profileId: text("profile_id").notNull(),
@@ -99,7 +99,18 @@ export const managedRuns = pgTable(
       for: "all",
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
-      withCheck: sql`${ownsWorkspace(table.workspaceId)} and ${table.userId} = (select auth.user_id())`,
+      withCheck: sql`${ownsWorkspace(table.workspaceId)} and (${table.userId} is null or ${table.userId} = (select auth.user_id()))`,
+    }),
+    pgPolicy("rack_runs_retention_read", {
+      for: "select",
+      to: retentionRole,
+      using: sql`${table.userId} is not null and ${table.createdAt} <= now() - interval '24 hours'`,
+    }),
+    pgPolicy("rack_runs_retention_anonymise", {
+      for: "update",
+      to: retentionRole,
+      using: sql`${table.userId} is not null and ${table.createdAt} <= now() - interval '24 hours'`,
+      withCheck: sql`${table.userId} is null`,
     }),
     pgPolicy("rack_runs_reliable_workflow", {
       for: "all",
