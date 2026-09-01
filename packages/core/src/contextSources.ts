@@ -12,6 +12,21 @@ export type ContextObject = {
   value: Record<string, unknown>;
 };
 
+export type ContextScope = "private" | "shared" | "published";
+export type ContextBoundary = "inside" | "between" | "beneath" | "around";
+export type ContextFlowTarget =
+  | "transient-task"
+  | "rack-source"
+  | "standing-host-practice"
+  | "shared-practice"
+  | "evaluation"
+  | "organisational-analytics";
+
+export type ContextFlowDecision = {
+  allowed: boolean;
+  reason: string;
+};
+
 export type ContextSnapshot = {
   id: string;
   sourceId: string;
@@ -21,6 +36,8 @@ export type ContextSnapshot = {
   evidenceRefs: string[];
   generatedAt: string;
   expiresAt: string | null;
+  scope: ContextScope;
+  boundary: ContextBoundary;
   permissions: string[];
   provenance: Record<string, unknown>;
   extensions: Record<string, unknown>;
@@ -114,6 +131,25 @@ const nullableStringField = (
   return value;
 };
 
+const contextScopeField = (
+  record: Record<string, unknown>,
+  field: string,
+): ContextScope => {
+  const value = record[field];
+  if (value !== "private" && value !== "shared" && value !== "published") {
+    throw new Error(
+      `Invalid OOS Context Packet: ${field} must be private, shared or published.`,
+    );
+  }
+  return value;
+};
+
+const boundaryForScope = (scope: ContextScope): ContextBoundary => {
+  if (scope === "private") return "inside";
+  if (scope === "shared") return "between";
+  return "around";
+};
+
 const stringArrayField = (
   record: Record<string, unknown>,
   field: string,
@@ -160,6 +196,8 @@ export const parseOosContextPacket = (
   const provenance = asRecord(packet.provenance, "provenance");
   const createdBy = asRecord(provenance.created_by, "provenance.created_by");
   const sourceId = stringField(createdBy, "id");
+  const scope = contextScopeField(packet, "scope");
+  const extensions = asRecord(packet.extensions, "extensions");
 
   if (expected?.subject !== undefined && expected.subject !== subject) {
     throw new Error(
@@ -182,10 +220,51 @@ export const parseOosContextPacket = (
     evidenceRefs: stringArrayField(packet, "evidence_refs"),
     generatedAt: stringField(packet, "generated_at"),
     expiresAt: nullableStringField(packet, "expires_at"),
+    scope,
+    boundary: boundaryForScope(scope),
     permissions: stringArrayField(packet, "permissions"),
     provenance,
-    extensions: asRecord(packet.extensions, "extensions"),
+    extensions,
   };
+};
+
+export const contextFlowDecision = (
+  snapshot: ContextSnapshot,
+  target: ContextFlowTarget,
+): ContextFlowDecision => {
+  if (target === "transient-task") {
+    if (
+      snapshot.permissions.includes("local-use-only") ||
+      snapshot.permissions.includes("task-use")
+    ) {
+      return {
+        allowed: true,
+        reason:
+          "This purpose-bound snapshot may be used transiently for the reviewed task.",
+      };
+    }
+
+    return {
+      allowed: false,
+      reason:
+        "This Context Packet does not grant permission for transient task use.",
+    };
+  }
+
+  const reasons: Record<Exclude<ContextFlowTarget, "transient-task">, string> = {
+    "rack-source":
+      "Purpose-bound context must not silently become canonical Rack source.",
+    "standing-host-practice":
+      "Purpose-bound context must not be installed as standing host practice.",
+    "shared-practice":
+      "Context is not practice and must not be republished through shared practice.",
+    evaluation:
+      "Evaluation is a different purpose and requires a fresh explicit context disclosure.",
+    "organisational-analytics":
+      "Purpose-bound context must not become organisational analytics or behavioural telemetry.",
+  };
+
+  return { allowed: false, reason: reasons[target] };
 };
 
 export type OosContextSourceOptions = {
