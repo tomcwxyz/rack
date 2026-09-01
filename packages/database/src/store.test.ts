@@ -14,6 +14,10 @@ const evaluationLimitsMigration = new URL(
   "../drizzle/0003_evaluation_limits/migration.sql",
   import.meta.url,
 );
+const practiceEvaluationPrivacyMigration = new URL(
+  "../drizzle/0008_practice_evaluation_privacy/migration.sql",
+  import.meta.url,
+);
 
 describe("managed database boundary", () => {
   it("keeps the 24-hour retention limit and row policies in the foundation migration", async () => {
@@ -47,5 +51,18 @@ describe("managed database boundary", () => {
     expect(sql).toContain("workspace.owner_user_id = (SELECT auth.user_id())");
     expect(sql).not.toContain("rack_workflow");
     expect(sql).not.toContain("provider_call");
+  });
+
+  it("scrubs initiator identity after the transient evaluation window", async () => {
+    const sql = await readFile(
+      fileURLToPath(practiceEvaluationPrivacyMigration),
+      "utf8",
+    );
+    expect(sql).toContain("ALTER COLUMN user_id DROP NOT NULL");
+    expect(sql).toContain("user_id IS NULL");
+    expect(sql).toContain("interval '24 hours'");
+    expect(sql).toContain("rack_runs_retention_anonymise");
+    expect(sql).toContain("UPDATE (user_id)");
+    expect(sql).not.toContain("BYPASSRLS");
   });
 });

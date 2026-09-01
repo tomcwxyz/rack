@@ -4,6 +4,7 @@ import { z } from "zod";
 export const MANAGED_SCHEMA_VERSION = "0.1" as const;
 export const MAX_TRANSIENT_RETENTION_HOURS = 24;
 export const managedRunIdSchema = z.uuid();
+export const evaluationSubjectKindSchema = z.literal("practice");
 
 export const rackFingerprintSchema = z
   .string()
@@ -59,6 +60,7 @@ export const quickCheckCountsSchema = z
 export const durableEvaluationSummarySchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    subjectKind: evaluationSubjectKindSchema.default("practice"),
     rackFingerprint: rackFingerprintSchema,
     profileId: slugSchema,
     target: destinationIdSchema,
@@ -230,6 +232,7 @@ export const resolvedModelIdentitySchema = z
 export const evaluationPreflightResponseSchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    subjectKind: evaluationSubjectKindSchema.default("practice"),
     mode: evaluationModeSchema,
     indicative: z.boolean(),
     requiresExplicitConfirmation: z.literal(true),
@@ -373,6 +376,7 @@ const settledProviderCallSchema = z
 export const evaluationConfirmResponseSchema = z
   .object({
     schemaVersion: z.literal(MANAGED_SCHEMA_VERSION),
+    subjectKind: evaluationSubjectKindSchema.default("practice"),
     runId: managedRunIdSchema,
     workspaceId: z.uuid(),
     status: evaluationExecutionStatusSchema,

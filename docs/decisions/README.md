@@ -24,5 +24,9 @@ Rack uses ADRs for decisions that change canonical project semantics, dependency
 18. Semantic changes require ADRs and versioning
 19. Instruction, verification and evaluation remain separate; shared verification declarations cannot ship executable code
 20. Host discovery, installation and runtime delivery remain separate from deterministic destination rendering
+21. Personal and shared practice are source relationships; local adaptations do not become upstream telemetry
+22. Instruction, live verification and practice evaluation remain separate planes
+23. Host integration is separate from deterministic destination rendering
+24. Govern practice, not people; purpose-bound context crosses boundaries only explicitly
 
 Individual ADR files record the decisions which have moved from product specification into implementation. Accepted decisions must not be silently reversed in implementation tickets.

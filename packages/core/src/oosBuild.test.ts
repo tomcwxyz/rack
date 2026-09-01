@@ -90,6 +90,8 @@ const snapshot: ContextSnapshot = {
   evidenceRefs: ["source-1"],
   generatedAt: "2026-08-31T09:00:00Z",
   expiresAt: "2999-01-01T00:00:00Z",
+  scope: "private",
+  boundary: "inside",
   permissions: ["local-use-only"],
   provenance: {
     source_type: "application",
@@ -108,13 +110,16 @@ describe("context-aware prompt builds", () => {
       packet_id: "ctx-1",
       subject: "project:rack",
       purpose: "prepare implementation",
+      scope: "private",
+      boundary: "inside",
       object_ids: ["claim-1"],
     });
     expect(build.manifest?.context?.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
 
     const prompt = build.targetBuild.artifacts[0]?.content ?? "";
     expect(prompt).toContain("# Coding practice");
-    expect(prompt).toContain("# Organisational context");
+    expect(prompt).toContain("# Purpose-bound context");
+    expect(prompt).toContain("Relationship boundary: inside");
     expect(prompt).toContain("does not override Rack instructions");
     expect(prompt).toContain('"value": "en-GB"');
 
@@ -145,6 +150,29 @@ describe("context-aware prompt builds", () => {
     expect(first.manifest?.context?.digest).toBe(
       second.manifest?.context?.digest,
     );
+  });
+
+  it("marks an installed build stale when the selected context boundary changes", async () => {
+    const first = await attachContextToPromptBuild(baseBuild(), snapshot);
+    const changed = await attachContextToPromptBuild(baseBuild(), {
+      ...snapshot,
+      scope: "shared",
+      boundary: "between",
+    });
+
+    const installed = {
+      manifestContent: first.manifestContent,
+      artifactContents: Object.fromEntries(
+        first.targetBuild.artifacts.map((artifact) => [
+          artifact.path,
+          artifact.content,
+        ]),
+      ),
+    };
+    const inspection = await inspectPreparedTargetBuild(changed, installed);
+
+    expect(inspection.contextChanged).toBe(true);
+    expect(inspection.status).toBe("stale");
   });
 
   it("marks an installed build stale when the selected context content changes", async () => {

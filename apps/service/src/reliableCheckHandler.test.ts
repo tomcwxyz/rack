@@ -90,6 +90,7 @@ describe("reliable check handlers", () => {
   it("returns a content-free completed status", async () => {
     const summary: DurableEvaluationSummary = {
       schemaVersion: "0.1",
+      subjectKind: "practice",
       rackFingerprint: body.rackFingerprint,
       profileId: body.profileId,
       target: body.target,
