@@ -87,21 +87,26 @@ fn resolve_executable(command: &str) -> Result<PathBuf, String> {
     ))
 }
 
-fn runtime_command(host_id: &str) -> Result<(PathBuf, Vec<String>), String> {
+struct RuntimeSpec {
+    command: &'static str,
+    args: Vec<String>,
+}
+
+fn runtime_spec(host_id: &str) -> Result<RuntimeSpec, String> {
     match host_id {
-        "claude-code" => Ok((
-            resolve_executable("claude")?,
-            vec![
+        "claude-code" => Ok(RuntimeSpec {
+            command: "claude",
+            args: vec![
                 "-p".to_string(),
                 "--no-session-persistence".to_string(),
                 "--permission-mode".to_string(),
                 "plan".to_string(),
                 FIXED_INSTRUCTION.to_string(),
             ],
-        )),
-        "codex" => Ok((
-            resolve_executable("codex")?,
-            vec![
+        }),
+        "codex" => Ok(RuntimeSpec {
+            command: "codex",
+            args: vec![
                 "exec".to_string(),
                 "--ephemeral".to_string(),
                 "--sandbox".to_string(),
@@ -110,7 +115,7 @@ fn runtime_command(host_id: &str) -> Result<(PathBuf, Vec<String>), String> {
                 "never".to_string(),
                 FIXED_INSTRUCTION.to_string(),
             ],
-        )),
+        }),
         "opencode" => Err(
             "OpenCode transient context remains planned until Rack has a proven stdin-only task channel."
                 .to_string(),
@@ -119,6 +124,11 @@ fn runtime_command(host_id: &str) -> Result<(PathBuf, Vec<String>), String> {
             "{host_id} does not support Rack's transient task hand-off."
         )),
     }
+}
+
+fn runtime_command(host_id: &str) -> Result<(PathBuf, Vec<String>), String> {
+    let spec = runtime_spec(host_id)?;
+    Ok((resolve_executable(spec.command)?, spec.args))
 }
 
 fn bounded_text(path: &Path) -> Result<String, String> {
@@ -167,7 +177,7 @@ fn run_runtime(
         .map_err(|error| format!("Could not prepare host stderr: {error}"))?;
 
     let started = Instant::now();
-    let mut child = Command::new(program)
+    let mut child = match Command::new(program)
         .args(args)
         .current_dir(work_root)
         .env("NO_COLOR", "1")
@@ -175,15 +185,31 @@ fn run_runtime(
         .stdout(Stdio::from(stdout_file))
         .stderr(Stdio::from(stderr_file))
         .spawn()
-        .map_err(|error| format!("Could not start the selected AI tool: {error}"))?;
+    {
+        Ok(child) => child,
+        Err(error) => {
+            let _ = fs::remove_dir_all(&temp_root);
+            return Err(format!("Could not start the selected AI tool: {error}"));
+        }
+    };
 
-    let mut stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| "Could not open the AI tool input channel.".to_string())?;
-    stdin
-        .write_all(input.as_bytes())
-        .map_err(|error| format!("Could not pass transient context to the AI tool: {error}"))?;
+    let mut stdin = match child.stdin.take() {
+        Some(stdin) => stdin,
+        None => {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = fs::remove_dir_all(&temp_root);
+            return Err("Could not open the AI tool input channel.".to_string());
+        }
+    };
+    if let Err(error) = stdin.write_all(input.as_bytes()) {
+        let _ = child.kill();
+        let _ = child.wait();
+        let _ = fs::remove_dir_all(&temp_root);
+        return Err(format!(
+            "Could not pass transient context to the AI tool: {error}"
+        ));
+    }
     drop(stdin);
 
     let (exit_code, timed_out) = loop {
@@ -247,15 +273,36 @@ mod tests {
     use super::*;
 
     #[test]
-    fn only_proven_hosts_receive_runtime_commands() {
-        assert!(runtime_command("opencode").is_err());
-        assert!(runtime_command("openclaw").is_err());
+    fn only_proven_hosts_receive_runtime_specs() {
+        assert!(runtime_spec("claude-code").is_ok());
+        assert!(runtime_spec("codex").is_ok());
+        assert!(runtime_spec("opencode").is_err());
+        assert!(runtime_spec("openclaw").is_err());
+    }
+
+    #[test]
+    fn runtime_args_are_fixed_and_read_only() {
+        let claude = runtime_spec("claude-code").unwrap();
+        assert_eq!(claude.command, "claude");
+        assert!(claude.args.iter().any(|arg| arg == "--no-session-persistence"));
+        assert!(claude.args.windows(2).any(|pair| pair == ["--permission-mode", "plan"]));
+
+        let codex = runtime_spec("codex").unwrap();
+        assert_eq!(codex.command, "codex");
+        assert!(codex.args.iter().any(|arg| arg == "--ephemeral"));
+        assert!(codex.args.windows(2).any(|pair| pair == ["--sandbox", "read-only"]));
+        assert!(codex.args.windows(2).any(|pair| pair == ["--ask-for-approval", "never"]));
     }
 
     #[test]
     fn fixed_instruction_does_not_contain_task_or_context_placeholders() {
         assert!(!FIXED_INSTRUCTION.contains("{task}"));
         assert!(!FIXED_INSTRUCTION.contains("{context}"));
+        for host_id in ["claude-code", "codex"] {
+            let spec = runtime_spec(host_id).unwrap();
+            assert!(spec.args.iter().all(|arg| !arg.contains("{task}")));
+            assert!(spec.args.iter().all(|arg| !arg.contains("{context}")));
+        }
     }
 
     #[test]
