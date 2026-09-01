@@ -10,7 +10,7 @@ describe("trusted verifier registry", () => {
     const verifier = getTrustedVerifier("repository-checks");
     expect(verifier).toEqual(
       expect.objectContaining({
-        implementation: "planned",
+        implementation: "available",
         execution: "local",
         sharedExecutableCodeAllowed: false,
       }),
@@ -74,7 +74,7 @@ describe("trusted verifier registry", () => {
     };
 
     expect(resolveAutomaticVerifiers(plan)).toEqual([
-      expect.objectContaining({ check: "repository-checks", status: "planned" }),
+      expect.objectContaining({ check: "repository-checks", status: "available" }),
       expect.objectContaining({
         check: "arbitrary-script",
         status: "unregistered",
