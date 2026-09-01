@@ -20,7 +20,7 @@ struct ManagedHostFile {
     digest: String,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct HostInstallState {
     schema_version: String,
