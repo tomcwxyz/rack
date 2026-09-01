@@ -20,6 +20,7 @@ type TopoContextPanelProps = {
   onChange: (selection: TopoContextSelection) => void;
   onStatus: (message: string) => void;
   defaultPurpose?: string;
+  useLabel?: string;
 };
 
 export function TopoContextPanel({
@@ -27,6 +28,7 @@ export function TopoContextPanel({
   onChange,
   onStatus,
   defaultPurpose = "prepare this Rack build",
+  useLabel = "Use TOPO memory in this build",
 }: TopoContextPanelProps) {
   const [status, setStatus] = useState<TopoLocalStatus | null>(null);
   const [checking, setChecking] = useState(true);
@@ -124,7 +126,7 @@ export function TopoContextPanel({
           next.objects.length +
           " context " +
           (next.objects.length === 1 ? "item" : "items") +
-          " for this build.",
+          " for this purpose.",
       );
     } catch (reason) {
       setSnapshot(null);
@@ -190,7 +192,7 @@ export function TopoContextPanel({
                 publish(next, null);
               }}
             />
-            <span>Use TOPO memory in this build</span>
+            <span>{useLabel}</span>
           </label>
 
           {enabled ? (
