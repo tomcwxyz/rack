@@ -9,6 +9,7 @@ import {
 type LocalVerificationPanelProps = {
   project: RackProject;
   selectedProfile: string;
+  workRoot: string | null;
   onEvidence: (evidence: string) => void;
 };
 
@@ -45,6 +46,7 @@ type RepositoryCheckExecution = {
 export function LocalVerificationPanel({
   project,
   selectedProfile,
+  workRoot,
   onEvidence,
 }: LocalVerificationPanelProps) {
   const verificationPlan = useMemo(
@@ -66,7 +68,7 @@ export function LocalVerificationPanel({
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    if (!repositoryStep || registry?.status !== "available") {
+    if (!workRoot || !repositoryStep || registry?.status !== "available") {
       setPlan(null);
       setResult(null);
       setError(null);
@@ -77,7 +79,8 @@ export function LocalVerificationPanel({
     setError(null);
     try {
       const next = await invoke<RepositoryCheckPlan>("inspect_repository_checks", {
-        root: project.root,
+        rackRoot: project.root,
+        workRoot,
       });
       setPlan(next);
       setResult(null);
@@ -97,7 +100,7 @@ export function LocalVerificationPanel({
 
   useEffect(() => {
     void refresh();
-  }, [project.root, repositoryStep?.id, registry?.status]);
+  }, [project.root, repositoryStep?.id, registry?.status, workRoot]);
 
   const runChecks = async () => {
     if (!plan?.fingerprint || plan.status !== "available") return;
@@ -105,7 +108,7 @@ export function LocalVerificationPanel({
     const commands = plan.checks.map((check) => check.displayCommand).join("\n");
     const confirmed = window.confirm(
       "Run these local repository commands from " +
-        project.root +
+        workRoot +
         "?\n\n" +
         commands +
         "\n\nThese scripts come from this repository's package.json, not from Starter or shared Rack practice.",
@@ -118,7 +121,8 @@ export function LocalVerificationPanel({
       const execution = await invoke<RepositoryCheckExecution>(
         "run_repository_checks",
         {
-          root: project.root,
+          rackRoot: project.root,
+          workRoot,
           fingerprint: plan.fingerprint,
           confirmed: true,
         },
@@ -138,6 +142,19 @@ export function LocalVerificationPanel({
       setBusy(null);
     }
   };
+
+  if (!workRoot) {
+    return (
+      <div className="check-panel local-verification-panel">
+        <p className="eyebrow">Local verification</p>
+        <h3>Choose a work project first</h3>
+        <p className="section-intro">
+          Rack source and the repository being checked can be different folders. Choose
+          the work project above before Rack inspects package.json or runs local checks.
+        </p>
+      </div>
+    );
+  }
 
   if (!repositoryStep) {
     return (
