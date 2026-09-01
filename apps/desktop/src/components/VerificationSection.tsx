@@ -414,7 +414,7 @@ export function VerificationSection({
 
   const verificationPanels = (
     <>
-      {verificationPanels}
+      {localPanel}
       {completionGatePanel}
     </>
   );
