@@ -20,6 +20,8 @@ type RepositoryCheckPlan = {
     id: string;
     label: string;
     script: string;
+    definition: string;
+    lifecycleScripts: Array<{ name: string; definition: string }>;
     displayCommand: string;
   }>;
   fingerprint: string | null;
@@ -39,6 +41,8 @@ type RepositoryCheckExecution = {
     durationMs: number;
     stdout: string;
     stderr: string;
+    definition: string;
+    lifecycleScripts: Array<{ name: string; definition: string }>;
   }>;
   evidence: string;
 };
@@ -111,7 +115,7 @@ export function LocalVerificationPanel({
         workRoot +
         "?\n\n" +
         commands +
-        "\n\nThese scripts come from this repository's package.json, not from Starter or shared Rack practice.",
+        "\n\nThe command and the repository-defined script/lifecycle contents shown on screen come from this work project's package.json, not from Starter or shared Rack practice.",
     );
     if (!confirmed) return;
 
@@ -204,6 +208,12 @@ export function LocalVerificationPanel({
                     <div>
                       <strong>{check.label}</strong>
                       <small>{check.script}</small>
+                      <code>{check.definition}</code>
+                      {check.lifecycleScripts.map((lifecycle) => (
+                        <small key={lifecycle.name}>
+                          {lifecycle.name}: <code>{lifecycle.definition}</code>
+                        </small>
+                      ))}
                     </div>
                     <code>{check.displayCommand}</code>
                   </div>
@@ -258,6 +268,18 @@ export function LocalVerificationPanel({
               <p>
                 <code>{check.displayCommand}</code>
               </p>
+              <p>
+                Repository script: <code>{check.definition}</code>
+              </p>
+              {check.lifecycleScripts.length > 0 ? (
+                <ul>
+                  {check.lifecycleScripts.map((lifecycle) => (
+                    <li key={lifecycle.name}>
+                      {lifecycle.name}: <code>{lifecycle.definition}</code>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {check.stdout ? (
                 <pre>
                   <code>{check.stdout}</code>
