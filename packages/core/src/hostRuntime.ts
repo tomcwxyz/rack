@@ -64,13 +64,25 @@ const cleanTask = (task: string): string => {
 };
 
 export const renderTransientHostInput = (
-  snapshot: ContextSnapshot,
+  snapshot: ContextSnapshot | null,
   task: string,
 ): string => {
+  const normalisedTask = cleanTask(task);
+  if (!snapshot) {
+    return [
+      "# RACK transient task hand-off",
+      "",
+      "## Task",
+      normalisedTask,
+      "",
+      "No additional TOPO context was selected for this task.",
+      "",
+    ].join("\n");
+  }
+
   const flow = contextFlowDecision(snapshot, "transient-task");
   if (!flow.allowed) throw new Error(flow.reason);
 
-  const normalisedTask = cleanTask(task);
   const objects = snapshot.objects.map((object) => ({
     type: object.type,
     id: object.id,
