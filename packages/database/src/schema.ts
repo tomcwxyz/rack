@@ -58,7 +58,7 @@ export const workspaceMemberships = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull(),
+    userId: text("user_id"),
     role: text("role").notNull().default("owner"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .notNull()
@@ -99,7 +99,7 @@ export const managedRuns = pgTable(
       for: "all",
       to: authenticatedRole,
       using: ownsWorkspace(table.workspaceId),
-      withCheck: sql`${ownsWorkspace(table.workspaceId)} and ${table.userId} = (select auth.user_id())`,
+      withCheck: sql`${ownsWorkspace(table.workspaceId)} and (${table.userId} is null or ${table.userId} = (select auth.user_id()))`,
     }),
     pgPolicy("rack_runs_reliable_workflow", {
       for: "all",
