@@ -18,6 +18,7 @@ import {
   type TargetBuildInspection,
 } from "@rack/core/build";
 import { discoverAiHosts, type HostDiscovery } from "../hostDiscovery.js";
+import { HostRuntimePanel } from "./HostRuntimePanel.js";
 import {
   TopoContextPanel,
   type TopoContextSelection,
@@ -554,6 +555,14 @@ export function PreviewSection({
               </div>
             </div>
           ) : null}
+
+          <HostRuntimePanel
+            projectName={project.manifest?.name ?? "rack"}
+            hostId={hostIntegration.id}
+            detected={Boolean(hostDiscovery?.detected)}
+            workRoot={workRoot}
+            onStatus={onStatus}
+          />
 
           {hostBusy === "inspect" ? <small>Checking project host files…</small> : null}
           {hostError ? (
