@@ -1,5 +1,6 @@
 mod document_import;
 mod generated;
+mod host_discovery;
 mod starter;
 mod topo_local;
 
@@ -607,6 +608,7 @@ pub fn run() {
             starter::apply_starter_import,
             generated::read_generated_prompt_build,
             generated::install_generated_prompt_build,
+            host_discovery::discover_ai_hosts,
             topo_local::topo_local_status,
             topo_local::topo_local_context
         ])
