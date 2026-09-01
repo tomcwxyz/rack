@@ -1,7 +1,6 @@
 use serde::Serialize;
 use serde_json::Value;
 use std::{
-    collections::BTreeMap,
     fs,
     fs::File,
     io::Read,
