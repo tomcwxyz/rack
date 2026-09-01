@@ -12,6 +12,7 @@ use std::{
 
 const CHECK_TIMEOUT: Duration = Duration::from_secs(180);
 const OUTPUT_LIMIT: usize = 32 * 1024;
+const EVIDENCE_LIMIT: usize = 96 * 1024;
 const ALLOWED_SCRIPTS: &[(&str, &str)] = &[
     ("check", "Project checks"),
     ("lint", "Lint"),
@@ -34,6 +35,7 @@ pub(crate) struct RepositoryCheck {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RepositoryCheckPlan {
     status: String,
+    work_root: String,
     package_manager: Option<String>,
     checks: Vec<RepositoryCheck>,
     fingerprint: Option<String>,
@@ -59,6 +61,7 @@ pub(crate) struct RepositoryCheckResult {
 pub(crate) struct RepositoryCheckExecution {
     status: String,
     fingerprint: String,
+    work_root: String,
     checks: Vec<RepositoryCheckResult>,
     evidence: String,
 }
@@ -68,7 +71,17 @@ fn canonical_rack_root(root: String) -> Result<PathBuf, String> {
         .canonicalize()
         .map_err(|error| format!("Could not open the Rack folder: {error}"))?;
     if !canonical.is_dir() || !canonical.join("rack.yaml").is_file() {
-        return Err("The selected folder is not a Rack project.".to_string());
+        return Err("The selected Rack source folder is not a Rack project.".to_string());
+    }
+    Ok(canonical)
+}
+
+fn canonical_work_root(root: String) -> Result<PathBuf, String> {
+    let canonical = PathBuf::from(root)
+        .canonicalize()
+        .map_err(|error| format!("Could not open the work project folder: {error}"))?;
+    if !canonical.is_dir() {
+        return Err("The selected work project is not a folder.".to_string());
     }
     Ok(canonical)
 }
@@ -99,16 +112,17 @@ fn command_for(manager: &str, script: &str) -> (String, Vec<String>, String) {
     (program, args, display)
 }
 
-fn inspect(root: &Path) -> Result<RepositoryCheckPlan, String> {
-    let package_path = root.join("package.json");
+fn inspect(work_root: &Path) -> Result<RepositoryCheckPlan, String> {
+    let package_path = work_root.join("package.json");
     if !package_path.is_file() {
         return Ok(RepositoryCheckPlan {
             status: "unavailable".to_string(),
+            work_root: work_root.to_string_lossy().to_string(),
             package_manager: None,
             checks: Vec::new(),
             fingerprint: None,
             message:
-                "Rack currently supports trusted repository checks for JavaScript/TypeScript projects with a package.json at the Rack root."
+                "Rack currently supports trusted repository checks for JavaScript/TypeScript work projects with a package.json at the selected project root."
                     .to_string(),
         });
     }
@@ -122,7 +136,7 @@ fn inspect(root: &Path) -> Result<RepositoryCheckPlan, String> {
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
-    let manager = package_manager(root);
+    let manager = package_manager(work_root);
 
     let mut checks = Vec::new();
     for (script, label) in ALLOWED_SCRIPTS {
@@ -145,6 +159,7 @@ fn inspect(root: &Path) -> Result<RepositoryCheckPlan, String> {
     if checks.is_empty() {
         return Ok(RepositoryCheckPlan {
             status: "unavailable".to_string(),
+            work_root: work_root.to_string_lossy().to_string(),
             package_manager: Some(manager.to_string()),
             checks,
             fingerprint: None,
@@ -155,7 +170,8 @@ fn inspect(root: &Path) -> Result<RepositoryCheckPlan, String> {
     }
 
     let signature = format!(
-        "{}\n{}\n{}",
+        "{}\n{}\n{}\n{}",
+        work_root.to_string_lossy(),
         package_content,
         manager,
         checks
@@ -167,11 +183,12 @@ fn inspect(root: &Path) -> Result<RepositoryCheckPlan, String> {
 
     Ok(RepositoryCheckPlan {
         status: "available".to_string(),
+        work_root: work_root.to_string_lossy().to_string(),
         package_manager: Some(manager.to_string()),
         checks,
         fingerprint: Some(digest(&signature)),
         message:
-            "Rack derived these checks from recognised package.json script names. No command came from Starter or shared practice."
+            "Rack derived these checks from recognised package.json script names in the selected work project. No command came from Starter or shared practice."
                 .to_string(),
     })
 }
@@ -189,7 +206,7 @@ fn tail_text(path: &Path) -> Result<String, String> {
 }
 
 fn run_check(
-    root: &Path,
+    work_root: &Path,
     manager: &str,
     check: &RepositoryCheck,
     log_root: &Path,
@@ -234,7 +251,7 @@ fn run_check(
 
     let mut child = match Command::new(&program)
         .args(&args)
-        .current_dir(root)
+        .current_dir(work_root)
         .env("CI", "true")
         .env("NO_COLOR", "1")
         .stdin(Stdio::null())
@@ -308,7 +325,7 @@ fn run_check(
 }
 
 fn evidence_from(results: &[RepositoryCheckResult]) -> String {
-    results
+    let combined = results
         .iter()
         .map(|result| {
             let mut lines = vec![
@@ -334,26 +351,47 @@ fn evidence_from(results: &[RepositoryCheckResult]) -> String {
             lines.join("\n")
         })
         .collect::<Vec<_>>()
-        .join("\n\n")
+        .join("\n\n");
+
+    if combined.len() <= EVIDENCE_LIMIT {
+        combined
+    } else {
+        let start = combined.len() - EVIDENCE_LIMIT;
+        let boundary = combined
+            .char_indices()
+            .find(|(index, _)| *index >= start)
+            .map(|(index, _)| index)
+            .unwrap_or(0);
+        format!(
+            "[Earlier local verifier output omitted to keep evidence bounded.]\n\n{}",
+            &combined[boundary..]
+        )
+    }
 }
 
 #[tauri::command]
-pub(crate) fn inspect_repository_checks(root: String) -> Result<RepositoryCheckPlan, String> {
-    let root = canonical_rack_root(root)?;
-    inspect(&root)
+pub(crate) fn inspect_repository_checks(
+    rack_root: String,
+    work_root: String,
+) -> Result<RepositoryCheckPlan, String> {
+    let _rack_root = canonical_rack_root(rack_root)?;
+    let work_root = canonical_work_root(work_root)?;
+    inspect(&work_root)
 }
 
 #[tauri::command]
 pub(crate) fn run_repository_checks(
-    root: String,
+    rack_root: String,
+    work_root: String,
     fingerprint: String,
     confirmed: bool,
 ) -> Result<RepositoryCheckExecution, String> {
     if !confirmed {
         return Err("Running repository code requires explicit confirmation.".to_string());
     }
-    let root = canonical_rack_root(root)?;
-    let plan = inspect(&root)?;
+    let rack_root = canonical_rack_root(rack_root)?;
+    let work_root = canonical_work_root(work_root)?;
+    let plan = inspect(&work_root)?;
     if plan.status != "available" {
         return Err(plan.message);
     }
@@ -372,7 +410,7 @@ pub(crate) fn run_repository_checks(
         .clone()
         .ok_or_else(|| "Rack could not determine a package manager.".to_string())?;
 
-    let log_root = root
+    let log_root = rack_root
         .join(".rack")
         .join("verification-temp")
         .join(format!(
@@ -389,7 +427,7 @@ pub(crate) fn run_repository_checks(
     let results = plan
         .checks
         .iter()
-        .map(|check| run_check(&root, &manager, check, &log_root))
+        .map(|check| run_check(&work_root, &manager, check, &log_root))
         .collect::<Vec<_>>();
     let _ = fs::remove_dir_all(&log_root);
 
@@ -407,6 +445,7 @@ pub(crate) fn run_repository_checks(
     Ok(RepositoryCheckExecution {
         status: status.to_string(),
         fingerprint: current_fingerprint,
+        work_root: work_root.to_string_lossy().to_string(),
         evidence: evidence_from(&results),
         checks: results,
     })
@@ -416,8 +455,8 @@ pub(crate) fn run_repository_checks(
 mod tests {
     use super::*;
 
-    fn fixture_root(label: &str) -> PathBuf {
-        let root = std::env::temp_dir().join(format!(
+    fn fixture_root(label: &str) -> (PathBuf, PathBuf) {
+        let base = std::env::temp_dir().join(format!(
             "rack-repository-checks-{label}-{}-{}",
             std::process::id(),
             SystemTime::now()
@@ -425,16 +464,19 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ));
-        fs::create_dir_all(&root).unwrap();
-        fs::write(root.join("rack.yaml"), "schema_version: \"0.1\"\n").unwrap();
-        root
+        let rack = base.join("rack");
+        let work = base.join("work");
+        fs::create_dir_all(&rack).unwrap();
+        fs::create_dir_all(&work).unwrap();
+        fs::write(rack.join("rack.yaml"), "schema_version: \"0.1\"\n").unwrap();
+        (rack, work)
     }
 
     #[test]
-    fn plans_only_recognised_package_scripts() {
-        let root = fixture_root("allowed");
+    fn plans_only_recognised_package_scripts_from_work_project() {
+        let (rack, work) = fixture_root("allowed");
         fs::write(
-            root.join("package.json"),
+            work.join("package.json"),
             r#"{
               "scripts": {
                 "check": "echo check",
@@ -444,9 +486,9 @@ mod tests {
             }"#,
         )
         .unwrap();
-        fs::write(root.join("pnpm-lock.yaml"), "lockfileVersion: '9.0'\n").unwrap();
+        fs::write(work.join("pnpm-lock.yaml"), "lockfileVersion: '9.0'\n").unwrap();
 
-        let plan = inspect(&root).unwrap();
+        let plan = inspect(&work).unwrap();
         assert_eq!(plan.status, "available");
         assert_eq!(plan.package_manager.as_deref(), Some("pnpm"));
         assert_eq!(
@@ -460,39 +502,39 @@ mod tests {
             .checks
             .iter()
             .all(|check| !check.display_command.contains("deploy")));
-        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 
     #[test]
-    fn plan_fingerprint_changes_when_package_scripts_change() {
-        let root = fixture_root("fingerprint");
+    fn plan_fingerprint_changes_when_work_project_scripts_change() {
+        let (rack, work) = fixture_root("fingerprint");
         fs::write(
-            root.join("package.json"),
+            work.join("package.json"),
             r#"{"scripts":{"test":"echo one"}}"#,
         )
         .unwrap();
-        let first = inspect(&root).unwrap().fingerprint.unwrap();
+        let first = inspect(&work).unwrap().fingerprint.unwrap();
         fs::write(
-            root.join("package.json"),
+            work.join("package.json"),
             r#"{"scripts":{"test":"echo two"}}"#,
         )
         .unwrap();
-        let second = inspect(&root).unwrap().fingerprint.unwrap();
+        let second = inspect(&work).unwrap().fingerprint.unwrap();
         assert_ne!(first, second);
-        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 
     #[test]
-    fn project_without_recognised_scripts_is_unavailable() {
-        let root = fixture_root("none");
+    fn work_project_without_recognised_scripts_is_unavailable() {
+        let (rack, work) = fixture_root("none");
         fs::write(
-            root.join("package.json"),
+            work.join("package.json"),
             r#"{"scripts":{"start":"node server.js"}}"#,
         )
         .unwrap();
-        let plan = inspect(&root).unwrap();
+        let plan = inspect(&work).unwrap();
         assert_eq!(plan.status, "unavailable");
         assert!(plan.checks.is_empty());
-        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 }
