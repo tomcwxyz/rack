@@ -87,6 +87,24 @@ The write path attempts to restore the previous managed state if an update/remov
 
 Transient TOPO context is not part of these installed host files.
 
+## Transient task hand-off
+
+The first runtime delivery path is deliberately separate from installation.
+
+For **Claude Code** and **Codex**, Rack can now run a reviewed, read-only task hand-off in the selected work project:
+
+- task and optional reviewed TOPO context are rendered into one purpose-bound input;
+- the input is written to the host process over stdin;
+- task/context are not added to command-line arguments;
+- task/context are not written into CLAUDE.md, AGENTS.md, generated Rack source or Rack-owned runtime state;
+- Rack uses fixed host commands and arguments owned by Rack rather than commands supplied by practice;
+- the first slice is read-only/plan mode and requires explicit confirmation;
+- output capture is bounded and temporary files are removed after execution.
+
+Claude Code uses print mode with session persistence disabled and plan permissions. Codex uses ephemeral exec with a read-only sandbox and approvals disabled for the non-interactive run.
+
+OpenCode remains **planned** for transient context. Rack will not write TOPO material into AGENTS.md or command files as a fallback merely to claim runtime support.
+
 ## UI
 
 The Preview and export surface now shows:
@@ -104,7 +122,7 @@ The build retained under .rack/generated/ remains separate from installing gener
 
 - improve manual-conflict guidance for existing AGENTS.md/CLAUDE.md;
 - consider an explicit adopt/compose flow rather than replacement for established host instruction files;
-- add transient TOPO task-context delivery for supported hosts;
+- expand transient task delivery beyond the first read-only Claude Code/Codex slice only after the pilot proves the boundary;
 - complete OpenCode-specific host registration where required by the current host version;
 - add host-install inspection to the CLI;
 - build cross-host conformance fixtures before promoting agent-runtime destinations.
