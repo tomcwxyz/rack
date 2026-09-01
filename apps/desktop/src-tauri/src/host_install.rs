@@ -13,7 +13,7 @@ pub(crate) struct HostFileInput {
     content: String,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ManagedHostFile {
     path: String,
