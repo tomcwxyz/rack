@@ -559,7 +559,10 @@ export function PreviewSection({
           <HostRuntimePanel
             projectName={project.manifest?.name ?? "rack"}
             hostId={hostIntegration.id}
-            detected={Boolean(hostDiscovery?.detected)}
+            detected={Boolean(
+              hostDiscovery?.evidence.some((item) => item.startsWith("command:")),
+            )}
+            practiceCurrent={hostInspection?.status === "current"}
             workRoot={workRoot}
             onStatus={onStatus}
           />
