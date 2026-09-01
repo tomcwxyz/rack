@@ -75,6 +75,10 @@ export const buildManifestSchema = z
         purpose: z.string().min(1),
         generated_at: z.string().datetime({ offset: true }),
         expires_at: z.string().datetime({ offset: true }).nullable(),
+        scope: z.enum(["private", "shared", "published"]).default("private"),
+        boundary: z
+          .enum(["inside", "between", "beneath", "around"])
+          .default("inside"),
         permissions: z.array(z.string()).default([]),
         object_ids: z.array(z.string()).default([]),
       })
