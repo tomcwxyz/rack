@@ -14,6 +14,7 @@ type HostRuntimePanelProps = {
   projectName: string;
   hostId: HostIntegrationId;
   detected: boolean;
+  practiceCurrent: boolean;
   workRoot: string | null;
   onStatus: (message: string) => void;
 };
@@ -34,6 +35,7 @@ export function HostRuntimePanel({
   projectName,
   hostId,
   detected,
+  practiceCurrent,
   workRoot,
   onStatus,
 }: HostRuntimePanelProps) {
@@ -64,7 +66,7 @@ export function HostRuntimePanel({
   }
 
   const runTask = async () => {
-    if (!workRoot || !detected || !task.trim()) return;
+    if (!workRoot || !detected || !practiceCurrent || !task.trim()) return;
     if (topoContext.enabled && !topoContext.snapshot) {
       setError("Review the selected TOPO context before handing this task to the AI tool.");
       return;
@@ -131,6 +133,12 @@ export function HostRuntimePanel({
       ) : !detected ? (
         <div className="notice">
           Rack has not detected {plan.displayName} on this computer.
+        </div>
+      ) : !practiceCurrent ? (
+        <div className="notice">
+          Install or update this Rack for {plan.displayName} before running the
+          transient task. Runtime context should sit on top of current standing
+          practice, not replace it.
         </div>
       ) : (
         <>
