@@ -23,6 +23,7 @@ type VerificationSectionProps = {
   project: RackProject;
   selectedProfile: string;
   onProfileChange: (profileId: string) => void;
+  workRoot: string | null;
 };
 
 type JudgementStep = VerificationPlanStep & { kind: "judgement"; question: string };
@@ -73,6 +74,7 @@ export function VerificationSection({
   project,
   selectedProfile,
   onProfileChange,
+  workRoot,
 }: VerificationSectionProps) {
   const auth = useManagedAuth();
   const judgementSteps = useMemo(
@@ -246,6 +248,7 @@ export function VerificationSection({
     <LocalVerificationPanel
       project={project}
       selectedProfile={selectedProfile}
+      workRoot={workRoot}
       onEvidence={(value) => {
         setLocalEvidence(value);
         setPlan(null);
