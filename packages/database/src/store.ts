@@ -440,5 +440,13 @@ export const purgeExpiredManagedPayloads = async (
   retentionDatabaseUrl: string,
 ): Promise<void> => {
   const sql = neon(retentionDatabaseUrl);
-  await sql`delete from rack_managed_payloads where expires_at <= now()`;
+  await sql.transaction([
+    sql`
+      update rack_managed_runs
+      set user_id = null
+      where user_id is not null
+        and created_at <= now() - interval '24 hours'
+    `,
+    sql`delete from rack_managed_payloads where expires_at <= now()`,
+  ]);
 };
