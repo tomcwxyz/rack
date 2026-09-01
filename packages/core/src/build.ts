@@ -211,6 +211,8 @@ export const attachContextToPromptBuild = async (
       purpose: snapshot.purpose,
       generated_at: snapshot.generatedAt,
       expires_at: snapshot.expiresAt,
+      scope: snapshot.scope,
+      boundary: snapshot.boundary,
       permissions: snapshot.permissions,
       object_ids: snapshot.objects.map((object) => object.id),
     },
