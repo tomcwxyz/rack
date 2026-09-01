@@ -45,10 +45,13 @@ Host discovery must remain read-only and privacy-minimising. The first implement
 
 Installation plans must:
 
+- require an explicit work-project target; the Rack source folder is not assumed to be the target repository;
 - require review before host changes;
 - preserve canonical Rack source;
 - keep transient context out of installed standing practice;
 - distinguish Rack-managed files from native extension/skill mechanisms;
+- keep ownership state/backups with local Rack metadata while writing host files only into the selected work project;
+- refuse to overwrite pre-existing host files Rack does not already own;
 - provide backup, drift and restore semantics before an integration becomes Supported.
 
 ## Verification relationship
