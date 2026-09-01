@@ -217,7 +217,7 @@ fn read_state(
     {
         return Err("Rack host state does not match this host installation.".to_string());
     }
-    if PathBuf::from(&state.work_root) != work_root {
+    if Path::new(&state.work_root) != work_root {
         return Err(
             "This Set-up already has a Rack-managed installation for this host in another work project. Remove that installation before changing the target."
                 .to_string(),
@@ -254,10 +254,11 @@ fn inspect(
     files: &[HostFileInput],
 ) -> Result<HostInstallInspection, String> {
     let state = read_state(rack_root, work_root, host_id, profile_id)?;
-    let desired = files
-        .iter()
-        .map(|file| (normalised(&safe_relative_path(&file.path).unwrap()), digest(&file.content)))
-        .collect::<BTreeMap<_, _>>();
+    let mut desired = BTreeMap::new();
+    for file in files {
+        let path = normalised(&safe_relative_path(&file.path)?);
+        desired.insert(path, digest(&file.content));
+    }
     let managed = state
         .as_ref()
         .map(|item| {
@@ -384,20 +385,21 @@ fn state_for(
     host_id: &str,
     profile_id: &str,
     files: &[HostFileInput],
-) -> HostInstallState {
-    HostInstallState {
+) -> Result<HostInstallState, String> {
+    let mut managed = Vec::new();
+    for file in files {
+        managed.push(ManagedHostFile {
+            path: normalised(&safe_relative_path(&file.path)?),
+            digest: digest(&file.content),
+        });
+    }
+    Ok(HostInstallState {
         schema_version: "0.1".to_string(),
         host_id: host_id.to_string(),
         profile_id: profile_id.to_string(),
         work_root: work_root.to_string_lossy().to_string(),
-        files: files
-            .iter()
-            .map(|file| ManagedHostFile {
-                path: normalised(&safe_relative_path(&file.path).unwrap()),
-                digest: digest(&file.content),
-            })
-            .collect(),
-    }
+        files: managed,
+    })
 }
 
 fn write_state_value(
@@ -484,11 +486,14 @@ fn restore_previous(
         .unwrap_or_default();
 
     for file in desired {
-        let path = normalised(&safe_relative_path(&file.path).unwrap());
+        let Ok(relative) = safe_relative_path(&file.path) else {
+            continue;
+        };
+        let path = normalised(&relative);
         if previous_paths.contains(path.as_str()) {
             continue;
         }
-        let destination = work_root.join(&path);
+        let destination = work_root.join(relative);
         if ordinary_file_digest(&destination)
             .ok()
             .flatten()
@@ -566,10 +571,10 @@ pub(crate) fn install_host_files(
         )?,
         None => None,
     };
-    let desired_paths = files
-        .iter()
-        .map(|file| normalised(&safe_relative_path(&file.path).unwrap()))
-        .collect::<HashSet<_>>();
+    let mut desired_paths = HashSet::new();
+    for file in &files {
+        desired_paths.insert(normalised(&safe_relative_path(&file.path)?));
+    }
 
     let mutation = (|| -> Result<Vec<String>, String> {
         if let Some(state) = &previous {
@@ -615,7 +620,7 @@ pub(crate) fn install_host_files(
             written.push(path);
         }
 
-        let next_state = state_for(&work_root, &host_id, &profile_id, &files);
+        let next_state = state_for(&work_root, &host_id, &profile_id, &files)?;
         write_state_value(&rack_root, &next_state)?;
         Ok(written)
     })();
@@ -763,7 +768,7 @@ mod tests {
         let (rack, work) = fixture_root("drift");
         let initial = vec![file("CLAUDE.md", "first")];
         fs::write(work.join("CLAUDE.md"), "first").unwrap();
-        let state = state_for(&work, "claude-code", "coding", &initial);
+        let state = state_for(&work, "claude-code", "coding", &initial).unwrap();
         write_state_value(&rack, &state).unwrap();
         fs::write(work.join("CLAUDE.md"), "changed elsewhere").unwrap();
 
@@ -784,7 +789,7 @@ mod tests {
         let (rack, work) = fixture_root("update");
         let initial = vec![file("AGENTS.md", "first")];
         fs::write(work.join("AGENTS.md"), "first").unwrap();
-        let state = state_for(&work, "codex", "coding", &initial);
+        let state = state_for(&work, "codex", "coding", &initial).unwrap();
         write_state_value(&rack, &state).unwrap();
 
         let inspection = inspect(
@@ -806,7 +811,7 @@ mod tests {
         let other = rack.parent().unwrap().join("other-work");
         fs::create_dir_all(&other).unwrap();
         let initial = vec![file("AGENTS.md", "first")];
-        let state = state_for(&work, "codex", "coding", &initial);
+        let state = state_for(&work, "codex", "coding", &initial).unwrap();
         write_state_value(&rack, &state).unwrap();
 
         let error = read_state(&rack, &other, "codex", "coding").unwrap_err();
