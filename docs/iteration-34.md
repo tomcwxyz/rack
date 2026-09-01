@@ -8,7 +8,7 @@ Move Rack from "render files for a host" to a reviewed host hand-off that knows 
 
 A Rack source folder is not assumed to be the same folder as the project being worked on.
 
-The desktop now asks for an explicit **work project** target.
+The desktop now asks for an explicit **work project** target and remembers that selection as local Rack metadata across application restarts.
 
 - canonical Rack Markdown/YAML stays in the Rack source folder;
 - generated host files are installed into the selected work project;
@@ -102,7 +102,6 @@ The build retained under .rack/generated/ remains separate from installing gener
 
 ## Remaining Iteration 34 work
 
-- persist the selected work-project target locally across application restarts;
 - improve manual-conflict guidance for existing AGENTS.md/CLAUDE.md;
 - consider an explicit adopt/compose flow rather than replacement for established host instruction files;
 - add transient TOPO task-context delivery for supported hosts;
