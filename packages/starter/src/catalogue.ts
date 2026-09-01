@@ -4,7 +4,7 @@ import {
   type RackModuleFrontmatter,
 } from "@rack/schemas";
 
-export const STARTER_CATALOGUE_VERSION = "0.1.0";
+export const STARTER_CATALOGUE_VERSION = "0.2.0";
 export const STARTER_CONTENT_LICENSE = "CC BY 4.0";
 export const STARTER_SOURCE_ORIGIN = "rack-starter";
 export const starterCatalogueMetadata = {
@@ -53,6 +53,7 @@ type EntryInput = {
   tags: string[];
   body: string;
   harness?: Record<string, unknown>;
+  schemaVersion?: "0.1" | "0.2";
   attribution?: StarterAttribution;
 };
 
@@ -87,7 +88,7 @@ const makeEntry = (input: EntryInput): StarterEntry => {
     description: input.description,
     tags: input.tags,
     harness: {
-      schema_version: "0.1",
+      schema_version: input.schemaVersion ?? "0.1",
       id,
       version: "0.1.0",
       source: {
@@ -561,6 +562,83 @@ export const starterCatalogue: readonly StarterEntry[] = [
     body: `Test the behaviour that would regress if the implementation were wrong. Prefer focused tests that express the contract over broad snapshots that make failures hard to interpret.`,
   }),
   makeEntry({
+    type: "method",
+    slug: "method.smallest-useful-change",
+    title: "Smallest useful change",
+    description: "Solve the requested problem without speculative architecture or unrelated refactoring.",
+    routes: ["coding"],
+    tags: ["coding", "method", "scope"],
+    harness: { stages: ["scope", "reuse", "change", "verify"] },
+    body: `Start with the smallest coherent change that satisfies the requested behaviour. Reuse sound existing code before adding abstractions, and do not broaden the implementation into speculative future needs. If an adjacent change is genuinely required, make that dependency explicit.`,
+  }),
+  makeEntry({
+    type: "craft",
+    slug: "craft.dependency-discipline",
+    title: "Dependency discipline",
+    description: "Prefer existing code, platform capabilities and current dependencies before adding another dependency.",
+    routes: ["coding"],
+    tags: ["coding", "craft", "dependencies"],
+    harness: { craft_domain: "software" },
+    body: `Before adding a dependency, check whether the repository already contains a suitable abstraction, whether the language or platform provides the capability, and whether an existing dependency already covers the need. Add a new dependency only when it creates a clear maintenance or correctness benefit.`,
+  }),
+  makeEntry({
+    type: "craft",
+    slug: "craft.remove-before-add",
+    title: "Remove before adding",
+    description: "Check whether simplifying or removing code is better than introducing another layer.",
+    routes: ["coding"],
+    tags: ["coding", "craft", "simplicity"],
+    harness: { craft_domain: "software" },
+    body: `When changing an awkward path, first ask whether obsolete code, duplication or an unnecessary abstraction can be removed. Prefer a smaller understandable system over preserving accidental complexity. Do not remove compatibility, validation, security, migration or error-handling behaviour merely to reduce code.`,
+  }),
+  makeEntry({
+    type: "method",
+    slug: "method.agent-handoff",
+    title: "Efficient agent hand-off",
+    description: "Pass concise state, evidence and next actions between coding agents without losing important constraints.",
+    routes: ["coding"],
+    tags: ["coding", "method", "agents"],
+    harness: { stages: ["state", "evidence", "next"] },
+    body: `When another agent or AI tool will continue the work, hand over the current state, decisions, changed files, verification actually performed, unresolved risks and the next useful action. Prefer compact structured evidence over conversational recap, but never omit a boundary or uncertainty merely to save tokens.`,
+  }),
+  makeEntry({
+    type: "guardrail",
+    slug: "guardrail.change-verification",
+    title: "Verify consequential code changes",
+    description: "Combine trusted repository checks with fresh semantic judgement before treating a consequential change as complete.",
+    routes: ["coding"],
+    tags: ["coding", "guardrail", "verification"],
+    schemaVersion: "0.2",
+    harness: {
+      criticality: "required",
+      enforcement: ["instruction", "output_check", "rubric_eval"],
+      verification: [
+        {
+          id: "repository-checks",
+          kind: "automatic",
+          label: "Repository checks pass",
+          check: "repository-checks",
+          requirement: "Run the Rack-owned trusted repository verification path and require the configured tests, type checks and builds to complete successfully.",
+          evidence: ["test-results", "build-results"],
+          on_fail: "block",
+        },
+        {
+          id: "scope-and-tests",
+          kind: "judgement",
+          label: "The change is scoped and meaningfully tested",
+          question: "Does the implementation stay within the requested scope, preserve important compatibility and security boundaries, and include meaningful verification for the behaviour changed?",
+          evidence: ["diff", "test-results", "build-results"],
+          on_fail: "block",
+          on_uncertain: "human_review",
+        },
+      ],
+      rules: [
+        { id: "no-unverified-claim", statement: "Do not describe a consequential code change as verified unless the stated checks were actually completed." },
+      ],
+    },
+    body: `Use deterministic checks for facts software can establish and a fresh bounded judgement for semantic questions. Missing, malformed or unavailable verification is not a pass; surface it as incomplete or escalate it for review.`,
+  }),
+  makeEntry({
     type: "guardrail",
     slug: "guardrail.security",
     title: "Security boundaries",
@@ -699,8 +777,12 @@ export const starterTemplates: readonly StarterTemplate[] = [
     moduleIds: [
       "@rack-starter/context.repository",
       "@rack-starter/method.inspect-plan-implement",
+      "@rack-starter/method.smallest-useful-change",
       "@rack-starter/craft.componentise",
+      "@rack-starter/craft.dependency-discipline",
+      "@rack-starter/craft.remove-before-add",
       "@rack-starter/craft.testing",
+      "@rack-starter/guardrail.change-verification",
       "@rack-starter/guardrail.security",
       "@rack-starter/guardrail.compatibility",
       "@rack-starter/task.implement-change",
@@ -716,6 +798,40 @@ export const starterTemplates: readonly StarterTemplate[] = [
       "@rack-starter/guardrail.security",
       "@rack-starter/guardrail.compatibility",
       "@rack-starter/craft.testing",
+      "@rack-starter/guardrail.change-verification",
+      "@rack-starter/task.review-code",
+    ],
+  },
+  {
+    id: "lean-code-change",
+    title: "Lean code change",
+    description: "A restrained implementation set that favours the smallest useful change, disciplined dependencies and explicit verification.",
+    route: "coding",
+    moduleIds: [
+      "@rack-starter/context.repository",
+      "@rack-starter/method.smallest-useful-change",
+      "@rack-starter/craft.dependency-discipline",
+      "@rack-starter/craft.remove-before-add",
+      "@rack-starter/craft.testing",
+      "@rack-starter/guardrail.security",
+      "@rack-starter/guardrail.compatibility",
+      "@rack-starter/guardrail.change-verification",
+      "@rack-starter/task.implement-change",
+    ],
+  },
+  {
+    id: "agent-code-handoff",
+    title: "Agent code hand-off",
+    description: "A coding set for work that may move between AI tools or agents without losing decisions, evidence or safety boundaries.",
+    route: "coding",
+    moduleIds: [
+      "@rack-starter/context.repository",
+      "@rack-starter/method.inspect-plan-implement",
+      "@rack-starter/method.agent-handoff",
+      "@rack-starter/guardrail.security",
+      "@rack-starter/guardrail.compatibility",
+      "@rack-starter/guardrail.change-verification",
+      "@rack-starter/task.implement-change",
       "@rack-starter/task.review-code",
     ],
   },

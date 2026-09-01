@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
+  buildHostInstallationPlan,
   buildTarget,
+  getHostIntegrationForDestination,
   listTargetAdapters,
   type DestinationId,
   type RackProject,
@@ -15,6 +17,7 @@ import {
   type PreparedTargetBuild,
   type TargetBuildInspection,
 } from "@rack/core/build";
+import { discoverAiHosts, type HostDiscovery } from "../hostDiscovery.js";
 import {
   TopoContextPanel,
   type TopoContextSelection,
@@ -80,6 +83,36 @@ export function PreviewSection({
   const [checking, setChecking] = useState(true);
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
+  const [hostDiscoveries, setHostDiscoveries] = useState<HostDiscovery[]>([]);
+
+  const hostIntegration = useMemo(
+    () => getHostIntegrationForDestination(target),
+    [target],
+  );
+  const hostDiscovery = hostIntegration
+    ? hostDiscoveries.find((item) => item.id === hostIntegration.id)
+    : null;
+  const hostInstallPlan = useMemo(
+    () =>
+      hostIntegration
+        ? buildHostInstallationPlan(hostIntegration.id, previewTargetBuild.artifacts)
+        : null,
+    [hostIntegration, previewTargetBuild.artifacts],
+  );
+
+  useEffect(() => {
+    let active = true;
+    void discoverAiHosts()
+      .then((items) => {
+        if (active) setHostDiscoveries(items);
+      })
+      .catch(() => {
+        if (active) setHostDiscoveries([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     setSelectedArtifactPath(previewTargetBuild.artifacts[0]?.path ?? null);
@@ -284,6 +317,38 @@ export function PreviewSection({
           onChange={setTopoContext}
           onStatus={onStatus}
         />
+      ) : null}
+
+      {hostIntegration ? (
+        <aside className="degradation-panel" aria-label="AI tool hand-off">
+          <p className="eyebrow">AI tool hand-off</p>
+          <p>
+            <strong>{hostIntegration.displayName}</strong>{" "}
+            {hostDiscovery?.detected ? "is detected on this computer." : "is not currently detected on this computer."}
+          </p>
+          <p>
+            Rack keeps standing practice, on-demand practice, transient context and
+            verification as separate host capabilities. Any host installation will be
+            reviewed before files or native integrations are changed.
+          </p>
+          {hostInstallPlan && hostInstallPlan.actions.length > 0 ? (
+            <ul>
+              {hostInstallPlan.actions.map((action) => (
+                <li key={action.path}>
+                  <code>{action.path}</code>{" "}
+                  <span>
+                    {action.purpose === "standing-practice"
+                      ? "standing practice"
+                      : "on-demand practice"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {hostIntegration.status !== "supported" ? (
+            <small>{hostIntegration.displayName} support is currently {hostIntegration.status}.</small>
+          ) : null}
+        </aside>
       ) : null}
 
       {buildError ? (
