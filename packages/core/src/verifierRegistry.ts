@@ -19,7 +19,7 @@ const verifierDefinitions: readonly TrustedVerifierDefinition[] = [
       "Run a Rack-owned repository verification path for trusted tests, type checks and builds without executing code supplied by Starter or shared practice.",
     evidence: ["test-results", "build-results"],
     execution: "local",
-    implementation: "planned",
+    implementation: "available",
     sharedExecutableCodeAllowed: false,
   },
 ] as const;

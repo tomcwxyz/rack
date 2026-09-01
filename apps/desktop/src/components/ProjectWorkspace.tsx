@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { resolveAttachedSharedPractice } from "../sharedPractice.js";
 import { useSharedPracticeLifecycle } from "../useSharedPracticeLifecycle.js";
@@ -50,6 +52,21 @@ export function ProjectWorkspace({
   const [section, setSection] = useState<WorkspaceSection>("rack");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [workRoot, setWorkRoot] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void invoke<string | null>("read_work_target", { rackRoot: project.root })
+      .then((value) => {
+        if (active) setWorkRoot(value);
+      })
+      .catch(() => {
+        if (active) setWorkRoot(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [project.root]);
   const sharedPractice = useSharedPracticeLifecycle(project.root);
   const [editing, setEditing] = useState<EditingSource | null>(null);
   const sharedResolution = useMemo(
@@ -102,6 +119,23 @@ export function ProjectWorkspace({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editingIdentity, editingOpen]);
+
+  const chooseWorkRoot = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Choose the project this Rack should work with",
+    });
+    const path = Array.isArray(selected) ? selected[0] : selected;
+    if (path) {
+      const canonical = await invoke<string>("set_work_target", {
+        rackRoot: project.root,
+        workRoot: path,
+      });
+      setWorkRoot(canonical);
+      setActionStatus("Work project selected. Host files and local verification will use this folder.");
+    }
+  };
 
   const sourceEdit = (path: string, title: string) =>
     setEditing({ kind: "source", path, title });
@@ -223,6 +257,48 @@ export function ProjectWorkspace({
           </div>
         ) : null}
 
+        <div className="work-target-bar">
+          <div>
+            <p className="eyebrow">Work project</p>
+            {workRoot ? (
+              <>
+                <strong>Host hand-off and local verification target</strong>
+                <code title={workRoot}>{workRoot}</code>
+              </>
+            ) : (
+              <>
+                <strong>Choose where this Rack should apply</strong>
+                <span>
+                  Your Rack source stays here. Choose the actual project/repository before
+                  installing AI-tool files or running local checks.
+                </span>
+              </>
+            )}
+          </div>
+          <div className="button-row">
+            <button className="quiet-action" type="button" onClick={() => void chooseWorkRoot()}>
+              {workRoot ? "Change work project" : "Choose work project"}
+            </button>
+            {!workRoot ? (
+              <button
+                className="quiet-action"
+                type="button"
+                onClick={() => {
+                  void invoke<string>("set_work_target", {
+                    rackRoot: project.root,
+                    workRoot: project.root,
+                  }).then((canonical) => {
+                    setWorkRoot(canonical);
+                    setActionStatus("Using the Rack folder itself as the work project.");
+                  });
+                }}
+              >
+                Use Rack folder
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         {section === "rack" ? (
           <RackSection
             project={project}
@@ -259,6 +335,7 @@ export function ProjectWorkspace({
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
             onStatus={setActionStatus}
+            workRoot={workRoot}
           />
         ) : null}
 
@@ -267,6 +344,7 @@ export function ProjectWorkspace({
             project={effectiveProject}
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
+            workRoot={workRoot}
           />
         ) : null}
 

@@ -138,7 +138,7 @@ UX rule:
 
 > use what the system can legitimately know; ask the person for what only they can know or decide.
 
-#### Iteration 34 — host discovery, installation plans and agent delivery
+#### Iteration 34 — host discovery, installation plans and agent delivery · in progress
 
 Outcome: RACK understands which AI tools are actually available, how each one accepts practice, and what a reviewed hand-off will change before anything is installed.
 
@@ -148,8 +148,10 @@ Scope:
 - safely detect supported and research hosts locally without uploading paths or host state;
 - begin with Claude Code, Codex and OpenCode, then test Hermes Agent, OpenClaw, Copilot CLI, Gemini CLI, Cursor and other useful coding hosts;
 - distinguish rendering from host detection, installation planning and installation execution;
+- require an explicit work-project target rather than assuming the Rack source folder is the code repository;
 - show the exact files/native surfaces a hand-off would change and require explicit review;
 - preserve backups, drift inspection and removal/restore paths for Rack-managed host output;
+- refuse to overwrite pre-existing host files Rack does not already own;
 - define context delivery for Claude Code, Codex and OpenCode;
 - distinguish standing practice, on-demand practice, transient task context and completion verification;
 - prevent transient TOPO material being accidentally installed as canonical project instructions;
@@ -157,7 +159,7 @@ Scope:
 - test RACK as governed practice plus TOPO as durable context alongside an agent's own short-term/native memory;
 - use external portability projects such as Honey for Devs as compatibility research, not as a runtime dependency or a reason to adopt silent installers.
 
-#### Iteration 35 — deterministic verifier registry and local execution
+#### Iteration 35 — deterministic verifier registry and local execution · in progress
 
 Outcome: trusted factual checks can execute without Starter or shared practice shipping executable code.
 
@@ -166,7 +168,9 @@ Scope:
 - complete the RACK-owned verifier registry boundary begun in Phase 3;
 - begin with the `repository-checks` identifier for tests, type checks and builds;
 - map source-level verifier IDs only to Rack-owned local executors;
+- run checks against the explicitly selected work project, not the Rack source by assumption;
 - inspect the repository and show the exact planned checks before execution;
+- fingerprint the reviewed plan and refuse execution if it changes before confirmation;
 - require an explicit local confirmation before running repository code in the first pilot implementation;
 - capture bounded evidence/results rather than complete process history;
 - distinguish registered, available, unavailable, failed and incomplete verification;

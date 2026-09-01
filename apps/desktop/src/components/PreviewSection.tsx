@@ -28,11 +28,38 @@ type PreviewSectionProps = {
   selectedProfile: string;
   onProfileChange: (profileId: string) => void;
   onStatus: (message: string) => void;
+  workRoot: string | null;
 };
 
 type InstallResult = {
   directory: string;
   backupDirectory: string | null;
+};
+
+type HostInstallInspection = {
+  hostId: string;
+  profileId: string;
+  status: "ready" | "current" | "update-available" | "conflict";
+  files: Array<{
+    path: string;
+    status: "create" | "current" | "update" | "remove" | "conflict";
+    detail: string;
+  }>;
+  canInstall: boolean;
+  canRemove: boolean;
+};
+
+type HostInstallResult = {
+  status: "installed" | "removed";
+  backupDirectory: string | null;
+  installedPaths: string[];
+};
+
+const hostInstallLabels: Record<HostInstallInspection["status"], string> = {
+  ready: "Ready to install",
+  current: "Installed and current",
+  "update-available": "Update available",
+  conflict: "Needs manual review",
 };
 
 const stateLabels: Record<TargetBuildInspection["status"], string> = {
@@ -55,6 +82,7 @@ export function PreviewSection({
   selectedProfile,
   onProfileChange,
   onStatus,
+  workRoot,
 }: PreviewSectionProps) {
   const [target, setTarget] = useState<DestinationId>("prompt");
   const targetBuild = useMemo(
@@ -84,6 +112,12 @@ export function PreviewSection({
   const [building, setBuilding] = useState(false);
   const [buildError, setBuildError] = useState<string | null>(null);
   const [hostDiscoveries, setHostDiscoveries] = useState<HostDiscovery[]>([]);
+  const [hostInspection, setHostInspection] =
+    useState<HostInstallInspection | null>(null);
+  const [hostBusy, setHostBusy] = useState<"inspect" | "install" | "remove" | null>(
+    null,
+  );
+  const [hostError, setHostError] = useState<string | null>(null);
 
   const hostIntegration = useMemo(
     () => getHostIntegrationForDestination(target),
@@ -113,6 +147,129 @@ export function PreviewSection({
       active = false;
     };
   }, []);
+
+  const hostFiles = useMemo(
+    () =>
+      previewTargetBuild.artifacts.map((artifact) => ({
+        path: artifact.path,
+        content: artifact.content,
+      })),
+    [previewTargetBuild.artifacts],
+  );
+
+  const refreshHostInstallation = useCallback(async () => {
+    if (
+      !workRoot ||
+      !hostIntegration ||
+      hostIntegration.status !== "supported" ||
+      hostFiles.length === 0
+    ) {
+      setHostInspection(null);
+      setHostError(null);
+      return;
+    }
+
+    setHostBusy("inspect");
+    setHostError(null);
+    try {
+      const next = await invoke<HostInstallInspection>("inspect_host_install", {
+        rackRoot: project.root,
+        workRoot,
+        hostId: hostIntegration.id,
+        profileId: selectedProfile,
+        files: hostFiles,
+      });
+      setHostInspection(next);
+    } catch (reason) {
+      setHostInspection(null);
+      setHostError(
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "Rack could not inspect this host installation.",
+      );
+    } finally {
+      setHostBusy(null);
+    }
+  }, [hostFiles, hostIntegration, project.root, selectedProfile, workRoot]);
+
+  useEffect(() => {
+    void refreshHostInstallation();
+  }, [refreshHostInstallation]);
+
+  const installForHost = async () => {
+    if (!workRoot || !hostIntegration || !hostInspection?.canInstall) return;
+    const confirmed = window.confirm(
+      "Install the reviewed Rack files for " +
+        hostIntegration.displayName +
+        " into " +
+        workRoot +
+        "? Rack will not overwrite pre-existing files it does not already manage.",
+    );
+    if (!confirmed) return;
+
+    setHostBusy("install");
+    setHostError(null);
+    try {
+      const result = await invoke<HostInstallResult>("install_host_files", {
+        rackRoot: project.root,
+        workRoot,
+        hostId: hostIntegration.id,
+        profileId: selectedProfile,
+        files: hostFiles,
+        confirmed: true,
+      });
+      onStatus(
+        result.backupDirectory
+          ? `${hostIntegration.displayName} updated. The previous Rack-managed host files were backed up locally.`
+          : `${hostIntegration.displayName} host files installed into this project.`,
+      );
+      await refreshHostInstallation();
+    } catch (reason) {
+      setHostError(
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "Rack could not install these host files.",
+      );
+    } finally {
+      setHostBusy(null);
+    }
+  };
+
+  const removeHostInstallation = async () => {
+    if (!workRoot || !hostIntegration || !hostInspection?.canRemove) return;
+    const confirmed = window.confirm(
+      `Remove the Rack-managed ${hostIntegration.displayName} files from this project? Rack will stop if any managed file changed outside Rack.`,
+    );
+    if (!confirmed) return;
+
+    setHostBusy("remove");
+    setHostError(null);
+    try {
+      await invoke<HostInstallResult>("remove_host_install", {
+        rackRoot: project.root,
+        workRoot,
+        hostId: hostIntegration.id,
+        profileId: selectedProfile,
+        confirmed: true,
+      });
+      onStatus(`${hostIntegration.displayName} Rack installation removed. A local backup was retained.`);
+      await refreshHostInstallation();
+    } catch (reason) {
+      setHostError(
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "Rack could not remove this host installation.",
+      );
+    } finally {
+      setHostBusy(null);
+    }
+  };
 
   useEffect(() => {
     setSelectedArtifactPath(previewTargetBuild.artifacts[0]?.path ?? null);
@@ -344,6 +501,65 @@ export function PreviewSection({
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {hostIntegration.status === "supported" && !workRoot ? (
+            <div className="notice">
+              Choose a work project above before Rack inspects or installs AI-tool files.
+            </div>
+          ) : null}
+
+          {hostIntegration.status === "supported" && hostInspection ? (
+            <div className="host-install-review">
+              <div className="build-state-line">
+                <span className={`build-state build-state--${hostInspection.status === "conflict" ? "modified" : hostInspection.status === "current" ? "current" : "stale"}`}>
+                  {hostInstallLabels[hostInspection.status]}
+                </span>
+                <span className="build-meta">
+                  Rack only owns files it created through this installation.
+                </span>
+              </div>
+              <ul>
+                {hostInspection.files.map((file) => (
+                  <li key={file.path}>
+                    <code>{file.path}</code>{" "}
+                    <strong>{file.status.replace("-", " ")}</strong>
+                    <span> — {file.detail}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="button-row">
+                <button
+                  className="primary-action"
+                  type="button"
+                  disabled={!hostInspection.canInstall || Boolean(hostBusy)}
+                  onClick={() => void installForHost()}
+                >
+                  {hostBusy === "install"
+                    ? "Installing…"
+                    : hostInspection.status === "update-available"
+                      ? `Update ${hostIntegration.displayName}`
+                      : `Install for ${hostIntegration.displayName}`}
+                </button>
+                {hostInspection.canRemove ? (
+                  <button
+                    className="quiet-action"
+                    type="button"
+                    disabled={Boolean(hostBusy)}
+                    onClick={() => void removeHostInstallation()}
+                  >
+                    {hostBusy === "remove" ? "Removing…" : "Remove Rack installation"}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {hostBusy === "inspect" ? <small>Checking project host files…</small> : null}
+          {hostError ? (
+            <div className="notice notice--error" role="alert">
+              {hostError}
+            </div>
           ) : null}
           {hostIntegration.status !== "supported" ? (
             <small>{hostIntegration.displayName} support is currently {hostIntegration.status}.</small>

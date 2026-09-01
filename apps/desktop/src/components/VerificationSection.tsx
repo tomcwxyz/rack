@@ -15,6 +15,7 @@ import {
   type VerificationJudgementPlan,
 } from "@rack/managed";
 import { ManagedSignIn, useManagedAuth } from "../managedAuth.js";
+import { LocalVerificationPanel } from "./LocalVerificationPanel.js";
 import { formatMicrousd, settledCostMicrousd } from "../managedChecks.js";
 import "../checks.css";
 
@@ -22,6 +23,7 @@ type VerificationSectionProps = {
   project: RackProject;
   selectedProfile: string;
   onProfileChange: (profileId: string) => void;
+  workRoot: string | null;
 };
 
 type JudgementStep = VerificationPlanStep & { kind: "judgement"; question: string };
@@ -72,6 +74,7 @@ export function VerificationSection({
   project,
   selectedProfile,
   onProfileChange,
+  workRoot,
 }: VerificationSectionProps) {
   const auth = useManagedAuth();
   const judgementSteps = useMemo(
@@ -88,6 +91,7 @@ export function VerificationSection({
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"preflight" | "run" | null>(null);
+  const [localEvidence, setLocalEvidence] = useState("");
 
   const selectedStep =
     judgementSteps.find((step) => step.id === selectedStepId) ??
@@ -110,6 +114,29 @@ export function VerificationSection({
       setSelectedStepId(selectedStep.id);
     }
   }, [selectedStep, selectedStepId]);
+
+  useEffect(() => {
+    if (!localEvidence || !selectedStep) return;
+    setEvidence((current) => {
+      const next = { ...current };
+      let changed = false;
+      if (
+        selectedStep.evidence.includes("test-results") &&
+        !current["test-results"]?.trim()
+      ) {
+        next["test-results"] = localEvidence;
+        changed = true;
+      }
+      if (
+        selectedStep.evidence.includes("build-results") &&
+        !current["build-results"]?.trim()
+      ) {
+        next["build-results"] = localEvidence;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [localEvidence, selectedStep]);
 
   const invalidate = () => {
     setPlan(null);
@@ -217,6 +244,19 @@ export function VerificationSection({
     project.profiles.find((profile) => profile.id === selectedProfile)?.title ??
     selectedProfile;
 
+  const localPanel = (
+    <LocalVerificationPanel
+      project={project}
+      selectedProfile={selectedProfile}
+      workRoot={workRoot}
+      onEvidence={(value) => {
+        setLocalEvidence(value);
+        setPlan(null);
+        setResult(null);
+      }}
+    />
+  );
+
   if (!auth.configured) {
     return (
       <section className="checks-section">
@@ -226,6 +266,7 @@ export function VerificationSection({
             <h2>Verify work against your practice</h2>
           </div>
         </div>
+        {localPanel}
         <div className="checks-empty">
           <h3>Managed verification is not enabled in this build</h3>
           <p>{auth.configurationMessage}</p>
@@ -240,9 +281,18 @@ export function VerificationSection({
 
   if (auth.pending) {
     return (
-      <p className="checks-loading" role="status">
-        Checking managed sign-in…
-      </p>
+      <section className="checks-section">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Verification</p>
+            <h2>Verify work against your practice</h2>
+          </div>
+        </div>
+        {localPanel}
+        <p className="checks-loading" role="status">
+          Checking managed sign-in…
+        </p>
+      </section>
     );
   }
 
@@ -268,7 +318,10 @@ export function VerificationSection({
             </li>
           </ul>
         </div>
-        <ManagedSignIn />
+        <div>
+          {localPanel}
+          <ManagedSignIn />
+        </div>
       </section>
     );
   }
@@ -293,6 +346,7 @@ export function VerificationSection({
             Sign out
           </button>
         </div>
+        {localPanel}
         <div className="checks-empty">
           <h3>No semantic verification is configured</h3>
           <p>
@@ -328,6 +382,8 @@ export function VerificationSection({
           Sign out
         </button>
       </div>
+
+      {localPanel}
 
       <div className="check-form-grid">
         <div className="check-panel">

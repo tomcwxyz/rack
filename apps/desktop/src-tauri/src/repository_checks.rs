@@ -1,0 +1,637 @@
+use serde::Serialize;
+use serde_json::Value;
+use std::{
+    fs,
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
+
+const CHECK_TIMEOUT: Duration = Duration::from_secs(180);
+const OUTPUT_LIMIT: usize = 32 * 1024;
+const EVIDENCE_LIMIT: usize = 96 * 1024;
+const ALLOWED_SCRIPTS: &[(&str, &str)] = &[
+    ("check", "Project checks"),
+    ("lint", "Lint"),
+    ("typecheck", "Type check"),
+    ("type-check", "Type check"),
+    ("test", "Tests"),
+    ("build", "Build"),
+];
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryLifecycleScript {
+    name: String,
+    definition: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryCheck {
+    id: String,
+    label: String,
+    script: String,
+    definition: String,
+    lifecycle_scripts: Vec<RepositoryLifecycleScript>,
+    display_command: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryCheckPlan {
+    status: String,
+    work_root: String,
+    package_manager: Option<String>,
+    checks: Vec<RepositoryCheck>,
+    fingerprint: Option<String>,
+    message: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryCheckResult {
+    id: String,
+    label: String,
+    display_command: String,
+    status: String,
+    exit_code: Option<i32>,
+    timed_out: bool,
+    duration_ms: u128,
+    stdout: String,
+    stderr: String,
+    definition: String,
+    lifecycle_scripts: Vec<RepositoryLifecycleScript>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryCheckExecution {
+    status: String,
+    fingerprint: String,
+    work_root: String,
+    checks: Vec<RepositoryCheckResult>,
+    evidence: String,
+}
+
+fn canonical_rack_root(root: String) -> Result<PathBuf, String> {
+    let canonical = PathBuf::from(root)
+        .canonicalize()
+        .map_err(|error| format!("Could not open the Rack folder: {error}"))?;
+    if !canonical.is_dir() || !canonical.join("rack.yaml").is_file() {
+        return Err("The selected Rack source folder is not a Rack project.".to_string());
+    }
+    Ok(canonical)
+}
+
+fn canonical_work_root(root: String) -> Result<PathBuf, String> {
+    let canonical = PathBuf::from(root)
+        .canonicalize()
+        .map_err(|error| format!("Could not open the work project folder: {error}"))?;
+    if !canonical.is_dir() {
+        return Err("The selected work project is not a folder.".to_string());
+    }
+    Ok(canonical)
+}
+
+fn digest(value: &str) -> String {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    for byte in value.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("fnv1a64:{hash:016x}")
+}
+
+fn package_manager(root: &Path) -> &'static str {
+    if root.join("pnpm-lock.yaml").is_file() {
+        "pnpm"
+    } else if root.join("yarn.lock").is_file() {
+        "yarn"
+    } else {
+        "npm"
+    }
+}
+
+#[cfg(windows)]
+fn manager_program(manager: &str) -> String {
+    format!("{manager}.cmd")
+}
+
+#[cfg(not(windows))]
+fn manager_program(manager: &str) -> String {
+    manager.to_string()
+}
+
+fn command_for(manager: &str, script: &str) -> (String, Vec<String>, String) {
+    let program = manager_program(manager);
+    let args = vec!["run".to_string(), script.to_string()];
+    let display = format!("{manager} run {script}");
+    (program, args, display)
+}
+
+fn inspect(work_root: &Path) -> Result<RepositoryCheckPlan, String> {
+    let package_path = work_root.join("package.json");
+    if !package_path.is_file() {
+        return Ok(RepositoryCheckPlan {
+            status: "unavailable".to_string(),
+            work_root: work_root.to_string_lossy().to_string(),
+            package_manager: None,
+            checks: Vec::new(),
+            fingerprint: None,
+            message:
+                "Rack currently supports trusted repository checks for JavaScript/TypeScript work projects with a package.json at the selected project root."
+                    .to_string(),
+        });
+    }
+
+    let package_content = fs::read_to_string(&package_path)
+        .map_err(|error| format!("Could not read package.json: {error}"))?;
+    let package: Value = serde_json::from_str(&package_content)
+        .map_err(|error| format!("package.json is invalid JSON: {error}"))?;
+    let scripts = package
+        .get("scripts")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let manager = package_manager(work_root);
+
+    let mut checks = Vec::new();
+    for (script, label) in ALLOWED_SCRIPTS {
+        let Some(definition) = scripts
+            .get(*script)
+            .and_then(Value::as_str)
+            .filter(|value| !value.trim().is_empty())
+        else {
+            continue;
+        };
+
+        let lifecycle_scripts = [format!("pre{script}"), format!("post{script}")]
+            .into_iter()
+            .filter_map(|name| {
+                scripts
+                    .get(&name)
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.trim().is_empty())
+                    .map(|value| RepositoryLifecycleScript {
+                        name,
+                        definition: value.to_string(),
+                    })
+            })
+            .collect::<Vec<_>>();
+
+        let (_, _, display_command) = command_for(manager, script);
+        checks.push(RepositoryCheck {
+            id: script.replace('-', "_"),
+            label: (*label).to_string(),
+            script: (*script).to_string(),
+            definition: definition.to_string(),
+            lifecycle_scripts,
+            display_command,
+        });
+    }
+
+    if checks.is_empty() {
+        return Ok(RepositoryCheckPlan {
+            status: "unavailable".to_string(),
+            work_root: work_root.to_string_lossy().to_string(),
+            package_manager: Some(manager.to_string()),
+            checks,
+            fingerprint: None,
+            message:
+                "Rack found package.json but none of the trusted pilot script names: check, lint, typecheck, type-check, test or build."
+                    .to_string(),
+        });
+    }
+
+    let signature = format!(
+        "{}\n{}\n{}\n{}",
+        work_root.to_string_lossy(),
+        package_content,
+        manager,
+        checks
+            .iter()
+            .map(|check| format!("{}:{}", check.id, check.script))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+
+    Ok(RepositoryCheckPlan {
+        status: "available".to_string(),
+        work_root: work_root.to_string_lossy().to_string(),
+        package_manager: Some(manager.to_string()),
+        checks,
+        fingerprint: Some(digest(&signature)),
+        message:
+            "Rack derived these checks from recognised package.json script names in the selected work project. No command came from Starter or shared practice."
+                .to_string(),
+    })
+}
+
+fn tail_text(path: &Path) -> Result<String, String> {
+    let mut file = File::open(path)
+        .map_err(|error| format!("Could not read verifier output: {error}"))?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(|error| format!("Could not read verifier output: {error}"))?;
+    if bytes.len() > OUTPUT_LIMIT {
+        bytes = bytes.split_off(bytes.len() - OUTPUT_LIMIT);
+    }
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
+fn run_check(
+    work_root: &Path,
+    manager: &str,
+    check: &RepositoryCheck,
+    log_root: &Path,
+) -> RepositoryCheckResult {
+    let (program, args, display_command) = command_for(manager, &check.script);
+    let stdout_path = log_root.join(format!("{}-stdout.log", check.id));
+    let stderr_path = log_root.join(format!("{}-stderr.log", check.id));
+    let started = Instant::now();
+
+    let stdout_file = match File::create(&stdout_path) {
+        Ok(file) => file,
+        Err(error) => {
+            return RepositoryCheckResult {
+                id: check.id.clone(),
+                label: check.label.clone(),
+                display_command,
+                status: "error".to_string(),
+                exit_code: None,
+                timed_out: false,
+                duration_ms: started.elapsed().as_millis(),
+                stdout: String::new(),
+                stderr: format!("Could not prepare verification output: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
+            }
+        }
+    };
+    let stderr_file = match File::create(&stderr_path) {
+        Ok(file) => file,
+        Err(error) => {
+            return RepositoryCheckResult {
+                id: check.id.clone(),
+                label: check.label.clone(),
+                display_command,
+                status: "error".to_string(),
+                exit_code: None,
+                timed_out: false,
+                duration_ms: started.elapsed().as_millis(),
+                stdout: String::new(),
+                stderr: format!("Could not prepare verification error output: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
+            }
+        }
+    };
+
+    let mut child = match Command::new(&program)
+        .args(&args)
+        .current_dir(work_root)
+        .env("CI", "true")
+        .env("NO_COLOR", "1")
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(stdout_file))
+        .stderr(Stdio::from(stderr_file))
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(error) => {
+            return RepositoryCheckResult {
+                id: check.id.clone(),
+                label: check.label.clone(),
+                display_command,
+                status: "error".to_string(),
+                exit_code: None,
+                timed_out: false,
+                duration_ms: started.elapsed().as_millis(),
+                stdout: String::new(),
+                stderr: format!("Could not start the trusted repository check: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
+            }
+        }
+    };
+
+    let mut timed_out = false;
+    let exit_code = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status.code(),
+            Ok(None) if started.elapsed() < CHECK_TIMEOUT => {
+                thread::sleep(Duration::from_millis(100));
+            }
+            Ok(None) => {
+                timed_out = true;
+                let _ = child.kill();
+                let status = child.wait().ok();
+                break status.and_then(|item| item.code());
+            }
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                break None;
+            }
+        }
+    };
+
+    let stdout = tail_text(&stdout_path).unwrap_or_default();
+    let stderr = tail_text(&stderr_path).unwrap_or_default();
+    let _ = fs::remove_file(&stdout_path);
+    let _ = fs::remove_file(&stderr_path);
+
+    let status = if timed_out {
+        "timeout"
+    } else if exit_code == Some(0) {
+        "pass"
+    } else if exit_code.is_some() {
+        "fail"
+    } else {
+        "error"
+    };
+
+    RepositoryCheckResult {
+        id: check.id.clone(),
+        label: check.label.clone(),
+        display_command,
+        status: status.to_string(),
+        exit_code,
+        timed_out,
+        duration_ms: started.elapsed().as_millis(),
+        stdout,
+        stderr,
+        definition: check.definition.clone(),
+        lifecycle_scripts: check.lifecycle_scripts.clone(),
+    }
+}
+
+fn evidence_from(results: &[RepositoryCheckResult]) -> String {
+    let combined = results
+        .iter()
+        .map(|result| {
+            let mut lines = vec![
+                format!("## {}", result.label),
+                format!("Command: {}", result.display_command),
+                format!("Script definition: {}", result.definition),
+                format!("Status: {}", result.status),
+                format!(
+                    "Exit code: {}",
+                    result
+                        .exit_code
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "none".to_string())
+                ),
+            ];
+            if !result.lifecycle_scripts.is_empty() {
+                lines.push("Lifecycle scripts invoked by the package manager:".to_string());
+                for lifecycle in &result.lifecycle_scripts {
+                    lines.push(format!("- {}: {}", lifecycle.name, lifecycle.definition));
+                }
+            }
+            if !result.stdout.trim().is_empty() {
+                lines.push("Output:".to_string());
+                lines.push(result.stdout.trim().to_string());
+            }
+            if !result.stderr.trim().is_empty() {
+                lines.push("Errors:".to_string());
+                lines.push(result.stderr.trim().to_string());
+            }
+            lines.join("\n")
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n");
+
+    if combined.len() <= EVIDENCE_LIMIT {
+        combined
+    } else {
+        let start = combined.len() - EVIDENCE_LIMIT;
+        let boundary = combined
+            .char_indices()
+            .find(|(index, _)| *index >= start)
+            .map(|(index, _)| index)
+            .unwrap_or(0);
+        format!(
+            "[Earlier local verifier output omitted to keep evidence bounded.]\n\n{}",
+            &combined[boundary..]
+        )
+    }
+}
+
+#[tauri::command]
+pub(crate) fn inspect_repository_checks(
+    rack_root: String,
+    work_root: String,
+) -> Result<RepositoryCheckPlan, String> {
+    let _rack_root = canonical_rack_root(rack_root)?;
+    let work_root = canonical_work_root(work_root)?;
+    inspect(&work_root)
+}
+
+#[tauri::command]
+pub(crate) fn run_repository_checks(
+    rack_root: String,
+    work_root: String,
+    fingerprint: String,
+    confirmed: bool,
+) -> Result<RepositoryCheckExecution, String> {
+    if !confirmed {
+        return Err("Running repository code requires explicit confirmation.".to_string());
+    }
+    let rack_root = canonical_rack_root(rack_root)?;
+    let work_root = canonical_work_root(work_root)?;
+    let plan = inspect(&work_root)?;
+    if plan.status != "available" {
+        return Err(plan.message);
+    }
+    let current_fingerprint = plan
+        .fingerprint
+        .clone()
+        .ok_or_else(|| "Repository checks do not have a valid fingerprint.".to_string())?;
+    if current_fingerprint != fingerprint {
+        return Err(
+            "The repository check plan changed after review. Inspect the checks again before running them."
+                .to_string(),
+        );
+    }
+    let manager = plan
+        .package_manager
+        .clone()
+        .ok_or_else(|| "Rack could not determine a package manager.".to_string())?;
+
+    let log_root = rack_root
+        .join(".rack")
+        .join("verification-temp")
+        .join(format!(
+            "{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map_err(|error| format!("Could not create verifier run ID: {error}"))?
+                .as_millis()
+        ));
+    fs::create_dir_all(&log_root)
+        .map_err(|error| format!("Could not prepare local verification: {error}"))?;
+
+    let results = plan
+        .checks
+        .iter()
+        .map(|check| run_check(&work_root, &manager, check, &log_root))
+        .collect::<Vec<_>>();
+    let _ = fs::remove_dir_all(&log_root);
+
+    let status = if results.iter().all(|result| result.status == "pass") {
+        "pass"
+    } else if results
+        .iter()
+        .any(|result| result.status == "fail" || result.status == "timeout")
+    {
+        "fail"
+    } else {
+        "incomplete"
+    };
+
+    Ok(RepositoryCheckExecution {
+        status: status.to_string(),
+        fingerprint: current_fingerprint,
+        work_root: work_root.to_string_lossy().to_string(),
+        evidence: evidence_from(&results),
+        checks: results,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture_root(label: &str) -> (PathBuf, PathBuf) {
+        let base = std::env::temp_dir().join(format!(
+            "rack-repository-checks-{label}-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let rack = base.join("rack");
+        let work = base.join("work");
+        fs::create_dir_all(&rack).unwrap();
+        fs::create_dir_all(&work).unwrap();
+        fs::write(rack.join("rack.yaml"), "schema_version: \"0.1\"\n").unwrap();
+        (rack, work)
+    }
+
+    #[test]
+    fn plans_only_recognised_package_scripts_from_work_project() {
+        let (rack, work) = fixture_root("allowed");
+        fs::write(
+            work.join("package.json"),
+            r#"{
+              "scripts": {
+                "check": "echo check",
+                "test": "echo test",
+                "deploy": "echo never-run"
+              }
+            }"#,
+        )
+        .unwrap();
+        fs::write(work.join("pnpm-lock.yaml"), "lockfileVersion: '9.0'\n").unwrap();
+
+        let plan = inspect(&work).unwrap();
+        assert_eq!(plan.status, "available");
+        assert_eq!(plan.package_manager.as_deref(), Some("pnpm"));
+        assert_eq!(
+            plan.checks
+                .iter()
+                .map(|check| check.script.as_str())
+                .collect::<Vec<_>>(),
+            vec!["check", "test"]
+        );
+        assert!(plan
+            .checks
+            .iter()
+            .all(|check| !check.display_command.contains("deploy")));
+        assert_eq!(plan.checks[0].definition, "echo check");
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
+    fn plan_surfaces_package_manager_lifecycle_scripts() {
+        let (rack, work) = fixture_root("lifecycle");
+        fs::write(
+            work.join("package.json"),
+            r#"{
+              "scripts": {
+                "pretest": "echo prepare",
+                "test": "echo test",
+                "posttest": "echo clean"
+              }
+            }"#,
+        )
+        .unwrap();
+
+        let plan = inspect(&work).unwrap();
+        let test = plan
+            .checks
+            .iter()
+            .find(|check| check.script == "test")
+            .unwrap();
+        assert_eq!(test.definition, "echo test");
+        assert_eq!(
+            test.lifecycle_scripts
+                .iter()
+                .map(|item| item.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["pretest", "posttest"]
+        );
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
+    fn plan_fingerprint_changes_when_work_project_scripts_change() {
+        let (rack, work) = fixture_root("fingerprint");
+        fs::write(
+            work.join("package.json"),
+            r#"{"scripts":{"test":"echo one"}}"#,
+        )
+        .unwrap();
+        let first = inspect(&work).unwrap().fingerprint.unwrap();
+        fs::write(
+            work.join("package.json"),
+            r#"{"scripts":{"test":"echo two"}}"#,
+        )
+        .unwrap();
+        let second = inspect(&work).unwrap().fingerprint.unwrap();
+        assert_ne!(first, second);
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
+    fn package_manager_program_does_not_require_a_shell() {
+        let (program, args, display) = command_for("npm", "test");
+        #[cfg(windows)]
+        assert_eq!(program, "npm.cmd");
+        #[cfg(not(windows))]
+        assert_eq!(program, "npm");
+        assert_eq!(args, vec!["run".to_string(), "test".to_string()]);
+        assert_eq!(display, "npm run test");
+    }
+
+    #[test]
+    fn work_project_without_recognised_scripts_is_unavailable() {
+        let (rack, work) = fixture_root("none");
+        fs::write(
+            work.join("package.json"),
+            r#"{"scripts":{"start":"node server.js"}}"#,
+        )
+        .unwrap();
+        let plan = inspect(&work).unwrap();
+        assert_eq!(plan.status, "unavailable");
+        assert!(plan.checks.is_empty());
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+}

@@ -344,3 +344,80 @@
     position: static;
   }
 }
+
+
+.local-verification-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.local-verification-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.local-verification-heading h3 {
+  margin: 0 0 8px;
+  font-family: Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.repository-command-list {
+  display: grid;
+  gap: 8px;
+}
+
+.repository-command {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 52%);
+}
+
+.repository-command strong,
+.repository-command small {
+  display: block;
+}
+
+.repository-command small {
+  margin-top: 3px;
+  color: var(--muted);
+}
+
+.repository-command code {
+  text-align: right;
+  color: var(--muted);
+}
+
+.host-install-review {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.host-install-review ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .local-verification-heading,
+  .repository-command {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .repository-command code {
+    text-align: left;
+  }
+}
