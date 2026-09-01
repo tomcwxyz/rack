@@ -24,10 +24,19 @@ const ALLOWED_SCRIPTS: &[(&str, &str)] = &[
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct RepositoryLifecycleScript {
+    name: String,
+    definition: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RepositoryCheck {
     id: String,
     label: String,
     script: String,
+    definition: String,
+    lifecycle_scripts: Vec<RepositoryLifecycleScript>,
     display_command: String,
 }
 
@@ -54,6 +63,8 @@ pub(crate) struct RepositoryCheckResult {
     duration_ms: u128,
     stdout: String,
     stderr: String,
+    definition: String,
+    lifecycle_scripts: Vec<RepositoryLifecycleScript>,
 }
 
 #[derive(Clone, Serialize)]
@@ -150,18 +161,35 @@ fn inspect(work_root: &Path) -> Result<RepositoryCheckPlan, String> {
 
     let mut checks = Vec::new();
     for (script, label) in ALLOWED_SCRIPTS {
-        if !scripts
+        let Some(definition) = scripts
             .get(*script)
             .and_then(Value::as_str)
-            .is_some_and(|value| !value.trim().is_empty())
-        {
+            .filter(|value| !value.trim().is_empty())
+        else {
             continue;
-        }
+        };
+
+        let lifecycle_scripts = [format!("pre{script}"), format!("post{script}")]
+            .into_iter()
+            .filter_map(|name| {
+                scripts
+                    .get(&name)
+                    .and_then(Value::as_str)
+                    .filter(|value| !value.trim().is_empty())
+                    .map(|value| RepositoryLifecycleScript {
+                        name,
+                        definition: value.to_string(),
+                    })
+            })
+            .collect::<Vec<_>>();
+
         let (_, _, display_command) = command_for(manager, script);
         checks.push(RepositoryCheck {
             id: script.replace('-', "_"),
             label: (*label).to_string(),
             script: (*script).to_string(),
+            definition: definition.to_string(),
+            lifecycle_scripts,
             display_command,
         });
     }
@@ -239,6 +267,8 @@ fn run_check(
                 duration_ms: started.elapsed().as_millis(),
                 stdout: String::new(),
                 stderr: format!("Could not prepare verification output: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
             }
         }
     };
@@ -255,6 +285,8 @@ fn run_check(
                 duration_ms: started.elapsed().as_millis(),
                 stdout: String::new(),
                 stderr: format!("Could not prepare verification error output: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
             }
         }
     };
@@ -281,6 +313,8 @@ fn run_check(
                 duration_ms: started.elapsed().as_millis(),
                 stdout: String::new(),
                 stderr: format!("Could not start the trusted repository check: {error}"),
+                definition: check.definition.clone(),
+                lifecycle_scripts: check.lifecycle_scripts.clone(),
             }
         }
     };
@@ -331,6 +365,8 @@ fn run_check(
         duration_ms: started.elapsed().as_millis(),
         stdout,
         stderr,
+        definition: check.definition.clone(),
+        lifecycle_scripts: check.lifecycle_scripts.clone(),
     }
 }
 
@@ -341,6 +377,7 @@ fn evidence_from(results: &[RepositoryCheckResult]) -> String {
             let mut lines = vec![
                 format!("## {}", result.label),
                 format!("Command: {}", result.display_command),
+                format!("Script definition: {}", result.definition),
                 format!("Status: {}", result.status),
                 format!(
                     "Exit code: {}",
@@ -350,6 +387,12 @@ fn evidence_from(results: &[RepositoryCheckResult]) -> String {
                         .unwrap_or_else(|| "none".to_string())
                 ),
             ];
+            if !result.lifecycle_scripts.is_empty() {
+                lines.push("Lifecycle scripts invoked by the package manager:".to_string());
+                for lifecycle in &result.lifecycle_scripts {
+                    lines.push(format!("- {}: {}", lifecycle.name, lifecycle.definition));
+                }
+            }
             if !result.stdout.trim().is_empty() {
                 lines.push("Output:".to_string());
                 lines.push(result.stdout.trim().to_string());
@@ -512,6 +555,39 @@ mod tests {
             .checks
             .iter()
             .all(|check| !check.display_command.contains("deploy")));
+        assert_eq!(plan.checks[0].definition, "echo check");
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
+    fn plan_surfaces_package_manager_lifecycle_scripts() {
+        let (rack, work) = fixture_root("lifecycle");
+        fs::write(
+            work.join("package.json"),
+            r#"{
+              "scripts": {
+                "pretest": "echo prepare",
+                "test": "echo test",
+                "posttest": "echo clean"
+              }
+            }"#,
+        )
+        .unwrap();
+
+        let plan = inspect(&work).unwrap();
+        let test = plan
+            .checks
+            .iter()
+            .find(|check| check.script == "test")
+            .unwrap();
+        assert_eq!(test.definition, "echo test");
+        assert_eq!(
+            test.lifecycle_scripts
+                .iter()
+                .map(|item| item.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["pretest", "posttest"]
+        );
         let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 
