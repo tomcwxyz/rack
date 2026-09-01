@@ -138,11 +138,11 @@ export function TopoContextPanel({
   const unavailableMessage = topoStatusMessage(status);
 
   return (
-    <aside className="topo-context-panel" aria-label="TOPO organisational context">
+    <aside className="topo-context-panel" aria-label="TOPO purpose-bound context">
       <div className="topo-context-heading">
         <div>
           <p className="eyebrow">TOPO memory</p>
-          <h3>Connect context from TOPO</h3>
+          <h3>Use purpose-bound context from TOPO</h3>
         </div>
         <span
           className={
@@ -157,8 +157,10 @@ export function TopoContextPanel({
 
       <p className="muted-copy">
         TOPO and Rack stay separate. When you choose to use memory here, Rack
-        asks TOPO for only the context relevant to this build. Sensitive and
-        restricted memory stays in TOPO.
+        asks TOPO for context for this specific task. The reviewed snapshot stays
+        transient: it does not become Rack practice, standing host instructions,
+        evaluation data or organisational reporting. Sensitive and restricted
+        memory stays in TOPO.
       </p>
 
       {!status?.available ? (
