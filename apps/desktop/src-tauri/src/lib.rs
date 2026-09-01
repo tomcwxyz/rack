@@ -2,6 +2,7 @@ mod document_import;
 mod generated;
 mod host_discovery;
 mod host_install;
+mod host_runtime;
 mod repository_checks;
 mod starter;
 mod topo_local;
@@ -615,6 +616,7 @@ pub fn run() {
             host_install::inspect_host_install,
             host_install::install_host_files,
             host_install::remove_host_install,
+            host_runtime::run_transient_host_task,
             repository_checks::inspect_repository_checks,
             repository_checks::run_repository_checks,
             work_target::read_work_target,
