@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   buildVerificationPlan,
   prepareTargetBuild,
+  resolveVerificationCompletionGate,
   resolveVerificationJudgementGate,
   type RackProject,
+  type VerificationCompletionStatus,
   type VerificationGateDecision,
   type VerificationPlanStep,
+  type VerificationStepResult,
 } from "@rack/core";
 import {
   confirmVerificationJudgement,
@@ -27,6 +30,7 @@ type VerificationSectionProps = {
 };
 
 type JudgementStep = VerificationPlanStep & { kind: "judgement"; question: string };
+type HumanStep = VerificationPlanStep & { kind: "human"; prompt: string };
 type EvidenceKind = JudgementStep["evidence"][number];
 
 type VerificationResult = {
@@ -61,14 +65,13 @@ const gateExplanation: Record<VerificationGateDecision, string> = {
     "Rack did not obtain a valid structured judgement, so it has not treated the work as passing.",
 };
 
-const judgementStepsFrom = (
-  project: RackProject,
-  profileId: string,
-): JudgementStep[] =>
-  buildVerificationPlan(project, profileId).steps.filter(
-    (step): step is JudgementStep =>
-      step.kind === "judgement" && typeof step.question === "string",
-  );
+const completionStatusLabels: Record<VerificationCompletionStatus, string> = {
+  pass: "Pass · completion requirements satisfied",
+  fail: "Fail · completion is blocked",
+  "review-required": "Review required",
+  uncertain: "Uncertain · do not treat as pass",
+  incomplete: "Incomplete · evidence is still missing",
+};
 
 export function VerificationSection({
   project,
@@ -77,9 +80,25 @@ export function VerificationSection({
   workRoot,
 }: VerificationSectionProps) {
   const auth = useManagedAuth();
-  const judgementSteps = useMemo(
-    () => judgementStepsFrom(project, selectedProfile),
+  const verificationPlan = useMemo(
+    () => buildVerificationPlan(project, selectedProfile),
     [project, selectedProfile],
+  );
+  const judgementSteps = useMemo(
+    () =>
+      verificationPlan.steps.filter(
+        (step): step is JudgementStep =>
+          step.kind === "judgement" && typeof step.question === "string",
+      ),
+    [verificationPlan],
+  );
+  const humanSteps = useMemo(
+    () =>
+      verificationPlan.steps.filter(
+        (step): step is HumanStep =>
+          step.kind === "human" && typeof step.prompt === "string",
+      ),
+    [verificationPlan],
   );
   const [selectedStepId, setSelectedStepId] = useState(
     judgementSteps[0]?.id ?? "",
@@ -92,6 +111,14 @@ export function VerificationSection({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"preflight" | "run" | null>(null);
   const [localEvidence, setLocalEvidence] = useState("");
+  const [automaticResult, setAutomaticResult] =
+    useState<VerificationStepResult | null>(null);
+  const [judgementResults, setJudgementResults] = useState<
+    Record<string, VerificationStepResult>
+  >({});
+  const [humanResults, setHumanResults] = useState<
+    Record<string, "pass" | "fail">
+  >({});
 
   const selectedStep =
     judgementSteps.find((step) => step.id === selectedStepId) ??
@@ -138,16 +165,24 @@ export function VerificationSection({
     });
   }, [localEvidence, selectedStep]);
 
-  const invalidate = () => {
+  const invalidate = (clearRecorded = true) => {
     setPlan(null);
     setResult(null);
     setError(null);
+    if (clearRecorded && selectedStepId) {
+      setJudgementResults((current) => {
+        if (!(selectedStepId in current)) return current;
+        const next = { ...current };
+        delete next[selectedStepId];
+        return next;
+      });
+    }
   };
 
   const changeStep = (stepId: string) => {
     setSelectedStepId(stepId);
     setEvidence({});
-    invalidate();
+    invalidate(false);
   };
 
   const evidenceItems = () => {
@@ -228,6 +263,13 @@ export function VerificationSection({
         execution.judgement?.verdict ?? null,
       );
       setResult({ execution, gate });
+      setJudgementResults((current) => ({
+        ...current,
+        [selectedStep.id]: {
+          stepId: selectedStep.id,
+          outcome: execution.judgement?.verdict ?? "incomplete",
+        },
+      }));
     } catch (caught) {
       setResult(null);
       setError(
@@ -240,9 +282,36 @@ export function VerificationSection({
     }
   };
 
+  useEffect(() => {
+    setAutomaticResult(null);
+    setJudgementResults({});
+    setHumanResults({});
+    setLocalEvidence("");
+    setPlan(null);
+    setResult(null);
+    setEvidence({});
+  }, [selectedProfile]);
+
   const selectedProfileTitle =
     project.profiles.find((profile) => profile.id === selectedProfile)?.title ??
     selectedProfile;
+
+  const completionResults = useMemo<VerificationStepResult[]>(
+    () => [
+      ...(automaticResult ? [automaticResult] : []),
+      ...Object.values(judgementResults),
+      ...Object.entries(humanResults).map(([stepId, outcome]) => ({
+        stepId,
+        outcome,
+      })),
+    ],
+    [automaticResult, humanResults, judgementResults],
+  );
+
+  const completionGate = useMemo(
+    () => resolveVerificationCompletionGate(verificationPlan, completionResults),
+    [completionResults, verificationPlan],
+  );
 
   const localPanel = (
     <LocalVerificationPanel
@@ -254,7 +323,100 @@ export function VerificationSection({
         setPlan(null);
         setResult(null);
       }}
+      onResult={setAutomaticResult}
     />
+  );
+
+  const completionGatePanel = (
+    <div className="check-panel completion-gate-panel">
+      <div className="local-verification-heading">
+        <div>
+          <p className="eyebrow">Completion gate</p>
+          <h3>{completionStatusLabels[completionGate.status]}</h3>
+          <p className="section-intro">
+            Rack combines deterministic checks, fresh bounded judgement and
+            explicit human review without converting missing or uncertain
+            evidence into a pass.
+          </p>
+        </div>
+        <span className={"check-mode-badge check-result--" + completionGate.status}>
+          {completionGate.status}
+        </span>
+      </div>
+
+      {completionGate.steps.length > 0 ? (
+        <div className="repository-command-list">
+          {completionGate.steps.map((step) => (
+            <div className="repository-command" key={step.stepId}>
+              <div>
+                <strong>{step.label}</strong>
+                <small>
+                  {step.kind} · {step.requiredForCompletion ? "required" : "advisory"}
+                </small>
+              </div>
+              <code>{step.decision}</code>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="section-intro">No verification steps are active for this Set-up.</p>
+      )}
+
+      {completionGate.warnings.length > 0 ? (
+        <div className="notice">
+          {completionGate.warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
+
+      {humanSteps.length > 0 ? (
+        <div className="human-review-list">
+          <p className="eyebrow">Human review</p>
+          {humanSteps.map((step) => (
+            <div className="repository-command" key={step.id}>
+              <div>
+                <strong>{step.label}</strong>
+                <small>{step.prompt}</small>
+              </div>
+              <div className="button-row">
+                <button
+                  className="quiet-action"
+                  type="button"
+                  onClick={() =>
+                    setHumanResults((current) => ({
+                      ...current,
+                      [step.id]: "pass",
+                    }))
+                  }
+                >
+                  Reviewed · satisfied
+                </button>
+                <button
+                  className="quiet-action"
+                  type="button"
+                  onClick={() =>
+                    setHumanResults((current) => ({
+                      ...current,
+                      [step.id]: "fail",
+                    }))
+                  }
+                >
+                  Needs changes
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const verificationPanels = (
+    <>
+      {verificationPanels}
+      {completionGatePanel}
+    </>
   );
 
   if (!auth.configured) {
@@ -266,7 +428,7 @@ export function VerificationSection({
             <h2>Verify work against your practice</h2>
           </div>
         </div>
-        {localPanel}
+        {verificationPanels}
         <div className="checks-empty">
           <h3>Managed verification is not enabled in this build</h3>
           <p>{auth.configurationMessage}</p>
@@ -288,7 +450,7 @@ export function VerificationSection({
             <h2>Verify work against your practice</h2>
           </div>
         </div>
-        {localPanel}
+        {verificationPanels}
         <p className="checks-loading" role="status">
           Checking managed sign-in…
         </p>
@@ -319,7 +481,7 @@ export function VerificationSection({
           </ul>
         </div>
         <div>
-          {localPanel}
+          {verificationPanels}
           <ManagedSignIn />
         </div>
       </section>
@@ -346,7 +508,7 @@ export function VerificationSection({
             Sign out
           </button>
         </div>
-        {localPanel}
+        {verificationPanels}
         <div className="checks-empty">
           <h3>No semantic verification is configured</h3>
           <p>
@@ -383,7 +545,7 @@ export function VerificationSection({
         </button>
       </div>
 
-      {localPanel}
+      {verificationPanels}
 
       <div className="check-form-grid">
         <div className="check-panel">
