@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { resolveAttachedSharedPractice } from "../sharedPractice.js";
 import { useSharedPracticeLifecycle } from "../useSharedPracticeLifecycle.js";
@@ -50,6 +51,7 @@ export function ProjectWorkspace({
   const [section, setSection] = useState<WorkspaceSection>("rack");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [workRoot, setWorkRoot] = useState<string | null>(null);
   const sharedPractice = useSharedPracticeLifecycle(project.root);
   const [editing, setEditing] = useState<EditingSource | null>(null);
   const sharedResolution = useMemo(
@@ -102,6 +104,19 @@ export function ProjectWorkspace({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [editingIdentity, editingOpen]);
+
+  const chooseWorkRoot = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Choose the project this Rack should work with",
+    });
+    const path = Array.isArray(selected) ? selected[0] : selected;
+    if (path) {
+      setWorkRoot(path);
+      setActionStatus("Work project selected. Host files and local verification will use this folder.");
+    }
+  };
 
   const sourceEdit = (path: string, title: string) =>
     setEditing({ kind: "source", path, title });
@@ -223,6 +238,43 @@ export function ProjectWorkspace({
           </div>
         ) : null}
 
+        <div className="work-target-bar">
+          <div>
+            <p className="eyebrow">Work project</p>
+            {workRoot ? (
+              <>
+                <strong>Host hand-off and local verification target</strong>
+                <code title={workRoot}>{workRoot}</code>
+              </>
+            ) : (
+              <>
+                <strong>Choose where this Rack should apply</strong>
+                <span>
+                  Your Rack source stays here. Choose the actual project/repository before
+                  installing AI-tool files or running local checks.
+                </span>
+              </>
+            )}
+          </div>
+          <div className="button-row">
+            <button className="quiet-action" type="button" onClick={() => void chooseWorkRoot()}>
+              {workRoot ? "Change work project" : "Choose work project"}
+            </button>
+            {!workRoot ? (
+              <button
+                className="quiet-action"
+                type="button"
+                onClick={() => {
+                  setWorkRoot(project.root);
+                  setActionStatus("Using the Rack folder itself as the work project.");
+                }}
+              >
+                Use Rack folder
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         {section === "rack" ? (
           <RackSection
             project={project}
@@ -237,6 +289,7 @@ export function ProjectWorkspace({
             lifecycle={sharedPractice}
             resolution={sharedResolution}
             onStatus={setActionStatus}
+            workRoot={workRoot}
           />
         ) : null}
 
@@ -267,6 +320,7 @@ export function ProjectWorkspace({
             project={effectiveProject}
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
+            workRoot={workRoot}
           />
         ) : null}
 
