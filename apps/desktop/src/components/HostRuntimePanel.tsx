@@ -164,6 +164,7 @@ export function HostRuntimePanel({
 
           <TopoContextPanel
             projectName={projectName}
+            useLabel="Use TOPO memory for this task"
             defaultPurpose={
               task.trim()
                 ? `support transient AI task: ${task.trim().slice(0, 500)}`
