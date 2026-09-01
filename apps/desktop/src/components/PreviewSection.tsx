@@ -28,6 +28,7 @@ type PreviewSectionProps = {
   selectedProfile: string;
   onProfileChange: (profileId: string) => void;
   onStatus: (message: string) => void;
+  workRoot: string | null;
 };
 
 type InstallResult = {
@@ -81,6 +82,7 @@ export function PreviewSection({
   selectedProfile,
   onProfileChange,
   onStatus,
+  workRoot,
 }: PreviewSectionProps) {
   const [target, setTarget] = useState<DestinationId>("prompt");
   const targetBuild = useMemo(
@@ -156,7 +158,12 @@ export function PreviewSection({
   );
 
   const refreshHostInstallation = useCallback(async () => {
-    if (!hostIntegration || hostIntegration.status !== "supported" || hostFiles.length === 0) {
+    if (
+      !workRoot ||
+      !hostIntegration ||
+      hostIntegration.status !== "supported" ||
+      hostFiles.length === 0
+    ) {
       setHostInspection(null);
       setHostError(null);
       return;
@@ -166,7 +173,8 @@ export function PreviewSection({
     setHostError(null);
     try {
       const next = await invoke<HostInstallInspection>("inspect_host_install", {
-        root: project.root,
+        rackRoot: project.root,
+        workRoot,
         hostId: hostIntegration.id,
         profileId: selectedProfile,
         files: hostFiles,
@@ -184,16 +192,20 @@ export function PreviewSection({
     } finally {
       setHostBusy(null);
     }
-  }, [hostFiles, hostIntegration, project.root, selectedProfile]);
+  }, [hostFiles, hostIntegration, project.root, selectedProfile, workRoot]);
 
   useEffect(() => {
     void refreshHostInstallation();
   }, [refreshHostInstallation]);
 
   const installForHost = async () => {
-    if (!hostIntegration || !hostInspection?.canInstall) return;
+    if (!workRoot || !hostIntegration || !hostInspection?.canInstall) return;
     const confirmed = window.confirm(
-      `Install the reviewed Rack files for ${hostIntegration.displayName} into this project? Rack will not overwrite pre-existing files it does not already manage.`,
+      "Install the reviewed Rack files for " +
+        hostIntegration.displayName +
+        " into " +
+        workRoot +
+        "? Rack will not overwrite pre-existing files it does not already manage.",
     );
     if (!confirmed) return;
 
@@ -201,7 +213,8 @@ export function PreviewSection({
     setHostError(null);
     try {
       const result = await invoke<HostInstallResult>("install_host_files", {
-        root: project.root,
+        rackRoot: project.root,
+        workRoot,
         hostId: hostIntegration.id,
         profileId: selectedProfile,
         files: hostFiles,
@@ -227,7 +240,7 @@ export function PreviewSection({
   };
 
   const removeHostInstallation = async () => {
-    if (!hostIntegration || !hostInspection?.canRemove) return;
+    if (!workRoot || !hostIntegration || !hostInspection?.canRemove) return;
     const confirmed = window.confirm(
       `Remove the Rack-managed ${hostIntegration.displayName} files from this project? Rack will stop if any managed file changed outside Rack.`,
     );
@@ -237,7 +250,8 @@ export function PreviewSection({
     setHostError(null);
     try {
       await invoke<HostInstallResult>("remove_host_install", {
-        root: project.root,
+        rackRoot: project.root,
+        workRoot,
         hostId: hostIntegration.id,
         profileId: selectedProfile,
         confirmed: true,
@@ -487,6 +501,12 @@ export function PreviewSection({
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {hostIntegration.status === "supported" && !workRoot ? (
+            <div className="notice">
+              Choose a work project above before Rack inspects or installs AI-tool files.
+            </div>
           ) : null}
 
           {hostIntegration.status === "supported" && hostInspection ? (
