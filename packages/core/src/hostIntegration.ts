@@ -51,7 +51,7 @@ const integrations: readonly HostIntegration[] = [
     delivery: {
       standingPractice: "supported",
       onDemandPractice: "supported",
-      transientContext: "planned",
+      transientContext: "supported",
       verificationGate: "planned",
     },
     installation: {
@@ -73,7 +73,7 @@ const integrations: readonly HostIntegration[] = [
     delivery: {
       standingPractice: "supported",
       onDemandPractice: "not-supported",
-      transientContext: "planned",
+      transientContext: "supported",
       verificationGate: "planned",
     },
     installation: {

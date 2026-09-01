@@ -4,6 +4,7 @@ import {
   buildVerificationPlan,
   resolveAutomaticVerifiers,
   type RackProject,
+  type VerificationStepResult,
 } from "@rack/core";
 
 type LocalVerificationPanelProps = {
@@ -11,6 +12,7 @@ type LocalVerificationPanelProps = {
   selectedProfile: string;
   workRoot: string | null;
   onEvidence: (evidence: string) => void;
+  onResult: (result: VerificationStepResult | null) => void;
 };
 
 type RepositoryCheckPlan = {
@@ -52,6 +54,7 @@ export function LocalVerificationPanel({
   selectedProfile,
   workRoot,
   onEvidence,
+  onResult,
 }: LocalVerificationPanelProps) {
   const verificationPlan = useMemo(
     () => buildVerificationPlan(project, selectedProfile),
@@ -75,6 +78,7 @@ export function LocalVerificationPanel({
     if (!workRoot || !repositoryStep || registry?.status !== "available") {
       setPlan(null);
       setResult(null);
+      onResult(null);
       setError(null);
       return;
     }
@@ -88,6 +92,7 @@ export function LocalVerificationPanel({
       });
       setPlan(next);
       setResult(null);
+      onResult(null);
     } catch (reason) {
       setPlan(null);
       setError(
@@ -107,7 +112,7 @@ export function LocalVerificationPanel({
   }, [project.root, repositoryStep?.id, registry?.status, workRoot]);
 
   const runChecks = async () => {
-    if (!plan?.fingerprint || plan.status !== "available") return;
+    if (!plan?.fingerprint || plan.status !== "available" || !repositoryStep) return;
 
     const commands = plan.checks.map((check) => check.displayCommand).join("\n");
     const confirmed = window.confirm(
@@ -133,8 +138,13 @@ export function LocalVerificationPanel({
       );
       setResult(execution);
       onEvidence(execution.evidence);
+      onResult({
+        stepId: repositoryStep.id,
+        outcome: execution.status,
+      });
     } catch (reason) {
       setResult(null);
+      onResult(null);
       setError(
         reason instanceof Error
           ? reason.message
