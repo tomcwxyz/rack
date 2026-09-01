@@ -76,7 +76,7 @@ FIELD STATION was an important design experiment during this phase. RACK adopted
 
 The TOPO → RACK connection has now been proved. The goal is to make that useful in ordinary work and across real AI hosts.
 
-#### Iteration 32 — paired context and cross-platform pilot hardening
+#### Iteration 32 — paired context and cross-platform pilot hardening · in progress
 
 Outcome: TOPO and RACK behave like reliable companion applications, including on Linux.
 

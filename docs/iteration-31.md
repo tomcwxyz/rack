@@ -149,6 +149,6 @@ A later service-contract version should give verification its own durable run ty
 
 ## Next
 
-Iteration 32 should add the deterministic verifier registry beginning with one trusted local check such as repository verification. That registry should map source-level check identifiers onto Rack-owned executors and must continue to reject executable code supplied by shared practice.
+The roadmap was reprioritised after the TOPO → RACK local-context path was proved.
 
-After that, host integration can combine deterministic and semantic results into a complete verification gate.
+Iteration 32 now hardens paired TOPO/RACK use and promotes Linux towards supported-pilot status. The deterministic verifier registry remains planned for Iteration 35, after context-aware creation and host/agent delivery have been exercised.

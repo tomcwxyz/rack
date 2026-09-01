@@ -94,6 +94,50 @@ jobs:
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml document_import::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
 
+  desktop-linux:
+    name: Desktop smoke and package (Linux)
+    needs: quality
+    if: >-
+      needs.quality.result == 'success' &&
+      needs.quality.outputs.desktop_changed == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux desktop dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @rack/desktop... build
+      - run: cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml document_import::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
+      - name: Build Linux pilot packages
+        env:
+          CI: true
+        run: pnpm --filter @rack/desktop tauri build --bundles deb,appimage
+
   desktop-macos:
     name: Desktop smoke (macOS)
     needs: quality
