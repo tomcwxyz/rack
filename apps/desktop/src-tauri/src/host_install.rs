@@ -218,10 +218,10 @@ fn read_state(
         return Err("Rack host state does not match this host installation.".to_string());
     }
     if Path::new(&state.work_root) != work_root {
-        return Err(
-            "This Set-up already has a Rack-managed installation for this host in another work project. Remove that installation before changing the target."
-                .to_string(),
-        );
+        return Err(format!(
+            "This Set-up already has a Rack-managed installation for this host in another work project: {}. Select that project and remove the Rack installation before changing the target.",
+            state.work_root
+        ));
     }
 
     validate_state_paths(&state)?;
