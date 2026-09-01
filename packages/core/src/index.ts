@@ -188,6 +188,7 @@ export * from "./contextSources.js";
 export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
 export * from "./hostIntegration.js";
+export * from "./hostRuntime.js";
 export * from "./practiceProject.js";
 export * from "./practiceReview.js";
 export * from "./practiceResolution.js";
