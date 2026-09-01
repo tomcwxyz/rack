@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
+  buildHostInstallationPlan,
   buildTarget,
   getHostIntegrationForDestination,
   listTargetAdapters,
@@ -91,6 +92,13 @@ export function PreviewSection({
   const hostDiscovery = hostIntegration
     ? hostDiscoveries.find((item) => item.id === hostIntegration.id)
     : null;
+  const hostInstallPlan = useMemo(
+    () =>
+      hostIntegration
+        ? buildHostInstallationPlan(hostIntegration.id, previewTargetBuild.artifacts)
+        : null,
+    [hostIntegration, previewTargetBuild.artifacts],
+  );
 
   useEffect(() => {
     let active = true;
@@ -323,6 +331,20 @@ export function PreviewSection({
             verification as separate host capabilities. Any host installation will be
             reviewed before files or native integrations are changed.
           </p>
+          {hostInstallPlan && hostInstallPlan.actions.length > 0 ? (
+            <ul>
+              {hostInstallPlan.actions.map((action) => (
+                <li key={action.path}>
+                  <code>{action.path}</code>{" "}
+                  <span>
+                    {action.purpose === "standing-practice"
+                      ? "standing practice"
+                      : "on-demand practice"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {hostIntegration.status !== "supported" ? (
             <small>{hostIntegration.displayName} support is currently {hostIntegration.status}.</small>
           ) : null}
