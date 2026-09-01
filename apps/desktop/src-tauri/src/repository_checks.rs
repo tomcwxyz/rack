@@ -105,8 +105,18 @@ fn package_manager(root: &Path) -> &'static str {
     }
 }
 
+#[cfg(windows)]
+fn manager_program(manager: &str) -> String {
+    format!("{manager}.cmd")
+}
+
+#[cfg(not(windows))]
+fn manager_program(manager: &str) -> String {
+    manager.to_string()
+}
+
 fn command_for(manager: &str, script: &str) -> (String, Vec<String>, String) {
-    let program = manager.to_string();
+    let program = manager_program(manager);
     let args = vec!["run".to_string(), script.to_string()];
     let display = format!("{manager} run {script}");
     (program, args, display)
@@ -522,6 +532,17 @@ mod tests {
         let second = inspect(&work).unwrap().fingerprint.unwrap();
         assert_ne!(first, second);
         let _ = fs::remove_dir_all(rack.parent().unwrap());
+    }
+
+    #[test]
+    fn package_manager_program_does_not_require_a_shell() {
+        let (program, args, display) = command_for("npm", "test");
+        #[cfg(windows)]
+        assert_eq!(program, "npm.cmd");
+        #[cfg(not(windows))]
+        assert_eq!(program, "npm");
+        assert_eq!(args, vec!["run".to_string(), "test".to_string()]);
+        assert_eq!(display, "npm run test");
     }
 
     #[test]
