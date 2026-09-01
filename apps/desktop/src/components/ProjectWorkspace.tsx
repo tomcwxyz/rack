@@ -289,7 +289,6 @@ export function ProjectWorkspace({
             lifecycle={sharedPractice}
             resolution={sharedResolution}
             onStatus={setActionStatus}
-            workRoot={workRoot}
           />
         ) : null}
 
@@ -312,6 +311,7 @@ export function ProjectWorkspace({
             selectedProfile={selectedProfile}
             onProfileChange={setSelectedProfile}
             onStatus={setActionStatus}
+            workRoot={workRoot}
           />
         ) : null}
 
