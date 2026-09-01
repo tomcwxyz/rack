@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   buildHostRuntimePlan,
@@ -48,6 +48,12 @@ export function HostRuntimePanel({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<HostRuntimeExecution | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const handleContextChange = useCallback((selection: TopoContextSelection) => {
+    setTopoContext(selection);
+    setResult(null);
+    setError(null);
+  }, []);
 
   if (!plan) return null;
 
@@ -163,11 +169,7 @@ export function HostRuntimePanel({
                 ? `support transient AI task: ${task.trim().slice(0, 500)}`
                 : "support this transient AI task"
             }
-            onChange={(selection) => {
-              setTopoContext(selection);
-              setResult(null);
-              setError(null);
-            }}
+            onChange={handleContextChange}
             onStatus={onStatus}
           />
 
