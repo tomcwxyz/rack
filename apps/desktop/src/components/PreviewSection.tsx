@@ -192,7 +192,7 @@ export function PreviewSection({
 
   const installForHost = async () => {
     if (!hostIntegration || !hostInspection?.canInstall) return;
-    const confirmed = globalThis.confirm(
+    const confirmed = window.confirm(
       `Install the reviewed Rack files for ${hostIntegration.displayName} into this project? Rack will not overwrite pre-existing files it does not already manage.`,
     );
     if (!confirmed) return;
@@ -228,7 +228,7 @@ export function PreviewSection({
 
   const removeHostInstallation = async () => {
     if (!hostIntegration || !hostInspection?.canRemove) return;
-    const confirmed = globalThis.confirm(
+    const confirmed = window.confirm(
       `Remove the Rack-managed ${hostIntegration.displayName} files from this project? Rack will stop if any managed file changed outside Rack.`,
     );
     if (!confirmed) return;
