@@ -58,6 +58,15 @@ describe("transient host runtime planning", () => {
     expect(snapshot.objects).toHaveLength(1);
   });
 
+  it("refuses expired reviewed context", () => {
+    expect(() =>
+      renderTransientHostInput(
+        { ...snapshot, expiresAt: "2000-01-01T00:00:00Z" },
+        "Review it.",
+      ),
+    ).toThrow(/expired/);
+  });
+
   it("refuses context without task-use permission", () => {
     expect(() =>
       renderTransientHostInput({ ...snapshot, permissions: [] }, "Review it."),
