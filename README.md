@@ -13,7 +13,7 @@ A user can:
 - choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
 - import existing Word, PowerPoint, spreadsheet, OpenDocument, RTF, EPUB, CSV and text-based PDF material locally as editable Markdown during creation or context maintenance;
 - review every proposed instruction before Rack writes local files;
-- browse a bundled Starter library of reusable instructions and six starting templates;
+- browse a bundled Starter library of reusable instructions and eight starting templates, including richer Coding packs for restrained changes, agent hand-off and verification;
 - inspect exact Starter source, licence and attribution before copying anything into a Rack;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
@@ -29,6 +29,7 @@ A user can:
 - preview, copy and export generated instructions;
 - install managed local builds with provenance manifests, retained backups and drift detection;
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
+- detect likely local AI coding hosts through a read-only desktop discovery boundary and keep host hand-off/installation planning separate from rendering;
 - run indicative Quick checks and repeated independently judged Reliable checks through the optional managed service;
 - define and inspect target-neutral Verification Plans which distinguish automatic checks, bounded AI judgement and human review from ordinary prompt guidance;
 - verify supplied work against configured semantic practice through a fresh bounded model call, with metadata-only cost preflight and explicit paid confirmation;
@@ -58,7 +59,7 @@ Rack has three guided starting routes:
 
 Every route works without an account or model connection. It creates a small starting assembly rather than a locked template: the resulting Markdown and YAML source remains editable through guided or advanced maintenance.
 
-The bundled Starter library is another way into that same source model. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
+The bundled Starter library is another way into that same source model. The current catalogue contains 40 reusable modules and eight route-oriented templates, with Coding practice covering repository context, restrained implementation, dependency discipline, simplification, componentisation, testing, security, compatibility, agent hand-off and structured verification. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
 
@@ -80,7 +81,7 @@ Supported destinations are:
 - OpenCode;
 - Codex.
 
-Hermes Agent and OpenClaw remain planned Preview destinations.
+Hermes Agent and OpenClaw remain planned Preview destinations. Phase 3 also carries a host-integration compatibility map and read-only local detection for Claude Code, Codex, OpenCode, Hermes Agent, OpenClaw, Copilot CLI, Gemini CLI, Cursor and Windsurf; detection does not install or modify those tools.
 
 ## Repository
 
