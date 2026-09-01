@@ -285,13 +285,22 @@ mod tests {
         let claude = runtime_spec("claude-code").unwrap();
         assert_eq!(claude.command, "claude");
         assert!(claude.args.iter().any(|arg| arg == "--no-session-persistence"));
-        assert!(claude.args.windows(2).any(|pair| pair == ["--permission-mode", "plan"]));
+        assert!(claude
+            .args
+            .windows(2)
+            .any(|pair| pair[0] == "--permission-mode" && pair[1] == "plan"));
 
         let codex = runtime_spec("codex").unwrap();
         assert_eq!(codex.command, "codex");
         assert!(codex.args.iter().any(|arg| arg == "--ephemeral"));
-        assert!(codex.args.windows(2).any(|pair| pair == ["--sandbox", "read-only"]));
-        assert!(codex.args.windows(2).any(|pair| pair == ["--ask-for-approval", "never"]));
+        assert!(codex
+            .args
+            .windows(2)
+            .any(|pair| pair[0] == "--sandbox" && pair[1] == "read-only"));
+        assert!(codex
+            .args
+            .windows(2)
+            .any(|pair| pair[0] == "--ask-for-approval" && pair[1] == "never"));
     }
 
     #[test]
