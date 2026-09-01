@@ -80,6 +80,13 @@ export const renderTransientHostInput = (
     ].join("\n");
   }
 
+  if (
+    snapshot.expiresAt !== null &&
+    Date.parse(snapshot.expiresAt) <= Date.now()
+  ) {
+    throw new Error("The reviewed TOPO context has expired. Request and review fresh context for this task.");
+  }
+
   const flow = contextFlowDecision(snapshot, "transient-task");
   if (!flow.allowed) throw new Error(flow.reason);
 
