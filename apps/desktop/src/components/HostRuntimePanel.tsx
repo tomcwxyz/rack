@@ -158,6 +158,11 @@ export function HostRuntimePanel({
 
           <TopoContextPanel
             projectName={projectName}
+            defaultPurpose={
+              task.trim()
+                ? `support transient AI task: ${task.trim().slice(0, 500)}`
+                : "support this transient AI task"
+            }
             onChange={(selection) => {
               setTopoContext(selection);
               setResult(null);
