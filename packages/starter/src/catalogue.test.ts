@@ -20,16 +20,44 @@ const parseSource = (source: string) => {
 };
 
 describe("Starter catalogue", () => {
-  it("ships the accepted first catalogue and six templates", () => {
-    expect(starterCatalogue).toHaveLength(35);
-    expect(starterTemplates).toHaveLength(6);
-    expect(new Set(starterCatalogue.map((entry) => entry.id)).size).toBe(35);
-    expect(new Set(starterTemplates.map((template) => template.id)).size).toBe(6);
+  it("ships the expanded catalogue and coding Starter packs", () => {
+    expect(starterCatalogue).toHaveLength(40);
+    expect(starterTemplates).toHaveLength(8);
+    expect(new Set(starterCatalogue.map((entry) => entry.id)).size).toBe(40);
+    expect(new Set(starterTemplates.map((template) => template.id)).size).toBe(8);
     expect(starterCatalogueMetadata.version).toBe("0.1.0");
     expect(starterCatalogueMetadata.license).toBe("CC BY 4.0");
 
     const titles = starterCatalogue.map((entry) => entry.title);
     expect(titles).toEqual([...titles].sort((left, right) => left.localeCompare(right)));
+  });
+
+  it("ships coding restraint and structured verification as inspectable Starter practice", () => {
+    expect(getStarterEntry("@rack-starter/method.smallest-useful-change")).toBeDefined();
+    expect(getStarterEntry("@rack-starter/craft.dependency-discipline")).toBeDefined();
+    expect(getStarterEntry("@rack-starter/craft.remove-before-add")).toBeDefined();
+    expect(getStarterEntry("@rack-starter/method.agent-handoff")).toBeDefined();
+
+    const verification = getStarterEntry("@rack-starter/guardrail.change-verification");
+    expect(verification).toBeDefined();
+    const parsed = parseSource(verification!.source);
+    expect(parsed.harness.schema_version).toBe("0.2");
+    expect(parsed.harness.verification).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "automatic",
+          check: "repository-checks",
+          on_fail: "block",
+        }),
+        expect.objectContaining({
+          kind: "judgement",
+          on_uncertain: "human_review",
+        }),
+      ]),
+    );
+
+    expect(starterTemplates.find((template) => template.id === "lean-code-change")).toBeDefined();
+    expect(starterTemplates.find((template) => template.id === "agent-code-handoff")).toBeDefined();
   });
 
   it("renders every entry as valid Rack source with attached provenance", () => {
