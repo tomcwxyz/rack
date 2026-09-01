@@ -112,7 +112,7 @@ export function LocalVerificationPanel({
   }, [project.root, repositoryStep?.id, registry?.status, workRoot]);
 
   const runChecks = async () => {
-    if (!plan?.fingerprint || plan.status !== "available") return;
+    if (!plan?.fingerprint || plan.status !== "available" || !repositoryStep) return;
 
     const commands = plan.checks.map((check) => check.displayCommand).join("\n");
     const confirmed = window.confirm(
