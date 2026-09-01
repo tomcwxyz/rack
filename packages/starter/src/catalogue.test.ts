@@ -25,7 +25,7 @@ describe("Starter catalogue", () => {
     expect(starterTemplates).toHaveLength(8);
     expect(new Set(starterCatalogue.map((entry) => entry.id)).size).toBe(40);
     expect(new Set(starterTemplates.map((template) => template.id)).size).toBe(8);
-    expect(starterCatalogueMetadata.version).toBe("0.1.0");
+    expect(starterCatalogueMetadata.version).toBe("0.2.0");
     expect(starterCatalogueMetadata.license).toBe("CC BY 4.0");
 
     const titles = starterCatalogue.map((entry) => entry.title);
