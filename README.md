@@ -30,8 +30,12 @@ A user can:
 - install managed local builds with provenance manifests, retained backups and drift detection;
 - build for a generic prompt, portable `AGENTS.md`, Claude Code, OpenCode and Codex;
 - detect likely local AI coding hosts through a read-only desktop discovery boundary and keep host hand-off/installation planning separate from rendering;
+- choose an explicit work-project folder for host installation and local repository verification rather than assuming the Rack source is the code repository;
+- install/update/remove Rack-managed Claude Code, Codex and OpenCode files only after review, with conflict detection and retained local backups;
 - run indicative Quick checks and repeated independently judged Reliable checks through the optional managed service;
 - define and inspect target-neutral Verification Plans which distinguish automatic checks, bounded AI judgement and human review from ordinary prompt guidance;
+- run the first Rack-owned local repository verifier against recognised package.json scripts after reviewing and confirming the exact commands;
+- carry bounded local test/build evidence into semantic verification without conflating deterministic and model judgement;
 - verify supplied work against configured semantic practice through a fresh bounded model call, with metadata-only cost preflight and explicit paid confirmation;
 - perform build, check, Starter-library and shared-practice publishing operations through the CLI.
 
@@ -61,7 +65,7 @@ Every route works without an account or model connection. It creates a small sta
 
 The bundled Starter library is another way into that same source model. The current catalogue contains 40 reusable modules and eight route-oriented templates, with Coding practice covering repository context, restrained implementation, dependency discipline, simplification, componentisation, testing, security, compatibility, agent hand-off and structured verification. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
 
-The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source.
+The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source. For host hand-off and local verification, the desktop asks for a separate work-project folder; this may deliberately be the Rack folder, but Rack does not assume that relationship.
 
 Shared practice is a separate composition layer rather than copied organisational source. A Rack can accept a plain `.rack.yaml` publication distributed through an existing shared location. Binding instructions apply to relevant Set-ups; adaptable instructions arrive as defaults and can be adapted or left out locally. Incoming file changes are reviewed before they replace the accepted snapshot. The publisher does not receive opt-out, adaptation or compliance telemetry.
 
