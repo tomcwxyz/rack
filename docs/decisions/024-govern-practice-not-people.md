@@ -103,7 +103,8 @@ For Phase 3:
 3. expose a Rack-owned context-flow decision which only permits the current snapshot to enter the reviewed transient task;
 4. refuse reuse of the same snapshot for canonical source, standing host practice, shared practice, evaluation or organisational analytics;
 5. replace ordinary UI language that calls TOPO context “organisational context” with “purpose-bound context”;
-6. include scope/boundary in context build digests so handling changes make a build stale.
+6. include scope/boundary in context build digests so handling changes make a build stale;
+7. keep managed-run initiator identity only for the transient request window and scrub it from durable run metadata after 24 hours.
 
 A later protocol revision may make boundary metadata explicit on the wire. This ADR does not silently redefine the draft OOS Context Packet schema.
 
