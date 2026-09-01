@@ -123,6 +123,14 @@ export const resolveVerificationCompletionGate = (
     };
   }
 
+  if (plan.steps.length === 0) {
+    return {
+      status: "incomplete",
+      steps: [],
+      warnings: ["No concrete verification steps are configured for this Set-up."],
+    };
+  }
+
   const byStep = new Map(results.map((result) => [result.stepId, result]));
   const warnings: string[] = [];
   const steps = plan.steps.map((step): VerificationCompletionStep => {
@@ -146,9 +154,16 @@ export const resolveVerificationCompletionGate = (
         decision !== "not-required",
     );
 
-  const status =
+  let status =
     statusPriority.find((candidate) => activeDecisions.includes(candidate)) ??
     "pass";
+
+  if (plan.unconfigured.length > 0 && status === "pass") {
+    status = "incomplete";
+    warnings.push(
+      "Some verification is declared but not configured, so Rack cannot treat completion as fully verified.",
+    );
+  }
 
   return { status, steps, warnings };
 };
