@@ -23,6 +23,15 @@ describe("host integration planning", () => {
     expect(getHostIntegrationForDestination("codex")?.delivery.onDemandPractice).toBe(
       "not-supported",
     );
+    expect(getHostIntegrationForDestination("claude-code")?.delivery.transientContext).toBe(
+      "supported",
+    );
+    expect(getHostIntegrationForDestination("codex")?.delivery.transientContext).toBe(
+      "supported",
+    );
+    expect(getHostIntegrationForDestination("opencode")?.delivery.transientContext).toBe(
+      "planned",
+    );
     expect(getHostIntegrationForDestination("hermes-agent")?.status).toBe("preview");
   });
 
