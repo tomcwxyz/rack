@@ -1,6 +1,8 @@
 mod document_import;
 mod generated;
 mod host_discovery;
+mod host_install;
+mod repository_checks;
 mod starter;
 mod topo_local;
 
@@ -609,6 +611,11 @@ pub fn run() {
             generated::read_generated_prompt_build,
             generated::install_generated_prompt_build,
             host_discovery::discover_ai_hosts,
+            host_install::inspect_host_install,
+            host_install::install_host_files,
+            host_install::remove_host_install,
+            repository_checks::inspect_repository_checks,
+            repository_checks::run_repository_checks,
             topo_local::topo_local_status,
             topo_local::topo_local_context
         ])
