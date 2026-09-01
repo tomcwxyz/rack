@@ -5,6 +5,7 @@ mod host_install;
 mod repository_checks;
 mod starter;
 mod topo_local;
+mod work_target;
 
 use serde::{Deserialize, Serialize};
 use std::{
@@ -616,6 +617,8 @@ pub fn run() {
             host_install::remove_host_install,
             repository_checks::inspect_repository_checks,
             repository_checks::run_repository_checks,
+            work_target::read_work_target,
+            work_target::set_work_target,
             topo_local::topo_local_status,
             topo_local::topo_local_context
         ])
