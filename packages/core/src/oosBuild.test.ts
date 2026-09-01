@@ -110,6 +110,8 @@ describe("context-aware prompt builds", () => {
       packet_id: "ctx-1",
       subject: "project:rack",
       purpose: "prepare implementation",
+      scope: "private",
+      boundary: "inside",
       object_ids: ["claim-1"],
     });
     expect(build.manifest?.context?.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
