@@ -95,6 +95,7 @@ jobs:
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_discovery::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_install::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_runtime::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml repository_checks::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml work_target::tests
 
@@ -139,6 +140,7 @@ jobs:
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_discovery::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_install::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_runtime::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml repository_checks::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml work_target::tests
       - name: Build Linux pilot packages
