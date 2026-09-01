@@ -536,14 +536,6 @@ pub(crate) fn remove_host_install(
     let state = read_state(&root, &host_id, &profile_id)?
         .ok_or_else(|| "Rack has no managed installation for this host and Set-up.".to_string())?;
 
-    let desired = state
-        .files
-        .iter()
-        .map(|file| HostFileInput {
-            path: file.path.clone(),
-            content: fs::read_to_string(root.join(&file.path)).unwrap_or_default(),
-        })
-        .collect::<Vec<_>>();
     for file in &state.files {
         let destination = root.join(safe_relative_path(&file.path)?);
         match ordinary_file_digest(&destination)? {
@@ -572,7 +564,6 @@ pub(crate) fn remove_host_install(
             .map_err(|error| format!("Could not remove Rack host state: {error}"))?;
     }
 
-    let _ = desired;
     Ok(HostInstallResult {
         status: "removed".to_string(),
         backup_directory: backup.map(|path| path.to_string_lossy().to_string()),
