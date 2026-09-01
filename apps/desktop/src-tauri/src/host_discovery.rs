@@ -1,6 +1,5 @@
 use serde::Serialize;
 use std::{
-    collections::HashSet,
     env,
     fs,
     path::{Path, PathBuf},
@@ -190,6 +189,7 @@ pub(crate) fn discover_ai_hosts() -> Vec<HostDiscovery> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn host_registry_has_unique_ids() {
