@@ -59,6 +59,7 @@ describe("desktop managed-check helpers", () => {
     expect(
       settledCostMicrousd({
         schemaVersion: "0.1",
+        subjectKind: "practice",
         runId: "00000000-0000-4000-8000-000000000001",
         workspaceId: "00000000-0000-4000-8000-000000000002",
         status: "completed",
