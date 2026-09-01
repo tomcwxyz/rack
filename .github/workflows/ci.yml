@@ -94,6 +94,8 @@ jobs:
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml document_import::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_discovery::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_install::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml repository_checks::tests
 
   desktop-linux:
     name: Desktop smoke and package (Linux)
@@ -135,6 +137,8 @@ jobs:
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml document_import::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml topo_local::tests
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_discovery::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml host_install::tests
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml repository_checks::tests
       - name: Build Linux pilot packages
         env:
           CI: true
