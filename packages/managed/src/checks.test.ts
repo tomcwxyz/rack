@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { durableEvaluationSummarySchema } from "./contracts.js";
+import {
+  durableEvaluationSummarySchema,
+  quickCheckRequestSchema,
+} from "./contracts.js";
 import { runQuickCheck, transientExpiry } from "./checks.js";
 
 const baseRequest = {
@@ -15,6 +18,7 @@ describe("managed quick checks", () => {
     const summary = runQuickCheck(baseRequest, new Date("2026-08-09T05:00:00.000Z"));
     expect(summary.passed).toBe(true);
     expect(summary.score).toBe(100);
+    expect(summary.subjectKind).toBe("practice");
     expect(JSON.stringify(summary)).not.toContain(baseRequest.instructions);
     expect(() =>
       durableEvaluationSummarySchema.parse({
@@ -35,6 +39,15 @@ describe("managed quick checks", () => {
       expect.arrayContaining(["budget-maximum", "placeholder-content", "possible-secret"]),
     );
     expect(summary.findings.every((finding) => !("snippet" in finding))).toBe(true);
+  });
+
+  it("does not accept an individual as an evaluation request dimension", () => {
+    expect(() =>
+      quickCheckRequestSchema.parse({
+        ...baseRequest,
+        actorId: "person-123",
+      }),
+    ).toThrow();
   });
 
   it("caps transient retention at 24 hours", () => {
