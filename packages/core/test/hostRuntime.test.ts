@@ -44,6 +44,12 @@ describe("transient host runtime planning", () => {
     expect(buildHostRuntimePlan("opencode")?.status).toBe("planned");
   });
 
+  it("supports a task without additional TOPO context", () => {
+    const input = renderTransientHostInput(null, "Review the current change.");
+    expect(input).toContain("Review the current change.");
+    expect(input).toContain("No additional TOPO context");
+  });
+
   it("renders task and reviewed context without changing the packet", () => {
     const input = renderTransientHostInput(snapshot, "Review the current change.");
     expect(input).toContain("Review the current change.");
