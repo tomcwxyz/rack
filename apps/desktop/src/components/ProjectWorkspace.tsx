@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { resolveAttachedSharedPractice } from "../sharedPractice.js";
@@ -52,6 +53,20 @@ export function ProjectWorkspace({
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [workRoot, setWorkRoot] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void invoke<string | null>("read_work_target", { rackRoot: project.root })
+      .then((value) => {
+        if (active) setWorkRoot(value);
+      })
+      .catch(() => {
+        if (active) setWorkRoot(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [project.root]);
   const sharedPractice = useSharedPracticeLifecycle(project.root);
   const [editing, setEditing] = useState<EditingSource | null>(null);
   const sharedResolution = useMemo(
@@ -113,7 +128,11 @@ export function ProjectWorkspace({
     });
     const path = Array.isArray(selected) ? selected[0] : selected;
     if (path) {
-      setWorkRoot(path);
+      const canonical = await invoke<string>("set_work_target", {
+        rackRoot: project.root,
+        workRoot: path,
+      });
+      setWorkRoot(canonical);
       setActionStatus("Work project selected. Host files and local verification will use this folder.");
     }
   };
@@ -265,8 +284,13 @@ export function ProjectWorkspace({
                 className="quiet-action"
                 type="button"
                 onClick={() => {
-                  setWorkRoot(project.root);
-                  setActionStatus("Using the Rack folder itself as the work project.");
+                  void invoke<string>("set_work_target", {
+                    rackRoot: project.root,
+                    workRoot: project.root,
+                  }).then((canonical) => {
+                    setWorkRoot(canonical);
+                    setActionStatus("Using the Rack folder itself as the work project.");
+                  });
                 }}
               >
                 Use Rack folder
