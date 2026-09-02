@@ -38,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check desktop release version
+      - name: Check Windows-safe desktop release version
         run: pnpm --filter @rack/desktop exec vitest run src/releaseVersion.test.ts
 
       - name: Build unsigned Windows installer and draft test release
