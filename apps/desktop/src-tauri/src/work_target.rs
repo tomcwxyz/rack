@@ -132,7 +132,7 @@ mod tests {
 
     #[test]
     fn missing_remembered_work_target_does_not_become_current() {
-        let (rack, work) = fixture();
+        let (_base, rack, work) = fixture();
         set_work_target(rack.to_string_lossy().to_string(), work.to_string_lossy().to_string())
             .unwrap();
         fs::remove_dir_all(&work).unwrap();
@@ -140,6 +140,5 @@ mod tests {
             read_work_target(rack.to_string_lossy().to_string()).unwrap(),
             None
         );
-        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 }
