@@ -1,0 +1,64 @@
+name: Windows test installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-test-installer.yml"
+
+concurrency:
+  group: rack-windows-test-installer
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Rack Windows test installer
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check desktop release version
+        run: pnpm --filter @rack/desktop exec vitest run src/releaseVersion.test.ts
+
+      - name: Build unsigned Windows installer and draft test release
+        uses: tauri-apps/tauri-action@action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true
+        with:
+          projectPath: apps/desktop
+          tagName: rack-test-${{ github.run_number }}
+          releaseName: "Rack Windows test · run ${{ github.run_number }}"
+          releaseBody: |
+            Windows test installer built from current Rack main for hands-on loop testing.
+
+            This is an unsigned development/test build. Windows SmartScreen may warn before installation.
+
+            No Node, pnpm, Rust or Cargo installation is required to run this packaged desktop app.
+          releaseDraft: true
+          prerelease: true
+          releaseAssetNamePattern: "Rack_Windows_Test_[version]_[arch][setup][ext]"
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          args: "--bundles nsis"
