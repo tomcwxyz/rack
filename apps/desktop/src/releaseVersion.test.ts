@@ -29,7 +29,7 @@ const cargoVersion =
   cargoToml.match(/^version = "([^"]+)"$/m)?.[1] ?? "";
 const lockedRackVersion =
   cargoLock.match(
-    /\[\[package\]\]\nname = "rack"\nversion = "([^"]+)"/,
+    /\[\[package\]\]\r?\nname = "rack"\r?\nversion = "([^"]+)"/,
   )?.[1] ?? "";
 
 const publishJob =
