@@ -94,6 +94,30 @@ jobs:
             throw "Rack installed but Rack.exe could not be located under LOCALAPPDATA."
           }
 
+          if (Get-Command Start-MpScan -ErrorAction SilentlyContinue) {
+            try {
+              Start-MpScan -ScanType CustomScan -ScanPath $installer.FullName
+              Start-MpScan -ScanType CustomScan -ScanPath $app
+              $rackDetections = Get-MpThreatDetection -ErrorAction SilentlyContinue |
+                Where-Object {
+                  ($_.Resources -join " ") -match "Rack" -or
+                  ($_.Resources -join " ") -match [regex]::Escape($installer.Name)
+                }
+              if ($rackDetections) {
+                $rackDetections | Format-List | Out-String | Write-Host
+                throw "Microsoft Defender reported a detection against the Rack installer or app."
+              }
+              Write-Host "Microsoft Defender custom scan reported no Rack detections."
+            } catch {
+              if ($_.Exception.Message -like "*reported a detection*") {
+                throw
+              }
+              Write-Warning "Defender scan could not be completed on this runner: $($_.Exception.Message)"
+            }
+          } else {
+            Write-Warning "Microsoft Defender PowerShell commands are unavailable on this runner."
+          }
+
           $process = Start-Process -FilePath $app -PassThru
           Start-Sleep -Seconds 8
           if ($process.HasExited) {
