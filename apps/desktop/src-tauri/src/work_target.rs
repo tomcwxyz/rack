@@ -108,28 +108,19 @@ pub(crate) fn set_work_target(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn fixture() -> (PathBuf, PathBuf) {
-        let base = std::env::temp_dir().join(format!(
-            "rack-work-target-{}-{}",
-            std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
-        let rack = base.join("rack");
-        let work = base.join("work");
+    fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
+        let base = tempfile::tempdir().unwrap();
+        let rack = base.path().join("rack");
+        let work = base.path().join("work");
         fs::create_dir_all(&rack).unwrap();
         fs::create_dir_all(&work).unwrap();
         fs::write(rack.join("rack.yaml"), "schema_version: \"0.1\"\n").unwrap();
-        (rack, work)
+        (base, rack, work)
     }
 
     #[test]
     fn local_work_target_round_trips() {
-        let (rack, work) = fixture();
+        let (_base, rack, work) = fixture();
         let selected =
             set_work_target(rack.to_string_lossy().to_string(), work.to_string_lossy().to_string())
                 .unwrap();
@@ -137,7 +128,6 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(PathBuf::from(selected), PathBuf::from(read));
-        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 
     #[test]
