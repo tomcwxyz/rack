@@ -108,19 +108,27 @@ pub(crate) fn set_work_target(
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn fixture() -> (tempfile::TempDir, PathBuf, PathBuf) {
-        let base = tempfile::tempdir().unwrap();
-        let rack = base.path().join("rack");
-        let work = base.path().join("work");
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(1);
+
+    fn fixture() -> (PathBuf, PathBuf) {
+        let base = std::env::temp_dir().join(format!(
+            "rack-work-target-{}-{}",
+            std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+        ));
+        let rack = base.join("rack");
+        let work = base.join("work");
         fs::create_dir_all(&rack).unwrap();
         fs::create_dir_all(&work).unwrap();
         fs::write(rack.join("rack.yaml"), "schema_version: \"0.1\"\n").unwrap();
-        (base, rack, work)
+        (rack, work)
     }
 
     #[test]
     fn local_work_target_round_trips() {
-        let (_base, rack, work) = fixture();
+        let (rack, work) = fixture();
         let selected =
             set_work_target(rack.to_string_lossy().to_string(), work.to_string_lossy().to_string())
                 .unwrap();
@@ -128,11 +136,12 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(PathBuf::from(selected), PathBuf::from(read));
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 
     #[test]
     fn missing_remembered_work_target_does_not_become_current() {
-        let (_base, rack, work) = fixture();
+        let (rack, work) = fixture();
         set_work_target(rack.to_string_lossy().to_string(), work.to_string_lossy().to_string())
             .unwrap();
         fs::remove_dir_all(&work).unwrap();
@@ -140,5 +149,6 @@ mod tests {
             read_work_target(rack.to_string_lossy().to_string()).unwrap(),
             None
         );
+        let _ = fs::remove_dir_all(rack.parent().unwrap());
     }
 }
