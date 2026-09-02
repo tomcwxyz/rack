@@ -594,10 +594,53 @@ fn write_generated_file(path: String, content: String) -> Result<(), String> {
     })
 }
 
+fn startup_log_path() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|root| root.join("Rack").join("logs").join("startup.log"))
+}
+
+fn append_startup_log(message: &str) {
+    let Some(path) = startup_log_path() else {
+        return;
+    };
+    let Some(parent) = path.parent() else {
+        return;
+    };
+    let _ = fs::create_dir_all(parent);
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    let line = format!("{timestamp} {message}\n");
+    use std::io::Write;
+    if let Ok(mut file) = fs::OpenOptions::new().create(true).append(true).open(path) {
+        let _ = file.write_all(line.as_bytes());
+    }
+}
+
+fn install_panic_log() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        append_startup_log(&format!("panic: {info}"));
+        previous(info);
+    }));
+}
+
+#[tauri::command]
+fn startup_log_location() -> Option<String> {
+    startup_log_path().map(|path| path.to_string_lossy().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    install_panic_log();
+    append_startup_log("process start");
+
+    let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .setup(|_app| {
+            append_startup_log("tauri setup complete");
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
             document_import::import_document,
@@ -622,8 +665,16 @@ pub fn run() {
             work_target::read_work_target,
             work_target::set_work_target,
             topo_local::topo_local_status,
-            topo_local::topo_local_context
+            topo_local::topo_local_context,
+            startup_log_location
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Rack");
+        .run(tauri::generate_context!());
+
+    match result {
+        Ok(()) => append_startup_log("process exit cleanly"),
+        Err(error) => {
+            append_startup_log(&format!("tauri run error: {error}"));
+            panic!("error while running Rack: {error}");
+        }
+    }
 }

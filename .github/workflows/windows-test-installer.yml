@@ -62,3 +62,72 @@ jobs:
           uploadUpdaterJson: false
           uploadUpdaterSignatures: false
           args: "--bundles nsis"
+
+      - name: Install and launch packaged Rack
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "apps/desktop/src-tauri/target/release/bundle/nsis" -Filter "*setup.exe" |
+            Select-Object -First 1
+          if (-not $installer) {
+            throw "Rack NSIS installer was not produced."
+          }
+
+          & $installer.FullName /S
+          if ($LASTEXITCODE -ne 0) {
+            throw "Rack NSIS silent install failed with exit code $LASTEXITCODE."
+          }
+
+          Start-Sleep -Seconds 3
+
+          $candidates = @(
+            "$env:LOCALAPPDATA\Rack\Rack.exe",
+            "$env:LOCALAPPDATA\Programs\Rack\Rack.exe",
+            "$env:LOCALAPPDATA\uk.co.good-ship.rack\Rack.exe"
+          )
+          $app = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $app) {
+            $found = Get-ChildItem $env:LOCALAPPDATA -Filter "Rack.exe" -File -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            $app = $found?.FullName
+          }
+          if (-not $app) {
+            throw "Rack installed but Rack.exe could not be located under LOCALAPPDATA."
+          }
+
+          if (Get-Command Start-MpScan -ErrorAction SilentlyContinue) {
+            try {
+              Start-MpScan -ScanType CustomScan -ScanPath $installer.FullName
+              Start-MpScan -ScanType CustomScan -ScanPath $app
+              $rackDetections = Get-MpThreatDetection -ErrorAction SilentlyContinue |
+                Where-Object {
+                  ($_.Resources -join " ") -match "Rack" -or
+                  ($_.Resources -join " ") -match [regex]::Escape($installer.Name)
+                }
+              if ($rackDetections) {
+                $rackDetections | Format-List | Out-String | Write-Host
+                throw "Microsoft Defender reported a detection against the Rack installer or app."
+              }
+              Write-Host "Microsoft Defender custom scan reported no Rack detections."
+            } catch {
+              if ($_.Exception.Message -like "*reported a detection*") {
+                throw
+              }
+              Write-Warning "Defender scan could not be completed on this runner: $($_.Exception.Message)"
+            }
+          } else {
+            Write-Warning "Microsoft Defender PowerShell commands are unavailable on this runner."
+          }
+
+          $process = Start-Process -FilePath $app -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) {
+            $log = "$env:LOCALAPPDATA\Rack\logs\startup.log"
+            if (Test-Path $log) {
+              Write-Host "Rack startup log:"
+              Get-Content $log
+            }
+            throw "Installed Rack exited during the startup smoke test with code $($process.ExitCode)."
+          }
+
+          Stop-Process -Id $process.Id -Force
+          Write-Host "Installed Rack remained running through the startup smoke window."

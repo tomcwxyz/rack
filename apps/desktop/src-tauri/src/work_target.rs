@@ -108,16 +108,15 @@ pub(crate) fn set_work_target(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(1);
 
     fn fixture() -> (PathBuf, PathBuf) {
         let base = std::env::temp_dir().join(format!(
             "rack-work-target-{}-{}",
             std::process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
         ));
         let rack = base.join("rack");
         let work = base.join("work");
