@@ -22,6 +22,46 @@ const verifierDefinitions: readonly TrustedVerifierDefinition[] = [
     implementation: "available",
     sharedExecutableCodeAllowed: false,
   },
+  {
+    id: "ship-check",
+    label: "Ship Check",
+    description:
+      "Run the trusted local Ship Check assurance provider across the configured packs and consume its bounded verification result.",
+    evidence: ["source"],
+    execution: "local",
+    implementation: "planned",
+    sharedExecutableCodeAllowed: false,
+  },
+  {
+    id: "ship-check-secure-build",
+    label: "Ship Check · Secure Build",
+    description:
+      "Run Ship Check's deterministic Secure Build assurance gate against the selected work project.",
+    evidence: ["source"],
+    execution: "local",
+    implementation: "planned",
+    sharedExecutableCodeAllowed: false,
+  },
+  {
+    id: "ship-check-production-ready",
+    label: "Ship Check · Production Ready",
+    description:
+      "Run Ship Check's deterministic Production Ready assurance gate against the selected work project.",
+    evidence: ["source"],
+    execution: "local",
+    implementation: "planned",
+    sharedExecutableCodeAllowed: false,
+  },
+  {
+    id: "ship-check-cost-aware",
+    label: "Ship Check · Cost Aware",
+    description:
+      "Run Ship Check's deterministic Cost Aware assurance gate against the selected work project.",
+    evidence: ["source"],
+    execution: "local",
+    implementation: "planned",
+    sharedExecutableCodeAllowed: false,
+  },
 ] as const;
 
 export const listTrustedVerifiers = (): TrustedVerifierDefinition[] =>
