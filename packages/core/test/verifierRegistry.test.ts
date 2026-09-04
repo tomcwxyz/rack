@@ -18,6 +18,25 @@ describe("trusted verifier registry", () => {
     expect(verifier?.evidence).toEqual(["test-results", "build-results"]);
   });
 
+  it("registers Ship Check gates as planned trusted local verifiers", () => {
+    for (const id of [
+      "ship-check",
+      "ship-check-secure-build",
+      "ship-check-production-ready",
+      "ship-check-cost-aware",
+    ]) {
+      expect(getTrustedVerifier(id)).toEqual(
+        expect.objectContaining({
+          id,
+          implementation: "planned",
+          execution: "local",
+          evidence: ["source"],
+          sharedExecutableCodeAllowed: false,
+        }),
+      );
+    }
+  });
+
   it("fails closed at the registry boundary for unknown automatic checks", () => {
     const plan: VerificationPlan = {
       profileId: "coding",
