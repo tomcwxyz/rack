@@ -50,20 +50,13 @@ export function HostHandoffSection({
         : null,
     [integration, project, selectedProfile],
   );
-  const files = useMemo(
-    () =>
-      targetBuild?.artifacts.map((artifact) => ({
-        path: artifact.path,
-        content: artifact.content,
-      })) ?? [],
-    [targetBuild],
-  );
+  const artifacts = useMemo(() => targetBuild?.artifacts ?? [], [targetBuild]);
   const host = useHostInstallation({
     rackRoot: project.root,
     workRoot,
     profileId: selectedProfile,
     hostId,
-    files,
+    artifacts,
     onStatus,
   });
 
@@ -136,7 +129,7 @@ export function HostHandoffSection({
         <div className="host-handoff__status-card">
           <span>Rack practice</span>
           <strong>{host.inspection ? installLabel(host.inspection.status) : "Checking…"}</strong>
-          <small>{files.length} {files.length === 1 ? "managed file" : "managed files"}</small>
+          <small>{artifacts.length} {artifacts.length === 1 ? "managed file" : "managed files"}</small>
         </div>
       </div>
 
