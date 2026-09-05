@@ -96,13 +96,13 @@ export function App() {
               type="button"
               onClick={() => setCreating("choose")}
             >
-              Create a Rack
+              Start with your work
             </button>
           </nav>
           <div className="sidebar-footer">
             <TopoConnectionIndicator compact />
             <p className="sidebar-note">
-              TOPO stays visible while you create this Rack.
+              TOPO can help with context if it is running, but you do not need it to use Rack.
             </p>
             <button
               className="sidebar-link"
@@ -132,7 +132,7 @@ export function App() {
     <main className="welcome-shell">
       <header className="welcome-header">
         <span className="wordmark">rack</span>
-        <p>Build your AI working practices.</p>
+        <p>Teach AI how you work.</p>
       </header>
 
       {openError ? (
@@ -146,11 +146,12 @@ export function App() {
 
       <section className="welcome-hero">
         <div>
-          <p className="eyebrow">Local-first · working pre-release</p>
-          <h1>Carry the useful parts of how you work.</h1>
+          <p className="eyebrow">Local-first · no account needed</p>
+          <h1>Teach AI how you work.</h1>
           <p className="lede">
-            Create one inspectable source for your context, methods, boundaries
-            and repeatable tasks—then build it for different AI tools.
+            Choose the kind of work you do. Rack gives you a strong starting
+            practice, lets you change anything you dislike, then helps you use
+            it across different AI tools.
           </p>
           <div className="button-row button-row--large">
             <button
@@ -158,7 +159,7 @@ export function App() {
               type="button"
               onClick={() => setCreating("choose")}
             >
-              Create a Rack
+              Get started
             </button>
             <button
               className="secondary-action secondary-action--light"
@@ -171,16 +172,16 @@ export function App() {
           </div>
         </div>
         <aside className="welcome-card">
-          <p className="eyebrow">Three guided starting routes</p>
-          <h2>Writing, research or coding</h2>
+          <p className="eyebrow">Useful in minutes</p>
+          <h2>Start with the work, not the machinery</h2>
           <p>
-            Start with the work you need to support. Review every proposed
-            instruction before Rack writes local files.
+            Rack proposes a practical way for AI to work with you. You stay in
+            control of what is kept, changed, shared or used for a task.
           </p>
           <ul>
-            <li>No account or model connection</li>
-            <li>Plain-language guided questions</li>
-            <li>Editable Markdown and YAML source</li>
+            <li>Pick writing, research or coding</li>
+            <li>Review a useful starting practice</li>
+            <li>Use it with the AI tools you already have</li>
           </ul>
         </aside>
       </section>
