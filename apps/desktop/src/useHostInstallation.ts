@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   buildHostInstallationPlan,
   getHostIntegration,
+  type GeneratedArtifact,
   type HostIntegrationId,
 } from "@rack/core";
 import { discoverAiHosts, type HostDiscovery } from "./hostDiscovery.js";
@@ -26,17 +27,12 @@ type HostInstallResult = {
   installedPaths: string[];
 };
 
-type HostFile = {
-  path: string;
-  content: string;
-};
-
 type UseHostInstallationArgs = {
   rackRoot: string;
   workRoot: string | null;
   profileId: string;
   hostId: HostIntegrationId | null;
-  files: HostFile[];
+  artifacts: GeneratedArtifact[];
   onStatus: (message: string) => void;
 };
 
@@ -45,7 +41,7 @@ export function useHostInstallation({
   workRoot,
   profileId,
   hostId,
-  files,
+  artifacts,
   onStatus,
 }: UseHostInstallationArgs) {
   const integration = useMemo(
@@ -60,12 +56,16 @@ export function useHostInstallation({
   const discovery = integration
     ? discoveries.find((item) => item.id === integration.id) ?? null
     : null;
+  const files = useMemo(
+    () => artifacts.map((artifact) => ({ path: artifact.path, content: artifact.content })),
+    [artifacts],
+  );
   const plan = useMemo(
     () =>
       integration
-        ? buildHostInstallationPlan(integration.id, files)
+        ? buildHostInstallationPlan(integration.id, artifacts)
         : null,
-    [files, integration],
+    [artifacts, integration],
   );
 
   useEffect(() => {
