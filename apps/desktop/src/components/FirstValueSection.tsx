@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  getHostIntegration,
+  type HostIntegrationId,
+} from "@rack/core";
 import { discoverAiHosts, type HostDiscovery } from "../hostDiscovery.js";
 
 type FirstValueSectionProps = {
   workRoot: string | null;
   onChooseWorkRoot: () => void;
   onUseWithAi: () => void;
+  onUseWithHost: (hostId: HostIntegrationId) => void;
   onImprovePractice: () => void;
   onCheckWork: () => void;
 };
@@ -13,6 +18,7 @@ export function FirstValueSection({
   workRoot,
   onChooseWorkRoot,
   onUseWithAi,
+  onUseWithHost,
   onImprovePractice,
   onCheckWork,
 }: FirstValueSectionProps) {
@@ -40,6 +46,18 @@ export function FirstValueSection({
   const detectedHosts = useMemo(
     () => hosts.filter((host) => host.detected).slice(0, 4),
     [hosts],
+  );
+  const readyHosts = useMemo(
+    () =>
+      detectedHosts
+        .map((host) => ({ host, integration: getHostIntegration(host.id) }))
+        .filter(
+          (item) =>
+            item.integration?.status === "supported" &&
+            Boolean(item.integration.destinationId),
+        )
+        .slice(0, 3),
+    [detectedHosts],
   );
 
   return (
@@ -92,14 +110,37 @@ export function FirstValueSection({
           <span className="first-value__number">2</span>
           <div>
             <p className="eyebrow">Use it</p>
-            <h3>Take your practice into AI</h3>
+            <h3>
+              {readyHosts.length > 0
+                ? "Use a tool already on this computer"
+                : "Take your practice into AI"}
+            </h3>
             <p>
-              Rack will show the best available route, what it will change, and
-              keep persistent practice separate from temporary task context.
+              {readyHosts.length > 0
+                ? "Rack has already worked out the right hand-off. Pick a tool and review the small set of project files it will manage."
+                : "Rack will show the best available route, what it will change, and keep persistent practice separate from temporary task context."}
             </p>
-            <button className="primary-action" type="button" onClick={onUseWithAi}>
-              Use with AI
-            </button>
+            <div className="first-value__host-actions">
+              {readyHosts.map(({ host }) => (
+                <button
+                  className="primary-action"
+                  type="button"
+                  key={host.id}
+                  onClick={() => onUseWithHost(host.id)}
+                >
+                  Use with {host.displayName}
+                </button>
+              ))}
+              {readyHosts.length === 0 ? (
+                <button className="primary-action" type="button" onClick={onUseWithAi}>
+                  Use with AI
+                </button>
+              ) : (
+                <button className="quiet-action" type="button" onClick={onUseWithAi}>
+                  Another AI tool
+                </button>
+              )}
+            </div>
           </div>
         </article>
 
