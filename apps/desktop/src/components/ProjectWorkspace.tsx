@@ -5,6 +5,7 @@ import type { ProjectSnapshot, RackProject } from "@rack/core";
 import { resolveAttachedSharedPractice } from "../sharedPractice.js";
 import { useSharedPracticeLifecycle } from "../useSharedPracticeLifecycle.js";
 import { ChecksSection } from "./ChecksSection.js";
+import { FirstValueSection } from "./FirstValueSection.js";
 import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
 import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
@@ -14,11 +15,12 @@ import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
 import { SetupsSection } from "./SetupsSection.js";
 import { SharedPracticeSection } from "./SharedPracticeSection.js";
-import { VerificationSection } from "./VerificationSection.js";
 import { SourceEditor } from "./SourceEditor.js";
 import { TopoConnectionIndicator } from "./TopoConnectionIndicator.js";
+import { VerificationSection } from "./VerificationSection.js";
 
 type WorkspaceSection =
+  | "home"
   | "rack"
   | "shared"
   | "setups"
@@ -49,7 +51,7 @@ export function ProjectWorkspace({
 }: ProjectWorkspaceProps) {
   const defaultProfile =
     project.manifest?.default_profile ?? project.profiles[0]?.id ?? "";
-  const [section, setSection] = useState<WorkspaceSection>("rack");
+  const [section, setSection] = useState<WorkspaceSection>("home");
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [workRoot, setWorkRoot] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function ProjectWorkspace({
       active = false;
     };
   }, [project.root]);
+
   const sharedPractice = useSharedPracticeLifecycle(project.root);
   const [editing, setEditing] = useState<EditingSource | null>(null);
   const sharedResolution = useMemo(
@@ -133,7 +136,9 @@ export function ProjectWorkspace({
         workRoot: path,
       });
       setWorkRoot(canonical);
-      setActionStatus("Work project selected. Host files and local verification will use this folder.");
+      setActionStatus(
+        "Work project selected. AI-tool hand-off and local checks will use this folder.",
+      );
     }
   };
 
@@ -159,74 +164,88 @@ export function ProjectWorkspace({
       }
     : null;
 
+  const advancedActive = ["shared", "setups", "checks", "library"].includes(section);
+  const showWorkTarget = ["preview", "verify", "checks"].includes(section);
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <button
           className="wordmark wordmark--button"
           type="button"
-          onClick={() => setSection("rack")}
+          onClick={() => setSection("home")}
           aria-label="Rack home"
         >
           rack
         </button>
         <nav aria-label="Primary navigation">
           <button
+            className={`nav-item ${section === "home" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => setSection("home")}
+          >
+            Work
+          </button>
+          <button
             className={`nav-item ${section === "rack" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => setSection("rack")}
           >
-            Your Rack
-          </button>
-          <button
-            className={`nav-item ${section === "shared" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => setSection("shared")}
-          >
-            Shared practice
-          </button>
-          <button
-            className={`nav-item ${section === "setups" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => setSection("setups")}
-          >
-            Set-ups
+            Improve
           </button>
           <button
             className={`nav-item ${section === "preview" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => setSection("preview")}
           >
-            Preview and export
+            Use with AI
           </button>
           <button
             className={`nav-item ${section === "verify" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => setSection("verify")}
           >
-            Verify work
+            Check work
           </button>
-          <button
-            className={`nav-item ${section === "checks" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => setSection("checks")}
-          >
-            Test Rack
-          </button>
-          <button
-            className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => setSection("library")}
-          >
-            Library
-          </button>
+
+          <details className="sidebar-advanced" open={advancedActive || undefined}>
+            <summary>More</summary>
+            <button
+              className={`nav-item ${section === "shared" ? "nav-item--active" : ""}`}
+              type="button"
+              onClick={() => setSection("shared")}
+            >
+              Shared practice
+            </button>
+            <button
+              className={`nav-item ${section === "setups" ? "nav-item--active" : ""}`}
+              type="button"
+              onClick={() => setSection("setups")}
+            >
+              Set-ups
+            </button>
+            <button
+              className={`nav-item ${section === "checks" ? "nav-item--active" : ""}`}
+              type="button"
+              onClick={() => setSection("checks")}
+            >
+              Test this Rack
+            </button>
+            <button
+              className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
+              type="button"
+              onClick={() => setSection("library")}
+            >
+              Starter library
+            </button>
+          </details>
         </nav>
         <div className="sidebar-footer">
           <TopoConnectionIndicator
             compact
             onOpenContext={() => setSection("preview")}
           />
-          <p className="sidebar-note">Build your AI working practices.</p>
+          <p className="sidebar-note">Teach AI how you work.</p>
           <button className="sidebar-link" type="button" onClick={onOpenAnother}>
             Open another Rack
           </button>
@@ -237,18 +256,24 @@ export function ProjectWorkspace({
         <header className="workspace-header">
           <div>
             <p className="eyebrow">
-              Local source · {project.manifest?.version ?? "unknown version"}
+              {section === "home"
+                ? "Ready to work"
+                : `Local source · ${project.manifest?.version ?? "unknown version"}`}
             </p>
             <h1>{project.manifest?.title ?? "Your Rack"}</h1>
             <p className="lede">
-              {project.manifest?.description ||
-                "Maintain the source once, then build it for different destinations."}
+              {section === "home"
+                ? "Your working practice is local, inspectable and ready to use with the tools you already have."
+                : project.manifest?.description ||
+                  "Maintain the source once, then use it across different AI tools."}
             </p>
           </div>
-          <div className="header-path" title={project.root}>
-            <span>Stored locally</span>
-            <code>{project.root}</code>
-          </div>
+          {section !== "home" ? (
+            <div className="header-path" title={project.root}>
+              <span>Stored locally</span>
+              <code>{project.root}</code>
+            </div>
+          ) : null}
         </header>
 
         {actionStatus ? (
@@ -257,47 +282,63 @@ export function ProjectWorkspace({
           </div>
         ) : null}
 
-        <div className="work-target-bar">
-          <div>
-            <p className="eyebrow">Work project</p>
-            {workRoot ? (
-              <>
-                <strong>Host hand-off and local verification target</strong>
-                <code title={workRoot}>{workRoot}</code>
-              </>
-            ) : (
-              <>
-                <strong>Choose where this Rack should apply</strong>
-                <span>
-                  Your Rack source stays here. Choose the actual project/repository before
-                  installing AI-tool files or running local checks.
-                </span>
-              </>
-            )}
-          </div>
-          <div className="button-row">
-            <button className="quiet-action" type="button" onClick={() => void chooseWorkRoot()}>
-              {workRoot ? "Change work project" : "Choose work project"}
-            </button>
-            {!workRoot ? (
+        {showWorkTarget ? (
+          <div className="work-target-bar">
+            <div>
+              <p className="eyebrow">Work project</p>
+              {workRoot ? (
+                <>
+                  <strong>AI-tool hand-off and local checks use this folder</strong>
+                  <code title={workRoot}>{workRoot}</code>
+                </>
+              ) : (
+                <>
+                  <strong>Choose where this Rack should apply</strong>
+                  <span>
+                    Your Rack source stays separate. Choose the actual project or
+                    repository before installing AI-tool files or running local checks.
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="button-row">
               <button
                 className="quiet-action"
                 type="button"
-                onClick={() => {
-                  void invoke<string>("set_work_target", {
-                    rackRoot: project.root,
-                    workRoot: project.root,
-                  }).then((canonical) => {
-                    setWorkRoot(canonical);
-                    setActionStatus("Using the Rack folder itself as the work project.");
-                  });
-                }}
+                onClick={() => void chooseWorkRoot()}
               >
-                Use Rack folder
+                {workRoot ? "Change work project" : "Choose work project"}
               </button>
-            ) : null}
+              {!workRoot ? (
+                <button
+                  className="quiet-action"
+                  type="button"
+                  onClick={() => {
+                    void invoke<string>("set_work_target", {
+                      rackRoot: project.root,
+                      workRoot: project.root,
+                    }).then((canonical) => {
+                      setWorkRoot(canonical);
+                      setActionStatus("Using the Rack folder itself as the work project.");
+                    });
+                  }}
+                >
+                  Use Rack folder
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {section === "home" ? (
+          <FirstValueSection
+            workRoot={workRoot}
+            onChooseWorkRoot={() => void chooseWorkRoot()}
+            onUseWithAi={() => setSection("preview")}
+            onImprovePractice={() => setSection("rack")}
+            onCheckWork={() => setSection("verify")}
+          />
+        ) : null}
 
         {section === "rack" ? (
           <RackSection
