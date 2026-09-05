@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { ProjectSnapshot, RackProject } from "@rack/core";
+import type {
+  HostIntegrationId,
+  ProjectSnapshot,
+  RackProject,
+} from "@rack/core";
 import { resolveAttachedSharedPractice } from "../sharedPractice.js";
 import { useSharedPracticeLifecycle } from "../useSharedPracticeLifecycle.js";
 import { ChecksSection } from "./ChecksSection.js";
@@ -10,6 +14,7 @@ import { GuidedContextEditor } from "./GuidedContextEditor.js";
 import { GuidedSetupEditor } from "./GuidedSetupEditor.js";
 import { GuidedStructuredEditor } from "./GuidedStructuredEditor.js";
 import { GuidedVoiceEditor } from "./GuidedVoiceEditor.js";
+import { HostHandoffSection } from "./HostHandoffSection.js";
 import { LibrarySection } from "./LibrarySection.js";
 import { PreviewSection } from "./PreviewSection.js";
 import { RackSection } from "./RackSection.js";
@@ -55,6 +60,7 @@ export function ProjectWorkspace({
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [workRoot, setWorkRoot] = useState<string | null>(null);
+  const [handoffHost, setHandoffHost] = useState<HostIntegrationId | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -130,16 +136,26 @@ export function ProjectWorkspace({
       title: "Choose the project this Rack should work with",
     });
     const path = Array.isArray(selected) ? selected[0] : selected;
-    if (path) {
-      const canonical = await invoke<string>("set_work_target", {
-        rackRoot: project.root,
-        workRoot: path,
-      });
-      setWorkRoot(canonical);
-      setActionStatus(
-        "Work project selected. AI-tool hand-off and local checks will use this folder.",
-      );
+    if (!path) return null;
+
+    const canonical = await invoke<string>("set_work_target", {
+      rackRoot: project.root,
+      workRoot: path,
+    });
+    setWorkRoot(canonical);
+    setActionStatus(
+      "Work project selected. AI-tool hand-off and local checks will use this folder.",
+    );
+    return canonical;
+  };
+
+  const startHostHandoff = async (hostId: HostIntegrationId) => {
+    if (!workRoot) {
+      const selected = await chooseWorkRoot();
+      if (!selected) return;
     }
+    setHandoffHost(hostId);
+    setSection("home");
   };
 
   const sourceEdit = (path: string, title: string) =>
@@ -166,6 +182,10 @@ export function ProjectWorkspace({
 
   const advancedActive = ["shared", "setups", "checks", "library"].includes(section);
   const showWorkTarget = ["preview", "verify", "checks"].includes(section);
+  const goHome = () => {
+    setHandoffHost(null);
+    setSection("home");
+  };
 
   return (
     <div className="app-shell">
@@ -173,7 +193,7 @@ export function ProjectWorkspace({
         <button
           className="wordmark wordmark--button"
           type="button"
-          onClick={() => setSection("home")}
+          onClick={goHome}
           aria-label="Rack home"
         >
           rack
@@ -182,28 +202,37 @@ export function ProjectWorkspace({
           <button
             className={`nav-item ${section === "home" ? "nav-item--active" : ""}`}
             type="button"
-            onClick={() => setSection("home")}
+            onClick={goHome}
           >
             Work
           </button>
           <button
             className={`nav-item ${section === "rack" ? "nav-item--active" : ""}`}
             type="button"
-            onClick={() => setSection("rack")}
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("rack");
+            }}
           >
             Improve
           </button>
           <button
             className={`nav-item ${section === "preview" ? "nav-item--active" : ""}`}
             type="button"
-            onClick={() => setSection("preview")}
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("preview");
+            }}
           >
             Use with AI
           </button>
           <button
             className={`nav-item ${section === "verify" ? "nav-item--active" : ""}`}
             type="button"
-            onClick={() => setSection("verify")}
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("verify");
+            }}
           >
             Check work
           </button>
@@ -243,7 +272,10 @@ export function ProjectWorkspace({
         <div className="sidebar-footer">
           <TopoConnectionIndicator
             compact
-            onOpenContext={() => setSection("preview")}
+            onOpenContext={() => {
+              setHandoffHost(null);
+              setSection("preview");
+            }}
           />
           <p className="sidebar-note">Teach AI how you work.</p>
           <button className="sidebar-link" type="button" onClick={onOpenAnother}>
@@ -257,13 +289,17 @@ export function ProjectWorkspace({
           <div>
             <p className="eyebrow">
               {section === "home"
-                ? "Ready to work"
+                ? handoffHost
+                  ? "Focused hand-off"
+                  : "Ready to work"
                 : `Local source · ${project.manifest?.version ?? "unknown version"}`}
             </p>
             <h1>{project.manifest?.title ?? "Your Rack"}</h1>
             <p className="lede">
               {section === "home"
-                ? "Your working practice is local, inspectable and ready to use with the tools you already have."
+                ? handoffHost
+                  ? "Rack has selected the right integration path and kept the technical destination machinery out of the way."
+                  : "Your working practice is local, inspectable and ready to use with the tools you already have."
                 : project.manifest?.description ||
                   "Maintain the source once, then use it across different AI tools."}
             </p>
@@ -330,13 +366,30 @@ export function ProjectWorkspace({
           </div>
         ) : null}
 
-        {section === "home" ? (
+        {section === "home" && !handoffHost ? (
           <FirstValueSection
             workRoot={workRoot}
             onChooseWorkRoot={() => void chooseWorkRoot()}
             onUseWithAi={() => setSection("preview")}
+            onUseWithHost={(hostId) => void startHostHandoff(hostId)}
             onImprovePractice={() => setSection("rack")}
             onCheckWork={() => setSection("verify")}
+          />
+        ) : null}
+
+        {section === "home" && handoffHost ? (
+          <HostHandoffSection
+            project={effectiveProject}
+            selectedProfile={selectedProfile}
+            hostId={handoffHost}
+            workRoot={workRoot}
+            onChooseWorkRoot={() => void chooseWorkRoot()}
+            onStatus={setActionStatus}
+            onOpenAdvanced={() => {
+              setHandoffHost(null);
+              setSection("preview");
+            }}
+            onChooseAnother={() => setHandoffHost(null)}
           />
         ) : null}
 
@@ -365,6 +418,7 @@ export function ProjectWorkspace({
             onSourceEdit={sourceEdit}
             onPreview={(profileId) => {
               setSelectedProfile(profileId);
+              setHandoffHost(null);
               setSection("preview");
             }}
           />
