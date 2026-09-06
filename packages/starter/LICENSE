@@ -1,7 +1,11 @@
-Rack Starter content is licensed under the Creative Commons Attribution 4.0 International licence (CC BY 4.0).
+RACK-authored Starter content is licensed under the Creative Commons Attribution 4.0 International licence (CC BY 4.0).
 
 Licence text: https://creativecommons.org/licenses/by/4.0/legalcode
 
-Attribution: Rack Starter, The Good Ship.
+Attribution: RACK Starter, The Good Ship.
 
-Individual catalogue entries may also carry an optional method attribution. Those notes identify inspiration or adaptation and do not change the licence applied to Rack's original wording.
+The bundled Starter catalogue may also contain explicitly attributed external practice. External entries retain the licence declared in their own source metadata and attribution rather than being relicensed as RACK-authored Starter content.
+
+Full licence notices for bundled external material are recorded in THIRD_PARTY_NOTICES.md. The current external Honey for Devs adaptations retain the upstream MIT licence and Green-PT copyright notice.
+
+Individual RACK-authored catalogue entries may also carry a method attribution identifying inspiration or adaptation; where an entry remains RACK-authored, that note does not by itself change its CC BY 4.0 licence.
