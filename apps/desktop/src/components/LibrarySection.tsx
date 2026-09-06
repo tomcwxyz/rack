@@ -128,7 +128,7 @@ export function LibrarySection({
     <section className="section-stack library-section">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Bundled · local · CC BY 4.0</p>
+          <p className="eyebrow">Bundled · local · attributed</p>
           <h2>Starter library</h2>
           <p>
             Browse reusable instructions, inspect the exact source, then review what Rack would
@@ -217,6 +217,7 @@ export function LibrarySection({
               <div className="library-card__meta">
                 <span>{entry.type}</span>
                 <span>{entry.routes.filter((value) => value !== "shared").join(" · ") || "shared"}</span>
+                <span>{entry.contentLicense}</span>
                 <code>{entry.digest.replace("fnv1a64-u16:", "")}</code>
               </div>
               <h3>{entry.title}</h3>
@@ -228,6 +229,15 @@ export function LibrarySection({
               </div>
               <details className="source-inspection">
                 <summary>Inspect exact source and attribution</summary>
+                <p className="source-attribution">
+                  Source: {entry.sourceOrigin} · Licence: {entry.contentLicense}
+                  {entry.upstreamRevision ? (
+                    <>
+                      <br />
+                      Upstream revision: <code>{entry.upstreamRevision}</code>
+                    </>
+                  ) : null}
+                </p>
                 {entry.attribution ? (
                   <p className="source-attribution">
                     Method attribution: {entry.attribution.name}
