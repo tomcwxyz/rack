@@ -44,7 +44,7 @@ export const registerLibraryCommands = (program: Command): void => {
     .option("--type <type>", "Filter by instruction type")
     .option("--tag <tag>", "Filter by tag")
     .option("--query <text>", "Search titles, descriptions, IDs and tags")
-    .option("--templates", "List the six starting templates instead of instructions")
+    .option("--templates", "List starting templates instead of instructions")
     .option("--json", "Print machine-readable JSON")
     .action(
       (options: {
@@ -90,7 +90,7 @@ export const registerLibraryCommands = (program: Command): void => {
           } else {
             for (const entry of entries) {
               process.stdout.write(
-                `${entry.id}\t${entry.type}\t${entry.title}\n  ${entry.description}\n`,
+                `${entry.id}\t${entry.type}\t${entry.title}\t${entry.contentLicense}\n  ${entry.description}\n`,
               );
             }
             process.stdout.write(
@@ -117,7 +117,7 @@ export const registerLibraryCommands = (program: Command): void => {
         if (options.json) process.stdout.write(`${JSON.stringify(entry, null, 2)}\n`);
         else {
           process.stdout.write(
-            `${entry.title}\n${entry.id}\n${entry.description}\nDigest: ${entry.digest}\nLicence: CC BY 4.0\n`,
+            `${entry.title}\n${entry.id}\n${entry.description}\nDigest: ${entry.digest}\nLicence: ${entry.contentLicense}\nSource: ${entry.sourceOrigin}\n${entry.upstreamRevision ? `Upstream revision: ${entry.upstreamRevision}\n` : ""}`,
           );
           if (entry.attribution) {
             process.stdout.write(
@@ -193,6 +193,8 @@ export const registerLibraryCommands = (program: Command): void => {
               existingPath: item.existingPath,
               message: item.message,
               digest: item.entry.digest,
+              contentLicense: item.entry.contentLicense,
+              sourceOrigin: item.entry.sourceOrigin,
             })),
           };
 
