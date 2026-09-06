@@ -1,7 +1,7 @@
 # RACK roadmap
 
 **Status:** active  
-**Updated:** 1 September 2026
+**Updated:** 6 September 2026
 
 This is the active product and implementation roadmap. Earlier iteration notes and the initial backlog remain useful implementation history, but they no longer describe the current priority order.
 
@@ -11,11 +11,13 @@ RACK's job is to make AI working practice portable, inspectable and testable.
 
 TOPO's job is to provide durable, purpose-bound memory and context.
 
-Those remain separate:
+Ship Check's job is to provide independent, evidence-led assurance about what the work actually produced.
+
+Those remain separate and independently useful:
 
 ```text
-TOPO
-memory · context · evidence
+optional TOPO context
+purpose · constraints · evidence
         │
         │ explicit purpose-bound disclosure
         ▼
@@ -27,9 +29,15 @@ AI host / agent
         │
         ▼
 work
+        │
+        ▼
+optional Ship Check
+repository evidence · assurance · repair guidance
+        │
+        └──────── bounded verification evidence ────────► RACK
 ```
 
-Context can influence a piece of work without becoming canonical RACK practice. Shared practice can influence an effective Set-up without being copied into local practice. Generated host files remain replaceable outputs rather than canonical source.
+Context can influence a piece of work without becoming canonical RACK practice. Shared practice can influence an effective Set-up without being copied into local practice. Generated host files remain replaceable outputs rather than canonical source. Ship Check evidence may inform RACK verification without Ship Check becoming a RACK runtime dependency.
 
 ## Progress so far
 
@@ -74,15 +82,16 @@ FIELD STATION was an important design experiment during this phase. RACK adopted
 
 ### Phase 3 — put practice into context · active
 
-The TOPO → RACK connection has now been proved. The goal is to make that useful in ordinary work and across real AI hosts.
+The TOPO → RACK connection has now been proved. The goal is to make that useful in ordinary work and across real AI hosts, while adding an independent evidence loop through Ship Check where that is useful.
 
-Phase 3 now has five first-class product tracks which should move together rather than becoming isolated features:
+Phase 3 now has six first-class product tracks which should move together rather than becoming isolated features:
 
 1. **Useful Starter practice** — deepen the Writing, Research and especially Coding packs so a new Rack begins with strong, inspectable working practice rather than generic prompt advice.
 2. **Host discovery and hand-off** — detect likely local AI tools safely, model their real capabilities, and show a reviewed installation/hand-off plan instead of treating every host as a text-file destination.
 3. **Verification** — complete the path from declared practice through trusted deterministic checks, fresh bounded judgement and explicit human review to a defensible completion decision.
 4. **Purpose-bound context** — let TOPO provide transient context without copying memory into canonical Rack practice or persistent host instructions.
-5. **Evaluation and governance boundaries** — evaluate practice rather than people, preserve personal context as personal context, and prevent implicit movement of context or behavioural exhaust across inside/between/beneath/around relationships.
+5. **Practice evidence loop** — let independent tools such as Ship Check return evidence against stable practice principle identifiers without making those tools mandatory or granting them authority over canonical practice.
+6. **Evaluation and governance boundaries** — evaluate practice rather than people, preserve personal context as personal context, and prevent implicit movement of context or behavioural exhaust across inside/between/beneath/around relationships.
 
 The relationship model is non-hierarchical: **inside** (personal/local), **between** (teams, projects and collaborations), **beneath** (infrastructure and verification machinery), and **around** (networks, standards and wider ecosystems). These are overlapping relationship lenses, not ranks or automatic inheritance boundaries.
 
@@ -100,6 +109,12 @@ Rack practice + reviewed TOPO context
                 │
                 ▼
              AI tool
+                │
+                ▼
+              work
+                │
+                ├─ RACK-owned verification
+                └─ optional external evidence, e.g. Ship Check
 ```
 
 #### Iteration 32 — paired context and cross-platform pilot hardening · in progress
@@ -160,7 +175,7 @@ Scope:
 - prevent transient TOPO material being accidentally installed as canonical project instructions;
 - promote Hermes Agent and OpenClaw from simple Preview-destination thinking into agent-runtime integration experiments;
 - test RACK as governed practice plus TOPO as durable context alongside an agent's own short-term/native memory;
-- use external portability projects such as Honey for Devs as compatibility research, not as a runtime dependency or a reason to adopt silent installers.
+- use external portability projects such as Honey for Devs as compatibility research and attributed practice sources, not as runtime dependencies or reasons to adopt silent installers.
 
 #### Iteration 35 — deterministic verifier registry and local execution · in progress
 
@@ -180,6 +195,25 @@ Scope:
 - fail closed when a named verifier is unavailable or incomplete;
 - keep deterministic and semantic verification distinct;
 - never accept a shell command, script body or plug-in supplied by Starter/shared practice as a verifier.
+
+#### Iteration 35.5 — first RACK ↔ Ship Check practice-evidence test · ready to test
+
+Outcome: prove one end-to-end loop in which RACK can name a working-practice principle and Ship Check can independently return evidence against the same identifier.
+
+Scope:
+
+- establish a small neutral `practice.*` vocabulary rather than coupling Ship Check to RACK module IDs;
+- map every Honey Starter entry to at least one stable principle identifier;
+- also map RACK's existing dependency, security and change-verification practice to the same vocabulary;
+- begin with `practice.preserve-safety`, `practice.dependency-restraint`, `practice.minimum-useful-change`, `practice.reuse-before-new-code`, `practice.fix-causes`, `practice.context-economy`, `practice.concise-handoff`, `practice.meaningful-verification` and `practice.cost-discipline`;
+- accept bounded Ship Check `practiceEvidence` inside its existing provider result rather than inventing a second verification channel;
+- do not interpret absence of Ship Check findings as proof that a broad practice principle passed;
+- keep RACK, Ship Check and TOPO independently installable and useful;
+- run the first contract test using Honey's `practice.preserve-safety` mapping and a deterministic Ship Check safety finding;
+- then run a manual cross-repository test using the Honey coding set-up against a deliberately risky fixture and one real repository;
+- use that evidence to decide whether principle identifiers should later become canonical module frontmatter rather than Starter catalogue metadata only.
+
+First-test success means the same principle ID survives **practice selection → work/check boundary → Ship Check evidence → RACK verification result**, with no source-code or TOPO requirement added to the contract.
 
 #### Iteration 36 — complete verification gates, governance boundaries and cross-host conformance
 
@@ -209,13 +243,15 @@ Pilot groups should include:
 
 - RACK-only use;
 - paired RACK + TOPO use;
+- paired RACK + Ship Check use for Coding work;
+- optional RACK + TOPO + Ship Check use where purpose-bound context genuinely helps;
 - Writing, Research and Coding work;
 - at least one agent-runtime workflow;
 - Windows, macOS and supported-pilot Linux.
 
 The central learning question is not whether participants understand RACK internals. It is whether they experience:
 
-> the AI has the context I chose to share and works in the way I intended.
+> the AI has the context I chose to share, works in the way I intended, and gives me useful evidence when that practice does or does not hold up.
 
 Observe:
 
@@ -224,21 +260,22 @@ Observe:
 - practice people accept, adapt or remove;
 - destination hand-off friction;
 - verification usefulness;
+- whether external evidence improves repair decisions without becoming noisy scoring;
 - Linux-specific installation/runtime friction;
-- where people expect RACK, TOPO or the host to own a capability.
+- where people expect RACK, TOPO, Ship Check or the host to own a capability.
 
 ## Phase 4 — derive the wider Organisational OS
 
 Broader Organisational OS work remains paused through Phase 3.
 
-Resume it from evidence generated by RACK, TOPO and agent/runtime integrations rather than by expanding the protocol spec in advance.
+Resume it from evidence generated by RACK, TOPO, Ship Check and agent/runtime integrations rather than by expanding the protocol spec in advance.
 
 Questions to revisit then include:
 
 - whether RACK needs to advertise an OOS Practice primitive at all;
 - what cross-tool activity or evidence objects are genuinely necessary;
-- whether feedback such as "this practice does not work here" belongs in RACK, TOPO, a signal system, or the protocol between them;
-- which FIELD STATION VSM concepts solve real coordination problems that the simpler source/context model cannot.
+- whether feedback such as "this practice does not work here" belongs in RACK, TOPO, Ship Check, a signal system, or the protocol between them;
+- which FIELD STATION VSM concepts solve real coordination problems that the simpler source/context/evidence model cannot.
 
 ## UX direction
 
@@ -249,7 +286,7 @@ RACK should adopt these principles:
 1. **Lead with the person's job, not RACK's architecture.** Prefer verbs and outcomes over schema concepts in ordinary views.
 2. **Ask only for genuine gaps.** Check TOPO, imported material and existing source before asking somebody to repeat context.
 3. **Propose, then let the person decide.** Practice suggestions require explicit accept/change/reject decisions.
-4. **Keep review boundaries visible.** TOPO context, shared practice and generated host output must each say where they came from and what accepting them will do.
+4. **Keep review boundaries visible.** TOPO context, shared practice, generated host output and external verification evidence must each say where they came from and what accepting them will do.
 5. **Make hand-off concrete.** Detect likely supported tools locally where safe, prioritise them, and explain exactly what will be written, registered, supplied transiently or checked afterwards.
 6. **Hide machinery without hiding consequences.** YAML, provenance digests and adapter capabilities belong behind ordinary product language, but changes, authority and data movement remain inspectable.
 7. **Design cross-platform from the start.** Windows, macOS and Linux should use the same mental model even when packaging or host integration differs.
@@ -285,6 +322,7 @@ Review FIELD STATION again after host-aware context delivery has been implemente
 - Managed evaluation/verification remains optional.
 - Canonical Rack source stays local.
 - TOPO context is purpose-bound and explicitly reviewed.
+- Ship Check remains optional, evidence-led and independent; its absence does not make RACK unusable.
 - No individual-compliance or employee-monitoring control plane.
 - Semantic format changes require ADR/version review.
 - Destination changes require adapter-version review and golden output.
