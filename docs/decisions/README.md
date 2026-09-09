@@ -28,5 +28,6 @@ Rack uses ADRs for decisions that change canonical project semantics, dependency
 22. Instruction, live verification and practice evaluation remain separate planes
 23. Host integration is separate from deterministic destination rendering
 24. Govern practice, not people; purpose-bound context crosses boundaries only explicitly
+25. TOPO context is consumed through a representation-independent ContextSource/Context Packet boundary
 
 Individual ADR files record the decisions which have moved from product specification into implementation. Accepted decisions must not be silently reversed in implementation tickets.
