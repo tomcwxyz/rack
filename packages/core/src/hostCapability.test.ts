@@ -90,6 +90,18 @@ describe("host capability application", () => {
     expect(context?.consequence).toContain("will not silently persist");
   });
 
+  it("marks unconfigured verification as a visible degradation", () => {
+    const verification = resolveHostCapability("claude-code", {
+      id: "verification.pre-completion",
+      count: 2,
+      unconfiguredCount: 1,
+    });
+
+    expect(verification?.resolution).toBe("degraded");
+    expect(verification?.preserved).toBe(true);
+    expect(verification?.summary).toContain("needs configuration");
+  });
+
   it("keeps completion verification with RACK until a native host gate exists", () => {
     for (const hostId of ["claude-code", "codex", "opencode"] as const) {
       const verification = resolveHostCapability(hostId, {
