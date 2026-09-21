@@ -157,3 +157,68 @@
     flex-direction: column;
   }
 }
+
+
+.starter-pack-review {
+  margin-top: 1.1rem;
+  padding: 1.1rem;
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--paper) 96%, var(--accent) 4%);
+}
+
+.starter-pack-review h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.45rem;
+}
+
+.starter-pack-review > div > p:last-child {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.starter-pack-review__items {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.starter-pack-review__items details {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--paper);
+}
+
+.starter-pack-review__items summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+}
+
+.starter-pack-review__items summary > span {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.starter-pack-review__items summary small,
+.starter-pack-review__items p {
+  color: var(--muted);
+}
+
+.starter-pack-review__items pre {
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.8rem;
+  border-radius: 0.7rem;
+  background: var(--ink);
+  color: var(--paper);
+  white-space: pre-wrap;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
