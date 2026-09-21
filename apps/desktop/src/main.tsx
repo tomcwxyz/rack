@@ -6,6 +6,7 @@ import { ManagedAuthProvider } from "./managedAuth.js";
 import "./styles.css";
 import "./first-value.css";
 import "./host-handoff.css";
+import "./starter-pack-chooser.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
