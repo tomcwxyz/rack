@@ -2,13 +2,18 @@ import { getStarterEntry, getStarterTemplate } from "@rack/starter";
 
 type StarterPackReviewProps = {
   templateId: string | null;
+  moduleIds: string[] | null;
 };
 
-export function StarterPackReview({ templateId }: StarterPackReviewProps) {
+export function StarterPackReview({
+  templateId,
+  moduleIds,
+}: StarterPackReviewProps) {
   const template = templateId ? getStarterTemplate(templateId) : null;
   if (!template) return null;
 
-  const entries = template.moduleIds
+  const selectedModuleIds = moduleIds ?? template.moduleIds;
+  const entries = selectedModuleIds
     .map((id) => getStarterEntry(id))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
@@ -18,8 +23,9 @@ export function StarterPackReview({ templateId }: StarterPackReviewProps) {
         <p className="eyebrow">Starting point to add</p>
         <h2 id="starter-pack-review-title">{template.title}</h2>
         <p>
-          {template.promise ?? template.description} These are ordinary,
-          inspectable Rack practices. Nothing in the pack can run code or install
+          {template.promise ?? template.description} You are adding{" "}
+          {selectedModuleIds.length} of {template.moduleIds.length} practices from
+          this starting point. These are ordinary, inspectable Rack practices. Nothing in the pack can run code or install
           hooks by itself.
         </p>
       </div>
