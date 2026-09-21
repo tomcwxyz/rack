@@ -28,6 +28,14 @@ describe("public Starter library", () => {
     expect(starterCatalogueMetadata.licenses).toEqual(["CC BY 4.0", "MIT"]);
   });
 
+  it("gives every starter pack a human-first promise and concrete best-for examples", () => {
+    for (const template of starterTemplates) {
+      expect(template.promise?.trim().length).toBeGreaterThan(20);
+      expect(template.bestFor?.length).toBeGreaterThan(0);
+      expect(template.bestFor?.every((item) => item.trim().length > 0)).toBe(true);
+    }
+  });
+
   it("keeps source provenance and licence on every public entry", () => {
     for (const entry of starterCatalogue) {
       expect(entry.sourceOrigin.length).toBeGreaterThan(0);
