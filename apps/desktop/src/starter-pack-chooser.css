@@ -222,3 +222,52 @@
   font-size: 0.75rem;
   line-height: 1.45;
 }
+
+
+.starter-pack-customise {
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+}
+
+.starter-pack-customise > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.starter-pack-customise > div:first-child span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.starter-pack-customise__items {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.starter-pack-customise__items label {
+  padding: 0.65rem 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--ground);
+  cursor: pointer;
+}
+
+.starter-pack-customise__items input {
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+
+.starter-pack-customise__items label > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.starter-pack-customise__items small {
+  color: var(--muted);
+  line-height: 1.4;
+}
