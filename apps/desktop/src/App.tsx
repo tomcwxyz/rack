@@ -25,6 +25,8 @@ export function App() {
   const [creating, setCreating] = useState<CreationState>(null);
   const [creationRoute, setCreationRoute] = useState<CreationRouteId | null>(null);
   const [starterPackId, setStarterPackId] = useState<string | null>(null);
+  const [starterPackModuleIds, setStarterPackModuleIds] =
+    useState<string[] | null>(null);
   const [starterPackIntent, setStarterPackIntent] =
     useState<StarterPackIntent>("use");
   const [loading, setLoading] = useState(false);
@@ -35,6 +37,7 @@ export function App() {
     setCreating(null);
     setCreationRoute(null);
     setStarterPackId(null);
+    setStarterPackModuleIds(null);
     setOpenError(null);
   };
 
@@ -84,6 +87,7 @@ export function App() {
   if (creating) {
     const routeProps = {
       starterPackId,
+      starterPackModuleIds,
       starterPackIntent,
       onCancel: () => setCreating(creationRoute ? "pack" : "choose"),
       onCreated: applySnapshot,
@@ -130,6 +134,7 @@ export function App() {
               onSelect={(route) => {
                 setCreationRoute(route);
                 setStarterPackId(null);
+                setStarterPackModuleIds(null);
                 setCreating("pack");
               }}
             />
@@ -140,10 +145,12 @@ export function App() {
               onBack={() => {
                 setCreationRoute(null);
                 setStarterPackId(null);
+                setStarterPackModuleIds(null);
                 setCreating("choose");
               }}
-              onSelect={(templateId, intent) => {
+              onSelect={(templateId, intent, moduleIds) => {
                 setStarterPackId(templateId);
+                setStarterPackModuleIds(moduleIds);
                 setStarterPackIntent(intent);
                 setCreating(creationRoute);
               }}
