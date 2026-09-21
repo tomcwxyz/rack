@@ -8,6 +8,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
+  applyStarterPackToCreatedRack,
+  type StarterPackIntent,
+} from "../creationStarterPack.js";
+import {
   buildWritingRackFiles,
   type WritingDraft,
   type WritingPracticeSelections,
@@ -20,10 +24,13 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { SelectedStarterPack } from "./SelectedStarterPack.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type WritingRouteProps = {
+  starterPackId: string | null;
+  starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
@@ -43,7 +50,12 @@ const initialDraft: WritingDraft = {
     "Turn notes into a concise update that explains what changed, why it matters and what happens next.",
 };
 
-export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
+export function WritingRoute({
+  starterPackId,
+  starterPackIntent,
+  onCancel,
+  onCreated,
+}: WritingRouteProps) {
   const [draft, setDraft] = useState<WritingDraft>(initialDraft);
   const [step, setStep] = useState<CreationStep>("questions");
   const [voiceChoice, setVoiceChoice] = useState<PracticeChoice>(null);
@@ -98,7 +110,11 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
         folderName: proposal.folderName,
         files: proposal.files,
       });
-      onCreated(snapshot);
+      const withStartingPoint = await applyStarterPackToCreatedRack(
+        snapshot,
+        starterPackId,
+      );
+      onCreated(withStartingPoint);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -138,10 +154,13 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
           <h1 id="writing-route-title">{header.title}</h1>
           <p className="lede">{header.intro}</p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Choose another route
-        </button>
       </header>
+
+      <SelectedStarterPack
+        templateId={starterPackId}
+        intent={starterPackIntent}
+        onChange={onCancel}
+      />
 
       <CreationProgress step={step} />
 
@@ -157,7 +176,13 @@ export function WritingRoute({ onCancel, onCreated }: WritingRouteProps) {
           className="route-form"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (questionsComplete) setStep("practice");
+            if (questionsComplete) {
+              setStep(
+                starterPackId && starterPackIntent === "use"
+                  ? "review"
+                  : "practice",
+              );
+            }
           }}
         >
           <div className="form-grid">
