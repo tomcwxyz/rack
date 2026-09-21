@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   getStarterEntry,
   getStarterTemplate,
@@ -9,7 +10,11 @@ import type { CreationRouteId } from "./RouteChooser.js";
 type StarterPackChooserProps = {
   route: CreationRouteId;
   onBack: () => void;
-  onSelect: (templateId: string | null, intent: StarterPackIntent) => void;
+  onSelect: (
+    templateId: string | null,
+    intent: StarterPackIntent,
+    moduleIds: string[] | null,
+  ) => void;
 };
 
 const starterPackIds: Record<CreationRouteId, string[]> = {
@@ -60,6 +65,22 @@ export function StarterPackChooser({
 }: StarterPackChooserProps) {
   const packs = starterPackIds[route].map(getPack);
   const copy = routeCopy[route];
+  const [customisingPackId, setCustomisingPackId] = useState<string | null>(null);
+  const [customModules, setCustomModules] = useState<Set<string>>(new Set());
+
+  const startCustomising = (pack: StarterTemplate) => {
+    setCustomisingPackId(pack.id);
+    setCustomModules(new Set(pack.moduleIds));
+  };
+
+  const toggleModule = (id: string, checked: boolean) => {
+    setCustomModules((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   return (
     <section className="starter-pack-chooser" aria-labelledby="starter-pack-title">
@@ -81,6 +102,8 @@ export function StarterPackChooser({
             .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
           const origins = [...new Set(entries.map((entry) => entry.sourceOrigin))];
           const licences = [...new Set(entries.map((entry) => entry.contentLicense))];
+          const customising = customisingPackId === pack.id;
+          const selectedCount = pack.moduleIds.filter((id) => customModules.has(id)).length;
 
           return (
             <article className="starter-pack-card" key={pack.id}>
@@ -117,22 +140,77 @@ export function StarterPackChooser({
                 </p>
               </details>
 
-              <div className="starter-pack-actions">
-                <button
-                  className="primary-action"
-                  type="button"
-                  onClick={() => onSelect(pack.id, "use")}
-                >
-                  Use this
-                </button>
-                <button
-                  className="quiet-action"
-                  type="button"
-                  onClick={() => onSelect(pack.id, "tune")}
-                >
-                  Change a few things
-                </button>
-              </div>
+              {customising ? (
+                <div className="starter-pack-customise">
+                  <div>
+                    <strong>Choose what to keep</strong>
+                    <span>
+                      Start with everything selected. Remove anything that does not fit;
+                      you can inspect exact source at final review.
+                    </span>
+                  </div>
+                  <div className="starter-pack-customise__items">
+                    {entries.map((entry) => (
+                      <label key={entry.id}>
+                        <input
+                          type="checkbox"
+                          checked={customModules.has(entry.id)}
+                          onChange={(event) =>
+                            toggleModule(entry.id, event.target.checked)
+                          }
+                        />
+                        <span>
+                          <strong>{entry.title}</strong>
+                          <small>{entry.description}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="starter-pack-actions">
+                    <button
+                      className="primary-action"
+                      type="button"
+                      disabled={selectedCount === 0}
+                      onClick={() =>
+                        onSelect(
+                          pack.id,
+                          "tune",
+                          pack.moduleIds.filter((id) => customModules.has(id)),
+                        )
+                      }
+                    >
+                      Use {selectedCount} selected
+                    </button>
+                    <button
+                      className="quiet-action"
+                      type="button"
+                      onClick={() => {
+                        setCustomisingPackId(null);
+                        setCustomModules(new Set());
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="starter-pack-actions">
+                  <button
+                    className="primary-action"
+                    type="button"
+                    onClick={() => onSelect(pack.id, "use", [...pack.moduleIds])}
+                  >
+                    Use this
+                  </button>
+                  <button
+                    className="quiet-action"
+                    type="button"
+                    onClick={() => startCustomising(pack)}
+                  >
+                    Change a few things
+                  </button>
+                </div>
+              )}
             </article>
           );
         })}
@@ -149,7 +227,7 @@ export function StarterPackChooser({
         <button
           className="quiet-action"
           type="button"
-          onClick={() => onSelect(null, "tune")}
+          onClick={() => onSelect(null, "tune", null)}
         >
           Start from the basics
         </button>
