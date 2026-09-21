@@ -173,6 +173,7 @@ Scope:
 - ask the person only for unresolved gaps or decisions only they can make;
 - begin a **harness-pack programme**: review useful external harnesses and agent-practice projects, extract portable working practice and capability requirements, retain provenance and licensing, and keep their executable runtime machinery out of Starter content;
 - use Honey as the first reference implementation for that programme;
+- maintain the source audit and candidate RACK-native packs in [harness-pack-programme.md](harness-pack-programme.md);
 - deepen Coding practice around smallest useful change, dependency discipline, simplification, agent hand-off and meaningful verification;
 - expand Research and Writing packs to the same level of coherence and usefulness;
 - let Starter practice declare structured automatic, judgement and human verification while preserving the no-executable-shared-code boundary;
