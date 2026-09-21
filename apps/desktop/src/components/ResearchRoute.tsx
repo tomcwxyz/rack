@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
+  applyStarterPackToCreatedRack,
+  type StarterPackIntent,
+} from "../creationStarterPack.js";
+import {
   buildResearchRackFiles,
   type ResearchDraft,
   type ResearchPracticeSelections,
@@ -15,10 +19,13 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { SelectedStarterPack } from "./SelectedStarterPack.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type ResearchRouteProps = {
+  starterPackId: string | null;
+  starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
@@ -39,7 +46,12 @@ const initialDraft: ResearchDraft = {
     "Produce a proportionate, evidence-aware synthesis that answers the question, explains uncertainty and identifies sensible next steps.",
 };
 
-export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
+export function ResearchRoute({
+  starterPackId,
+  starterPackIntent,
+  onCancel,
+  onCreated,
+}: ResearchRouteProps) {
   const [draft, setDraft] = useState<ResearchDraft>(initialDraft);
   const [step, setStep] = useState<CreationStep>("questions");
   const [methodChoice, setMethodChoice] = useState<PracticeChoice>(null);
@@ -93,7 +105,11 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
         folderName: proposal.folderName,
         files: proposal.files,
       });
-      onCreated(snapshot);
+      const withStartingPoint = await applyStarterPackToCreatedRack(
+        snapshot,
+        starterPackId,
+      );
+      onCreated(withStartingPoint);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -133,10 +149,13 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
           <h1 id="research-route-title">{header.title}</h1>
           <p className="lede">{header.intro}</p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Choose another route
-        </button>
       </header>
+
+      <SelectedStarterPack
+        templateId={starterPackId}
+        intent={starterPackIntent}
+        onChange={onCancel}
+      />
 
       <CreationProgress step={step} />
 
@@ -152,7 +171,13 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
           className="route-form"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (questionsComplete) setStep("practice");
+            if (questionsComplete) {
+              setStep(
+                starterPackId && starterPackIntent === "use"
+                  ? "review"
+                  : "practice",
+              );
+            }
           }}
         >
           <div className="form-grid">
