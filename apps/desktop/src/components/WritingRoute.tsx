@@ -31,6 +31,7 @@ import "../proposition-creation.css";
 
 type WritingRouteProps = {
   starterPackId: string | null;
+  starterPackModuleIds: string[] | null;
   starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
@@ -53,6 +54,7 @@ const initialDraft: WritingDraft = {
 
 export function WritingRoute({
   starterPackId,
+  starterPackModuleIds,
   starterPackIntent,
   onCancel,
   onCreated,
@@ -114,6 +116,7 @@ export function WritingRoute({
       const withStartingPoint = await applyStarterPackToCreatedRack(
         snapshot,
         starterPackId,
+        starterPackModuleIds,
       );
       onCreated(withStartingPoint);
     } catch (reason) {
@@ -161,6 +164,7 @@ export function WritingRoute({
 
       <SelectedStarterPack
         templateId={starterPackId}
+        moduleIds={starterPackModuleIds}
         intent={starterPackIntent}
         onChange={onCancel}
       />
@@ -434,7 +438,10 @@ export function WritingRoute({
             </article>
           </div>
 
-          <StarterPackReview templateId={starterPackId} />
+          <StarterPackReview
+            templateId={starterPackId}
+            moduleIds={starterPackModuleIds}
+          />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>
