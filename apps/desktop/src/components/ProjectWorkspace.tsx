@@ -265,7 +265,7 @@ export function ProjectWorkspace({
               type="button"
               onClick={() => setSection("library")}
             >
-              Starter library
+              Starting points
             </button>
           </details>
         </nav>
@@ -373,6 +373,7 @@ export function ProjectWorkspace({
             onUseWithAi={() => setSection("preview")}
             onUseWithHost={(hostId) => void startHostHandoff(hostId)}
             onImprovePractice={() => setSection("rack")}
+            onExploreStartingPoints={() => setSection("library")}
             onCheckWork={() => setSection("verify")}
           />
         ) : null}
