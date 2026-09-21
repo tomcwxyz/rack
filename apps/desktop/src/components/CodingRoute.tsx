@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
+  applyStarterPackToCreatedRack,
+  type StarterPackIntent,
+} from "../creationStarterPack.js";
+import {
   buildCodingRackFiles,
   type CodingDraft,
   type CodingPracticeSelections,
@@ -15,10 +19,13 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { SelectedStarterPack } from "./SelectedStarterPack.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type CodingRouteProps = {
+  starterPackId: string | null;
+  starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
@@ -37,7 +44,12 @@ const initialDraft: CodingDraft = {
     "Implement an agreed feature or fix using the existing architecture where it is sound, with clear verification and no hidden changes to behaviour.",
 };
 
-export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
+export function CodingRoute({
+  starterPackId,
+  starterPackIntent,
+  onCancel,
+  onCreated,
+}: CodingRouteProps) {
   const [draft, setDraft] = useState<CodingDraft>(initialDraft);
   const [step, setStep] = useState<CreationStep>("questions");
   const [craftChoice, setCraftChoice] = useState<PracticeChoice>(null);
@@ -90,7 +102,11 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
         folderName: proposal.folderName,
         files: proposal.files,
       });
-      onCreated(snapshot);
+      const withStartingPoint = await applyStarterPackToCreatedRack(
+        snapshot,
+        starterPackId,
+      );
+      onCreated(withStartingPoint);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -130,10 +146,13 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
           <h1 id="coding-route-title">{header.title}</h1>
           <p className="lede">{header.intro}</p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Choose another route
-        </button>
       </header>
+
+      <SelectedStarterPack
+        templateId={starterPackId}
+        intent={starterPackIntent}
+        onChange={onCancel}
+      />
 
       <CreationProgress step={step} />
 
@@ -149,7 +168,13 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
           className="route-form"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (questionsComplete) setStep("practice");
+            if (questionsComplete) {
+              setStep(
+                starterPackId && starterPackIntent === "use"
+                  ? "review"
+                  : "practice",
+              );
+            }
           }}
         >
           <div className="form-grid">
