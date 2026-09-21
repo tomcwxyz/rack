@@ -4,6 +4,8 @@ import {
   type HostSurfaceSupport,
 } from "./hostIntegration.js";
 import { buildHostRuntimePlan } from "./hostRuntime.js";
+import type { CompiledProfile } from "./compiler.js";
+import type { VerificationPlan } from "./verificationPlan.js";
 
 export type HostCapabilityId =
   | "practice.standing-guidance"
@@ -56,6 +58,96 @@ const supportResolution = (
   if (support === "supported") return supported;
   if (support === "planned") return planned;
   return unavailable;
+};
+
+export const deriveHostCapabilityNeeds = (
+  compiled: CompiledProfile | null,
+  verification: VerificationPlan | null,
+): HostCapabilityNeed[] => {
+  const needs: HostCapabilityNeed[] = [];
+
+  if (compiled?.modules.length) {
+    needs.push({
+      id: "practice.standing-guidance",
+      count: compiled.modules.length,
+      detail:
+        compiled.modules.length +
+        (compiled.modules.length === 1
+          ? " practice contributes to the standing Set-up."
+          : " practices contribute to the standing Set-up."),
+    });
+  }
+
+  const reusableTasks =
+    compiled?.modules.filter(
+      (module) =>
+        module.type === "task" && Boolean(module.harness.trigger.command),
+    ).length ?? 0;
+
+  if (reusableTasks > 0) {
+    needs.push({
+      id: "practice.on-demand-skill",
+      count: reusableTasks,
+      detail:
+        reusableTasks +
+        (reusableTasks === 1
+          ? " reusable task has a named command."
+          : " reusable tasks have named commands."),
+    });
+  }
+
+  needs.push({
+    id: "context.transient-task",
+    detail:
+      "Task instructions and any reviewed TOPO context should stay temporary rather than becoming standing practice.",
+  });
+
+  if (verification) {
+    const configuredChecks =
+      verification.counts.automatic +
+      verification.counts.judgement +
+      verification.counts.taskSuites;
+    const nonHumanUnconfigured = verification.unconfigured.filter(
+      (item) => item.mode !== "human_review",
+    ).length;
+
+    if (configuredChecks > 0 || nonHumanUnconfigured > 0) {
+      needs.push({
+        id: "verification.pre-completion",
+        count: configuredChecks + nonHumanUnconfigured,
+        detail:
+          configuredChecks +
+          " configured verification step" +
+          (configuredChecks === 1 ? "" : "s") +
+          (nonHumanUnconfigured
+            ? " and " +
+              nonHumanUnconfigured +
+              " declared check" +
+              (nonHumanUnconfigured === 1 ? "" : "s") +
+              " still needing configuration."
+            : "."),
+      });
+    }
+
+    const humanReviewCount =
+      verification.counts.human +
+      verification.unconfigured.filter((item) => item.mode === "human_review")
+        .length;
+
+    if (humanReviewCount > 0) {
+      needs.push({
+        id: "verification.human-review",
+        count: humanReviewCount,
+        detail:
+          humanReviewCount +
+          (humanReviewCount === 1
+            ? " part of this Set-up requires human review."
+            : " parts of this Set-up require human review."),
+      });
+    }
+  }
+
+  return needs;
 };
 
 export const resolveHostCapability = (
