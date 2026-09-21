@@ -3,12 +3,14 @@ import type { StarterPackIntent } from "../creationStarterPack.js";
 
 type SelectedStarterPackProps = {
   templateId: string | null;
+  moduleIds: string[] | null;
   intent: StarterPackIntent;
   onChange: () => void;
 };
 
 export function SelectedStarterPack({
   templateId,
+  moduleIds,
   intent,
   onChange,
 }: SelectedStarterPackProps) {
@@ -28,9 +30,12 @@ export function SelectedStarterPack({
         </span>
         {template ? (
           <small>
+            {moduleIds && moduleIds.length !== template.moduleIds.length
+              ? `Using ${moduleIds.length} of ${template.moduleIds.length} pack practices. `
+              : ""}
             {intent === "use"
               ? "Use this: Rack will accept the route defaults and take you straight to final review after the context questions."
-              : "Change a few things: Rack will pause on the practice choices before final review."}
+              : "Change a few things: Rack will also pause on the local practice choices before final review."}
           </small>
         ) : null}
       </div>
