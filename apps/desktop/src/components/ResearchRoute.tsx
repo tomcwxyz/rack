@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
+  applyStarterPackToCreatedRack,
+  type StarterPackIntent,
+} from "../creationStarterPack.js";
+import {
   buildResearchRackFiles,
   type ResearchDraft,
   type ResearchPracticeSelections,
@@ -15,10 +19,15 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { SelectedStarterPack } from "./SelectedStarterPack.js";
+import { StarterPackReview } from "./StarterPackReview.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type ResearchRouteProps = {
+  starterPackId: string | null;
+  starterPackModuleIds: string[] | null;
+  starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
@@ -39,7 +48,13 @@ const initialDraft: ResearchDraft = {
     "Produce a proportionate, evidence-aware synthesis that answers the question, explains uncertainty and identifies sensible next steps.",
 };
 
-export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
+export function ResearchRoute({
+  starterPackId,
+  starterPackModuleIds,
+  starterPackIntent,
+  onCancel,
+  onCreated,
+}: ResearchRouteProps) {
   const [draft, setDraft] = useState<ResearchDraft>(initialDraft);
   const [step, setStep] = useState<CreationStep>("questions");
   const [methodChoice, setMethodChoice] = useState<PracticeChoice>(null);
@@ -93,7 +108,12 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
         folderName: proposal.folderName,
         files: proposal.files,
       });
-      onCreated(snapshot);
+      const withStartingPoint = await applyStarterPackToCreatedRack(
+        snapshot,
+        starterPackId,
+        starterPackModuleIds,
+      );
+      onCreated(withStartingPoint);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -109,9 +129,11 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
 
   const header = {
     questions: {
-      title: "Start with the question and evidence you actually have",
+      title: "Add the question and context only you know",
       intro:
-        "Give Rack the decision context, question and source expectations. It will propose a reusable research method and evidence boundary next.",
+        starterPackId && starterPackIntent === "use"
+          ? "You have chosen a research starting point. Add the decision context, question and evidence constraints, then go straight to final review."
+          : "Add the decision context, question and evidence constraints. You can tune the research practice before final review.",
     },
     practice: {
       title: "How should AI investigate and handle uncertainty?",
@@ -133,16 +155,20 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
           <h1 id="research-route-title">{header.title}</h1>
           <p className="lede">{header.intro}</p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Choose another route
-        </button>
       </header>
+
+      <SelectedStarterPack
+        templateId={starterPackId}
+        moduleIds={starterPackModuleIds}
+        intent={starterPackIntent}
+        onChange={onCancel}
+      />
 
       <CreationProgress step={step} />
 
       {error ? (
         <div className="notice notice--error" role="alert">
-          <strong>Rack was not created.</strong>
+          <strong>Rack could not finish creating.</strong>
           <span>{error}</span>
         </div>
       ) : null}
@@ -152,7 +178,13 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
           className="route-form"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (questionsComplete) setStep("practice");
+            if (questionsComplete) {
+              setStep(
+                starterPackId && starterPackIntent === "use"
+                  ? "review"
+                  : "practice",
+              );
+            }
           }}
         >
           <div className="form-grid">
@@ -261,13 +293,19 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
           </div>
 
           <div className="route-actions">
-            <span>Question and evidence first. Reusable practice comes next.</span>
+            <span>
+              {starterPackId && starterPackIntent === "use"
+                ? "Add the question and evidence context. Final review comes next."
+                : "Question and evidence first. Then tune the practice."}
+            </span>
             <button
               className="primary-action"
               type="submit"
               disabled={!questionsComplete}
             >
-              Review suggested practice
+              {starterPackId && starterPackIntent === "use"
+                ? "Review this Rack"
+                : "Tune the practice"}
             </button>
           </div>
         </form>
@@ -384,6 +422,11 @@ export function ResearchRoute({ onCancel, onCreated }: ResearchRouteProps) {
               <p>{draft.taskPurpose}</p>
             </article>
           </div>
+
+          <StarterPackReview
+            templateId={starterPackId}
+            moduleIds={starterPackModuleIds}
+          />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>

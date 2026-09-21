@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
+  applyStarterPackToCreatedRack,
+  type StarterPackIntent,
+} from "../creationStarterPack.js";
+import {
   buildCodingRackFiles,
   type CodingDraft,
   type CodingPracticeSelections,
@@ -15,10 +19,15 @@ import {
   type PracticeChoice,
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
+import { SelectedStarterPack } from "./SelectedStarterPack.js";
+import { StarterPackReview } from "./StarterPackReview.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
 type CodingRouteProps = {
+  starterPackId: string | null;
+  starterPackModuleIds: string[] | null;
+  starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
 };
@@ -37,7 +46,13 @@ const initialDraft: CodingDraft = {
     "Implement an agreed feature or fix using the existing architecture where it is sound, with clear verification and no hidden changes to behaviour.",
 };
 
-export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
+export function CodingRoute({
+  starterPackId,
+  starterPackModuleIds,
+  starterPackIntent,
+  onCancel,
+  onCreated,
+}: CodingRouteProps) {
   const [draft, setDraft] = useState<CodingDraft>(initialDraft);
   const [step, setStep] = useState<CreationStep>("questions");
   const [craftChoice, setCraftChoice] = useState<PracticeChoice>(null);
@@ -90,7 +105,12 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
         folderName: proposal.folderName,
         files: proposal.files,
       });
-      onCreated(snapshot);
+      const withStartingPoint = await applyStarterPackToCreatedRack(
+        snapshot,
+        starterPackId,
+        starterPackModuleIds,
+      );
+      onCreated(withStartingPoint);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -106,9 +126,11 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
 
   const header = {
     questions: {
-      title: "Tell Rack about the system it must not guess at",
+      title: "Add the system context only you know",
       intro:
-        "Start with the repository, product and technical constraints. Rack will propose implementation and safety practice next.",
+        starterPackId && starterPackIntent === "use"
+          ? "You have chosen a coding starting point. Add the repository, product and technical constraints, then go straight to final review."
+          : "Add the repository, product and technical constraints. You can tune the implementation and safety practice before final review.",
     },
     practice: {
       title: "How should a coding agent make changes here?",
@@ -130,16 +152,20 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
           <h1 id="coding-route-title">{header.title}</h1>
           <p className="lede">{header.intro}</p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Choose another route
-        </button>
       </header>
+
+      <SelectedStarterPack
+        templateId={starterPackId}
+        moduleIds={starterPackModuleIds}
+        intent={starterPackIntent}
+        onChange={onCancel}
+      />
 
       <CreationProgress step={step} />
 
       {error ? (
         <div className="notice notice--error" role="alert">
-          <strong>Rack was not created.</strong>
+          <strong>Rack could not finish creating.</strong>
           <span>{error}</span>
         </div>
       ) : null}
@@ -149,7 +175,13 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
           className="route-form"
           onSubmit={(event: FormEvent<HTMLFormElement>) => {
             event.preventDefault();
-            if (questionsComplete) setStep("practice");
+            if (questionsComplete) {
+              setStep(
+                starterPackId && starterPackIntent === "use"
+                  ? "review"
+                  : "practice",
+              );
+            }
           }}
         >
           <div className="form-grid">
@@ -246,13 +278,19 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
           </div>
 
           <div className="route-actions">
-            <span>Project facts first. Implementation practice comes next.</span>
+            <span>
+              {starterPackId && starterPackIntent === "use"
+                ? "Only the project facts this starting point cannot know. Final review comes next."
+                : "Project facts first. Then tune the implementation practice."}
+            </span>
             <button
               className="primary-action"
               type="submit"
               disabled={!questionsComplete}
             >
-              Review suggested practice
+              {starterPackId && starterPackIntent === "use"
+                ? "Review this Rack"
+                : "Tune the practice"}
             </button>
           </div>
         </form>
@@ -370,6 +408,11 @@ export function CodingRoute({ onCancel, onCreated }: CodingRouteProps) {
               <p>{draft.taskPurpose}</p>
             </article>
           </div>
+
+          <StarterPackReview
+            templateId={starterPackId}
+            moduleIds={starterPackModuleIds}
+          />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>

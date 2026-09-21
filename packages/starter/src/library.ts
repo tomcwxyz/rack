@@ -17,7 +17,7 @@ import {
 } from "./honey.js";
 import type { StarterSourceProvenance } from "./external.js";
 
-export const STARTER_CATALOGUE_VERSION = "0.3.0";
+export const STARTER_CATALOGUE_VERSION = "0.4.0";
 
 export const starterCatalogueMetadata = {
   schemaVersion: "0.2",

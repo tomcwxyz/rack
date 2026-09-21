@@ -14,19 +14,30 @@ import {
   type CreationRouteId,
 } from "./components/RouteChooser.js";
 import { WritingRoute } from "./components/WritingRoute.js";
+import { StarterPackChooser } from "./components/StarterPackChooser.js";
 import { TopoConnectionIndicator } from "./components/TopoConnectionIndicator.js";
+import type { StarterPackIntent } from "./creationStarterPack.js";
 
-type CreationState = "choose" | CreationRouteId | null;
+type CreationState = "choose" | "pack" | CreationRouteId | null;
 
 export function App() {
   const [project, setProject] = useState<RackProject | null>(null);
   const [creating, setCreating] = useState<CreationState>(null);
+  const [creationRoute, setCreationRoute] = useState<CreationRouteId | null>(null);
+  const [starterPackId, setStarterPackId] = useState<string | null>(null);
+  const [starterPackModuleIds, setStarterPackModuleIds] =
+    useState<string[] | null>(null);
+  const [starterPackIntent, setStarterPackIntent] =
+    useState<StarterPackIntent>("use");
   const [loading, setLoading] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
 
   const applySnapshot = (snapshot: ProjectSnapshot) => {
     setProject(parseProjectSnapshot(snapshot));
     setCreating(null);
+    setCreationRoute(null);
+    setStarterPackId(null);
+    setStarterPackModuleIds(null);
     setOpenError(null);
   };
 
@@ -75,7 +86,10 @@ export function App() {
 
   if (creating) {
     const routeProps = {
-      onCancel: () => setCreating("choose" as const),
+      starterPackId,
+      starterPackModuleIds,
+      starterPackIntent,
+      onCancel: () => setCreating(creationRoute ? "pack" : "choose"),
       onCreated: applySnapshot,
     };
 
@@ -117,7 +131,29 @@ export function App() {
           {creating === "choose" ? (
             <RouteChooser
               onCancel={() => setCreating(null)}
-              onSelect={setCreating}
+              onSelect={(route) => {
+                setCreationRoute(route);
+                setStarterPackId(null);
+                setStarterPackModuleIds(null);
+                setCreating("pack");
+              }}
+            />
+          ) : null}
+          {creating === "pack" && creationRoute ? (
+            <StarterPackChooser
+              route={creationRoute}
+              onBack={() => {
+                setCreationRoute(null);
+                setStarterPackId(null);
+                setStarterPackModuleIds(null);
+                setCreating("choose");
+              }}
+              onSelect={(templateId, intent, moduleIds) => {
+                setStarterPackId(templateId);
+                setStarterPackModuleIds(moduleIds);
+                setStarterPackIntent(intent);
+                setCreating(creationRoute);
+              }}
             />
           ) : null}
           {creating === "writing" ? <WritingRoute {...routeProps} /> : null}

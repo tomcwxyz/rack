@@ -14,27 +14,27 @@ const routes: Array<{
 }> = [
   {
     id: "writing",
-    title: "Writing and communications",
+    title: "Write something",
     status: "Strong starting practice",
     description:
-      "Help AI sound more like you, stay clear about evidence and avoid the habits you dislike.",
-    includes: ["Audience and voice", "Language to avoid", "Evidence honesty"],
+      "Start with a clear, audience-aware way of writing. You can tune voice, evidence boundaries and the habits you want AI to avoid.",
+    includes: ["Emails and messages", "Reports and explainers", "Rewriting and editing"],
   },
   {
     id: "research",
-    title: "Research and knowledge work",
+    title: "Research or make sense of something",
     status: "Strong starting practice",
     description:
-      "Help AI investigate carefully, separate evidence from inference and stay explicit about uncertainty and gaps.",
-    includes: ["Research question", "Evidence and sources", "Method and gaps"],
+      "Start with a question-led research practice that checks sources, separates evidence from inference and keeps gaps visible.",
+    includes: ["Evidence reviews", "Comparing options", "Briefings and synthesis"],
   },
   {
     id: "coding",
-    title: "Coding and technical work",
+    title: "Build, change or review software",
     status: "Strong starting practice",
     description:
-      "Help AI understand the existing code, make restrained changes and verify important work before claiming it is done.",
-    includes: ["Project and stack", "Implementation practice", "Safe verification"],
+      "Start with restrained coding practice: understand the codebase, make the smallest coherent change and verify important work before calling it done.",
+    includes: ["Features and bug fixes", "Code review", "Agentic coding"],
   },
 ];
 
@@ -44,10 +44,11 @@ export function RouteChooser({ onSelect, onCancel }: RouteChooserProps) {
       <header className="route-header">
         <div>
           <p className="eyebrow">Start with the work</p>
-          <h1 id="route-chooser-title">What are you using AI for?</h1>
+          <h1 id="route-chooser-title">What do you want to do?</h1>
           <p className="lede">
-            Choose the closest fit. Rack will give you a useful starting practice,
-            then you can keep, change or leave out anything before it becomes yours.
+            Pick the closest thing. Rack will start you with a good way of working,
+            not an empty configuration. You can use it as-is, change a few things or
+            inspect exactly what is inside.
           </p>
         </div>
         <button className="quiet-action" type="button" onClick={onCancel}>
@@ -73,17 +74,17 @@ export function RouteChooser({ onSelect, onCancel }: RouteChooserProps) {
               type="button"
               onClick={() => onSelect(route.id)}
             >
-              Use Rack for {route.id}
+              Start here
             </button>
           </article>
         ))}
       </div>
 
       <aside className="route-chooser-note">
-        <strong>You do not need to design a system.</strong>
+        <strong>You do not need to know your “working practice” yet.</strong>
         <span>
-          Start with Rack's suggestions. The underlying practice remains local,
-          inspectable and editable whenever you want to go deeper.
+          Start with something good, use it in real work, then shape it as you notice
+          what helps, what gets in the way and what you want AI to do differently.
         </span>
       </aside>
     </section>

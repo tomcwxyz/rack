@@ -113,7 +113,7 @@ export function LibrarySection({
       const alreadyThere = plan.items.filter((item) => item.status === "identical").length;
       onProjectChanged(snapshot);
       onStatus(
-        `Starter import complete: ${added} added${alreadyThere ? `, ${alreadyThere} already present` : ""}.`,
+        `Practice added: ${added} added${alreadyThere ? `, ${alreadyThere} already present` : ""}.`,
       );
       setSelected(new Set());
       setPlan(null);
@@ -128,14 +128,16 @@ export function LibrarySection({
     <section className="section-stack library-section">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Bundled · local · attributed</p>
-          <h2>Starter library</h2>
+          <p className="eyebrow">Good ways to start · local · inspectable</p>
+          <h2>Starting points</h2>
           <p>
-            Browse reusable instructions, inspect the exact source, then review what Rack would
-            copy before anything changes. Imported files become ordinary local Rack source.
+            You do not need to design a working practice from scratch. Pick the closest
+            starting point, review what it will add, then change it as you learn what works for you.
           </p>
         </div>
-        <span className="count-badge">{starterCatalogue.length} instructions</span>
+        <span className="count-badge">
+          {starterTemplates.length} starting points · {starterCatalogue.length} practices
+        </span>
       </div>
 
       <div className="library-templates" aria-label="Starting templates">
@@ -148,10 +150,24 @@ export function LibrarySection({
           >
             <span className="template-card__route">{template.route}</span>
             <strong>{template.title}</strong>
-            <span>{template.description}</span>
-            <small>{template.moduleIds.length} instructions</small>
+            <span>{template.promise ?? template.description}</span>
+            {template.bestFor?.length ? (
+              <small>Best for: {template.bestFor.join(" · ")}</small>
+            ) : null}
+            <small>Use this starting point · {template.moduleIds.length} practices</small>
           </button>
         ))}
+      </div>
+
+      <div className="section-heading section-heading--compact">
+        <div>
+          <p className="eyebrow">Want to go deeper?</p>
+          <h3>Build or tune the practice yourself</h3>
+          <p>
+            The starting points above are made from small, reusable practices. Browse the
+            ingredients here when you want to add, remove or inspect something specific.
+          </p>
+        </div>
       </div>
 
       <div className="library-toolbar">
@@ -259,8 +275,8 @@ export function LibrarySection({
 
       <div className="library-review-bar">
         <div>
-          <strong>{selected.size} selected</strong>
-          <p>Nothing is fetched remotely and no existing module will be replaced.</p>
+          <strong>{selected.size} practice{selected.size === 1 ? "" : "s"} selected</strong>
+          <p>Nothing is fetched remotely and no existing local practice will be replaced.</p>
         </div>
         <label className="field">
           <span>Also add to Set-up</span>
@@ -285,7 +301,7 @@ export function LibrarySection({
           disabled={selected.size === 0 || reviewing}
           onClick={() => void review()}
         >
-          {reviewing ? "Reviewing…" : "Review import"}
+          {reviewing ? "Reviewing…" : "Review what will change"}
         </button>
       </div>
 
@@ -341,7 +357,7 @@ export function LibrarySection({
               disabled={plan.blocked || applying}
               onClick={() => void apply()}
             >
-              {applying ? "Adding…" : "Add to Rack"}
+              {applying ? "Adding…" : "Add these practices"}
             </button>
           </div>
         </div>

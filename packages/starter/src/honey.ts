@@ -162,6 +162,8 @@ export const honeyStarterTemplates: readonly StarterTemplate[] = [
     id: "honey-lean-coding",
     title: "Lean agentic coding · Honey",
     description: "Honey-inspired coding practice for smaller changes, lower context/output cost and explicit protection of correctness and verification.",
+    promise: "Start with a deliberately lean agentic coding practice: less unnecessary code and context, without trading away safety, quality or verification.",
+    bestFor: ["Agentic coding", "Token- and context-conscious implementation", "Repositories prone to over-engineering"],
     route: "coding",
     moduleIds: [
       "@rack-starter/context.repository",
