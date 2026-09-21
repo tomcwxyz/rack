@@ -26,6 +26,7 @@ import "../proposition-creation.css";
 
 type CodingRouteProps = {
   starterPackId: string | null;
+  starterPackModuleIds: string[] | null;
   starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
@@ -47,6 +48,7 @@ const initialDraft: CodingDraft = {
 
 export function CodingRoute({
   starterPackId,
+  starterPackModuleIds,
   starterPackIntent,
   onCancel,
   onCreated,
@@ -106,6 +108,7 @@ export function CodingRoute({
       const withStartingPoint = await applyStarterPackToCreatedRack(
         snapshot,
         starterPackId,
+        starterPackModuleIds,
       );
       onCreated(withStartingPoint);
     } catch (reason) {
@@ -153,6 +156,7 @@ export function CodingRoute({
 
       <SelectedStarterPack
         templateId={starterPackId}
+        moduleIds={starterPackModuleIds}
         intent={starterPackIntent}
         onChange={onCancel}
       />
@@ -405,7 +409,10 @@ export function CodingRoute({
             </article>
           </div>
 
-          <StarterPackReview templateId={starterPackId} />
+          <StarterPackReview
+            templateId={starterPackId}
+            moduleIds={starterPackModuleIds}
+          />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>
