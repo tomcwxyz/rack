@@ -24,6 +24,7 @@ export type HostCapabilityResolution =
 export type HostCapabilityNeed = {
   id: HostCapabilityId;
   count?: number;
+  unconfiguredCount?: number;
   detail?: string;
 };
 
@@ -66,15 +67,21 @@ export const deriveHostCapabilityNeeds = (
 ): HostCapabilityNeed[] => {
   const needs: HostCapabilityNeed[] = [];
 
-  if (compiled?.modules.length) {
+  const standingModules =
+    compiled?.modules.filter(
+      (module) =>
+        !(module.type === "task" && Boolean(module.harness.trigger.command)),
+    ).length ?? 0;
+
+  if (standingModules > 0) {
     needs.push({
       id: "practice.standing-guidance",
-      count: compiled.modules.length,
+      count: standingModules,
       detail:
-        compiled.modules.length +
-        (compiled.modules.length === 1
-          ? " practice contributes to the standing Set-up."
-          : " practices contribute to the standing Set-up."),
+        standingModules +
+        (standingModules === 1
+          ? " practice contributes to standing guidance."
+          : " practices contribute to standing guidance."),
     });
   }
 
@@ -115,6 +122,7 @@ export const deriveHostCapabilityNeeds = (
       needs.push({
         id: "verification.pre-completion",
         count: configuredChecks + nonHumanUnconfigured,
+        unconfiguredCount: nonHumanUnconfigured,
         detail:
           configuredChecks +
           " configured verification step" +
@@ -129,15 +137,17 @@ export const deriveHostCapabilityNeeds = (
       });
     }
 
+    const unconfiguredHumanReviews = verification.unconfigured.filter(
+      (item) => item.mode === "human_review",
+    ).length;
     const humanReviewCount =
-      verification.counts.human +
-      verification.unconfigured.filter((item) => item.mode === "human_review")
-        .length;
+      verification.counts.human + unconfiguredHumanReviews;
 
     if (humanReviewCount > 0) {
       needs.push({
         id: "verification.human-review",
         count: humanReviewCount,
+        unconfiguredCount: unconfiguredHumanReviews,
         detail:
           humanReviewCount +
           (humanReviewCount === 1
@@ -277,6 +287,19 @@ export const resolveHostCapability = (
   }
 
   if (need.id === "verification.pre-completion") {
+    if (need.unconfiguredCount) {
+      return {
+        ...need,
+        title: "Completion checks",
+        resolution: "degraded",
+        summary:
+          "Some declared verification still needs configuration before RACK can enforce it.",
+        consequence:
+          "Configured checks can still run, but every declared check must define concrete evidence and failure behaviour before RACK can treat the whole verification boundary as complete.",
+        preserved: true,
+      };
+    }
+
     if (host.delivery.verificationGate === "supported") {
       return {
         ...need,
@@ -298,6 +321,19 @@ export const resolveHostCapability = (
       summary: "RACK keeps verification outside the AI host.",
       consequence:
         "Configured checks and judgements still run through RACK. The host itself is not trusted to claim that those checks passed.",
+      preserved: true,
+    };
+  }
+
+  if (need.unconfiguredCount) {
+    return {
+      ...need,
+      title: "Human review",
+      resolution: "degraded",
+      summary:
+        "Human review is required, but part of that review still needs to be configured.",
+      consequence:
+        "RACK keeps the requirement visible, but it needs a concrete review prompt before it can present a complete human-review step.",
       preserved: true,
     };
   }
