@@ -1,7 +1,7 @@
 # RACK roadmap
 
 **Status:** active  
-**Updated:** 6 September 2026
+**Updated:** 21 September 2026
 
 This is the active product and implementation roadmap. Earlier iteration notes and the initial backlog remain useful implementation history, but they no longer describe the current priority order.
 
@@ -86,7 +86,7 @@ The TOPO → RACK connection has now been proved. The goal is to make that usefu
 
 Phase 3 now has six first-class product tracks which should move together rather than becoming isolated features:
 
-1. **Useful Starter practice** — deepen the Writing, Research and especially Coding packs so a new Rack begins with strong, inspectable working practice rather than generic prompt advice.
+1. **Lovely first use and useful Starter practice** — make RACK useful before somebody understands RACK: start from the work they want to do, offer a strong opinionated way to begin, and let their own working practice emerge through use.
 2. **Host discovery and hand-off** — detect likely local AI tools safely, model their real capabilities, and show a reviewed installation/hand-off plan instead of treating every host as a text-file destination.
 3. **Verification** — complete the path from declared practice through trusted deterministic checks, fresh bounded judgement and explicit human review to a defensible completion decision.
 4. **Purpose-bound context** — let TOPO provide transient context without copying memory into canonical Rack practice or persistent host instructions.
@@ -94,6 +94,27 @@ Phase 3 now has six first-class product tracks which should move together rather
 6. **Evaluation and governance boundaries** — evaluate practice rather than people, preserve personal context as personal context, and prevent implicit movement of context or behavioural exhaust across inside/between/beneath/around relationships.
 
 The relationship model is non-hierarchical: **inside** (personal/local), **between** (teams, projects and collaborations), **beneath** (infrastructure and verification machinery), and **around** (networks, standards and wider ecosystems). These are overlapping relationship lenses, not ranks or automatic inheritance boundaries.
+
+### Immediate product priority — start with a good way of working
+
+The architecture is now ahead of the ordinary product experience. The next implementation priority is therefore not another protocol or integration layer. It is to make RACK feel obvious and useful to somebody who cannot yet describe their own AI working practice.
+
+The first-use test is:
+
+> Someone who has never thought about an “AI working practice” can tell RACK roughly what they are trying to do and, within a few minutes, start with a genuinely good way of working which they can inspect, adapt and improve later.
+
+This means:
+
+- lead with jobs and outcomes — writing something, researching something, making a decision, building or reviewing something — rather than RACK objects;
+- present opinionated **Starter Packs** before individual modules;
+- describe a pack by the behaviour and benefit it gives the person, with its ingredients available underneath;
+- treat the existing module catalogue as composable practice infrastructure rather than the primary first-run experience;
+- let people adopt a good default quickly, then learn their own preferences from real use;
+- keep external packs attributed and inert: imported practice may declare capability needs, but executable hooks, commands and installers remain RACK-owned adapter/runtime concerns;
+- use genuine harness projects as practice and compatibility research, following the Honey model, without turning RACK into another harness-specific runtime;
+- make host capability differences legible in human terms: what becomes standing guidance, what can be mechanically enforced, what remains a RACK check and what still needs human review.
+
+The immediate implementation order is: **first-run language → Starter Packs v2 → harness-pack programme → capability-aware application → practice refinement from use**. TOPO, verification and Ship Check work continue where they make this loop better, rather than as separate concepts a new user must understand first.
 
 The intended host model is:
 
@@ -135,24 +156,33 @@ Scope:
 
 Linux support remains labelled experimental until this iteration's release and smoke criteria are met. The intended outcome is **supported Linux pilot**, beginning with a reliable x86_64 Debian/Ubuntu-compatible distribution path; arm64 and Flatpak should follow as release reliability permits.
 
-#### Iteration 33 — context-aware Set-ups and richer Starter practice
+#### Iteration 33 — lovely first use and Starter Packs v2 · active
 
-Outcome: RACK asks for less configuration and gives people stronger starting practice before asking them to design everything themselves.
+Outcome: somebody can start with a good way of working before they know how to describe their own practice.
 
 Scope:
 
-- let a Set-up express purpose-bound transient context needs without turning them into modules;
-- ask TOPO for suitable context first when the person has enabled local sharing;
-- reuse document import and existing Rack source before asking the person to re-enter information;
-- present TOPO material as reviewable propositions, never silent truth;
-- ask the person only for unresolved gaps;
-- preserve explicit accept/change/reject decisions for working practice;
-- expand Starter packs based on real working patterns rather than generic role labels;
-- deepen Coding practice around the smallest useful change, dependency discipline, simplification, agent hand-off and meaningful verification;
+- lead creation with the work the person is trying to do, not RACK architecture or role labels;
+- make ordinary language warm, concrete and consequence-led across welcome, creation, Work and Starter surfaces;
+- promote opinionated Starter Packs as the main starting point, with individual modules as inspectable ingredients underneath;
+- give every Starter Pack a clear promise and “best for” description so choosing one does not require understanding its module composition;
+- make Writing, Research and Coding each offer several genuinely different starting practices rather than only one route default;
+- preserve the existing review-before-write boundary: a pack is a proposed way of working, not an invisible configuration change;
+- let people move from “use this” → “change a few things” → “show me why” without forcing source-level concepts into the golden path;
+- reuse document import, existing Rack source and reviewed TOPO context before asking the person to repeat information;
+- ask the person only for unresolved gaps or decisions only they can make;
+- begin a **harness-pack programme**: review useful external harnesses and agent-practice projects, extract portable working practice and capability requirements, retain provenance and licensing, and keep their executable runtime machinery out of Starter content;
+- use Honey as the first reference implementation for that programme;
+- deepen Coding practice around smallest useful change, dependency discipline, simplification, agent hand-off and meaningful verification;
+- expand Research and Writing packs to the same level of coherence and usefulness;
 - let Starter practice declare structured automatic, judgement and human verification while preserving the no-executable-shared-code boundary;
-- improve empty states, first-run guidance and the transition from creation to real work.
+- improve the transition from choosing a starting point to doing real work with a detected AI tool.
 
 UX rule:
+
+> Start with a good way of working. Let the person discover and shape their own practice through use.
+
+The underlying rule still applies:
 
 > use what the system can legitimately know; ask the person for what only they can know or decide.
 
@@ -175,7 +205,8 @@ Scope:
 - prevent transient TOPO material being accidentally installed as canonical project instructions;
 - promote Hermes Agent and OpenClaw from simple Preview-destination thinking into agent-runtime integration experiments;
 - test RACK as governed practice plus TOPO as durable context alongside an agent's own short-term/native memory;
-- use external portability projects such as Honey for Devs as compatibility research and attributed practice sources, not as runtime dependencies or reasons to adopt silent installers.
+- use external portability projects such as Honey for Devs as compatibility research and attributed practice sources, not as runtime dependencies or reasons to adopt silent installers;
+- map Starter Pack capability needs onto the host compatibility model so RACK can explain which parts become guidance, hooks/checks or human review on each supported host.
 
 #### Iteration 35 — deterministic verifier registry and local execution · in progress
 
