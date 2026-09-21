@@ -123,9 +123,11 @@ export function CodingRoute({
 
   const header = {
     questions: {
-      title: "Tell Rack about the system it must not guess at",
+      title: "Add the system context only you know",
       intro:
-        "Start with the repository, product and technical constraints. Rack will propose implementation and safety practice next.",
+        starterPackId && starterPackIntent === "use"
+          ? "You have chosen a coding starting point. Add the repository, product and technical constraints, then go straight to final review."
+          : "Add the repository, product and technical constraints. You can tune the implementation and safety practice before final review.",
     },
     practice: {
       title: "How should a coding agent make changes here?",
@@ -159,7 +161,7 @@ export function CodingRoute({
 
       {error ? (
         <div className="notice notice--error" role="alert">
-          <strong>Rack was not created.</strong>
+          <strong>Rack could not finish creating.</strong>
           <span>{error}</span>
         </div>
       ) : null}
@@ -272,13 +274,19 @@ export function CodingRoute({
           </div>
 
           <div className="route-actions">
-            <span>Project facts first. Implementation practice comes next.</span>
+            <span>
+              {starterPackId && starterPackIntent === "use"
+                ? "Only the project facts this starting point cannot know. Final review comes next."
+                : "Project facts first. Then tune the implementation practice."}
+            </span>
             <button
               className="primary-action"
               type="submit"
               disabled={!questionsComplete}
             >
-              Review suggested practice
+              {starterPackId && starterPackIntent === "use"
+                ? "Review this Rack"
+                : "Tune the practice"}
             </button>
           </div>
         </form>
