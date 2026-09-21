@@ -202,3 +202,142 @@
     display: grid;
   }
 }
+
+
+.host-capability {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgb(255 253 247 / 72%);
+}
+
+.host-capability__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.host-capability__heading h3 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.status-pill--attention {
+  border-color: #d7bd7a;
+  background: #fff5d8;
+}
+
+.host-capability__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.host-capability__item {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 58%);
+}
+
+.host-capability__item--warning {
+  border-color: #dfc27c;
+  background: #fff9e8;
+}
+
+.host-capability__item--unavailable {
+  border-color: #d8aaa1;
+  background: #fff3f0;
+}
+
+.host-capability__mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--moss);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.host-capability__copy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.host-capability__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.host-capability__title-row > span {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.host-capability__copy p,
+.host-capability__copy small,
+.host-capability__copy details p,
+.host-capability__assurance {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.48;
+}
+
+.host-capability__copy small {
+  font-size: 0.76rem;
+}
+
+.host-capability__copy details {
+  margin-top: 2px;
+}
+
+.host-capability__copy summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.host-capability__copy details p {
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
+.host-capability__assurance {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+@media (max-width: 820px) {
+  .host-capability__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .host-capability__heading,
+  .host-capability__title-row {
+    display: grid;
+  }
+}
