@@ -159,6 +159,9 @@ Where safe and feasible, RACK should detect supported local tools and:
 - explain the files/context each destination receives;
 - show where persistent instructions will be installed;
 - distinguish persistent practice from transient task context;
+- explain what each part of the selected practice becomes on this host: native host behaviour, RACK-provided behaviour, human review, a clearly described degradation or something currently unavailable;
+- never silently drop a capability just because the host has no equivalent native surface;
+- derive this explanation from the actual current Set-up, not the Starter Pack it originally came from;
 - give a single clear next action after build/install.
 
 Agent runtimes need a different hand-off from coding hosts. RACK should not pretend a generated file is the only integration pattern.
