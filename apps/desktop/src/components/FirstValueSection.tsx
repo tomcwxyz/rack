@@ -11,6 +11,7 @@ type FirstValueSectionProps = {
   onUseWithAi: () => void;
   onUseWithHost: (hostId: HostIntegrationId) => void;
   onImprovePractice: () => void;
+  onExploreStartingPoints: () => void;
   onCheckWork: () => void;
 };
 
@@ -20,6 +21,7 @@ export function FirstValueSection({
   onUseWithAi,
   onUseWithHost,
   onImprovePractice,
+  onExploreStartingPoints,
   onCheckWork,
 }: FirstValueSectionProps) {
   const [hosts, setHosts] = useState<HostDiscovery[]>([]);
@@ -65,10 +67,10 @@ export function FirstValueSection({
       <div className="first-value__hero">
         <div>
           <p className="eyebrow">Start here</p>
-          <h2 id="first-value-title">Put this Rack into real work.</h2>
+          <h2 id="first-value-title">Start working. Shape the practice as you go.</h2>
           <p className="section-intro">
-            You already have a working practice. Choose where you are working,
-            use it with an AI tool, then check the result when it matters.
+            Rack has given you a useful way to start. Use it with real work first;
+            you can change the practice once you have something concrete to react to.
           </p>
         </div>
         <div className="first-value__host-state" aria-live="polite">
@@ -169,9 +171,14 @@ export function FirstValueSection({
             something you always want AI to do.
           </span>
         </div>
-        <button className="quiet-action" type="button" onClick={onImprovePractice}>
-          Improve your practice
-        </button>
+        <div className="button-row">
+          <button className="quiet-action" type="button" onClick={onExploreStartingPoints}>
+            Try another starting point
+          </button>
+          <button className="quiet-action" type="button" onClick={onImprovePractice}>
+            Improve your practice
+          </button>
+        </div>
       </aside>
     </section>
   );
