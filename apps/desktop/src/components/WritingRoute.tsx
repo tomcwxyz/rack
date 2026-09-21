@@ -131,9 +131,11 @@ export function WritingRoute({
 
   const header = {
     questions: {
-      title: "Tell Rack what it cannot reasonably guess",
+      title: "Add the context only you know",
       intro:
-        "Start with the context that is genuinely yours. Rack will suggest common working practice next, so you do not have to write a policy from scratch.",
+        starterPackId && starterPackIntent === "use"
+          ? "You have already chosen a starting practice. Add the context that is specific to your work, then Rack will take you straight to final review."
+          : "Add the context that is specific to your work. You can tune the writing practice before final review.",
     },
     practice: {
       title: "Does this sound like how you want AI to work?",
@@ -167,7 +169,7 @@ export function WritingRoute({
 
       {error ? (
         <div className="notice notice--error" role="alert">
-          <strong>Rack was not created.</strong>
+          <strong>Rack could not finish creating.</strong>
           <span>{error}</span>
         </div>
       ) : null}
@@ -285,14 +287,18 @@ export function WritingRoute({
 
           <div className="route-actions">
             <span>
-              Six short prompts first. Suggested practice comes next.
+              {starterPackId && starterPackIntent === "use"
+                ? "Only the context this starting point cannot know. Final review comes next."
+                : "Your context first. Then tune the practice."}
             </span>
             <button
               className="primary-action"
               type="submit"
               disabled={!questionsComplete}
             >
-              Review suggested practice
+              {starterPackId && starterPackIntent === "use"
+                ? "Review this Rack"
+                : "Tune the practice"}
             </button>
           </div>
         </form>
