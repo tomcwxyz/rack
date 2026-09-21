@@ -10,10 +10,10 @@ Rack is in active pre-release development. The repository contains a working loc
 
 A user can:
 
-- choose a guided starting route for Writing and communications, Research and knowledge work, or Coding and technical work;
+- start from the work they want to do and choose an opinionated Starter Pack without first having to describe their own AI working practice;
 - import existing Word, PowerPoint, spreadsheet, OpenDocument, RTF, EPUB, CSV and text-based PDF material locally as editable Markdown during creation or context maintenance;
 - review every proposed instruction before Rack writes local files;
-- browse a bundled Starter library of reusable instructions and eight starting templates, including richer Coding packs for restrained changes, agent hand-off and verification;
+- choose from nine Starter Packs backed by 48 reusable practices, including richer Coding packs for restrained changes, agent hand-off, Honey-inspired lean coding and verification;
 - inspect exact Starter source, licence and attribution before copying anything into a Rack;
 - keep canonical instructions and Set-ups as inspectable Markdown and YAML;
 - maintain context, voice, boundary and repeatable-task instructions through guided forms;
@@ -47,7 +47,7 @@ Iterations 1–15 established portable local working practice and the optional m
 
 The latest work has also proved a local TOPO → Rack context path. Rack can discover a running TOPO desktop, request purpose-bound context with explicit local permission, let the person review what will be used, and keep that context separate from canonical Rack practice.
 
-Rack is now in **Phase 3 — put practice into context**. The priority is to harden the TOPO/Rack pairing, improve the ordinary UX around context and practice, deliver context appropriately into AI hosts and agents, and complete verification from deterministic checks through to host-level gates.
+Rack is now in **Phase 3 — put practice into context**. The immediate product priority is **lovely first use and Starter Packs v2**: make Rack useful before somebody understands Rack, then let their own working practice emerge through real use. TOPO context, host delivery and verification continue where they strengthen that core loop.
 
 Linux has been promoted in this phase from a later experimental platform to a **supported-pilot target**. It remains experimental in the current release until the Phase 3 packaging, smoke-test and paired-TOPO acceptance criteria are met.
 
@@ -55,15 +55,15 @@ See [`docs/roadmap.md`](docs/roadmap.md) for the active roadmap and [`docs/ux-di
 
 ## Product shape
 
-Rack has three guided starting routes:
+Rack starts from three broad kinds of work:
 
 - Writing and communications — the most polished pilot route;
 - Research and knowledge work;
 - Coding and technical work.
 
-Every route works without an account or model connection. It creates a small starting assembly rather than a locked template: the resulting Markdown and YAML source remains editable through guided or advanced maintenance.
+Every route works without an account or model connection. The person can begin with a coherent Starter Pack rather than an empty configuration, then inspect, adapt or replace the practices inside it. The resulting Markdown and YAML source remains editable through guided or advanced maintenance.
 
-The bundled Starter library is another way into that same source model. The current catalogue contains 40 reusable modules and eight route-oriented templates, with Coding practice covering repository context, restrained implementation, dependency discipline, simplification, componentisation, testing, security, compatibility, agent hand-off and structured verification. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
+The bundled Starter library is another way into that same source model. The current catalogue contains **48 reusable practices and nine Starter Packs**. Packs are the human-facing starting point; the individual practices remain the inspectable ingredients underneath. Coding practice covers repository context, restrained implementation, dependency discipline, simplification, componentisation, testing, security, compatibility, agent hand-off, Honey-inspired lean coding and structured verification. Starter content is inspectable Markdown/YAML, copied into `modules/starter/` only after explicit review. Existing changed IDs are treated as conflicts; Rack never silently replaces local source.
 
 The canonical Rack project is stored locally. Generated destination packages are replaceable output under `.rack/generated/` and are never treated as canonical source. For host hand-off and local verification, the desktop asks for a separate work-project folder; this may deliberately be the Rack folder, but Rack does not assume that relationship.
 
