@@ -11,6 +11,7 @@ export type StarterPackIntent = "use" | "tune";
 export async function applyStarterPackToCreatedRack(
   snapshot: ProjectSnapshot,
   templateId: string | null,
+  moduleIds: string[] | null = null,
 ): Promise<ProjectSnapshot> {
   if (!templateId) return snapshot;
 
@@ -25,7 +26,7 @@ export async function applyStarterPackToCreatedRack(
   const plan = planStarterImport(
     project,
     snapshot,
-    [...template.moduleIds],
+    moduleIds ?? [...template.moduleIds],
     profileId,
   );
 
