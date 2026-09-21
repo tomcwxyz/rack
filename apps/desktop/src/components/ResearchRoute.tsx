@@ -126,9 +126,11 @@ export function ResearchRoute({
 
   const header = {
     questions: {
-      title: "Start with the question and evidence you actually have",
+      title: "Add the question and context only you know",
       intro:
-        "Give Rack the decision context, question and source expectations. It will propose a reusable research method and evidence boundary next.",
+        starterPackId && starterPackIntent === "use"
+          ? "You have chosen a research starting point. Add the decision context, question and evidence constraints, then go straight to final review."
+          : "Add the decision context, question and evidence constraints. You can tune the research practice before final review.",
     },
     practice: {
       title: "How should AI investigate and handle uncertainty?",
@@ -162,7 +164,7 @@ export function ResearchRoute({
 
       {error ? (
         <div className="notice notice--error" role="alert">
-          <strong>Rack was not created.</strong>
+          <strong>Rack could not finish creating.</strong>
           <span>{error}</span>
         </div>
       ) : null}
@@ -287,13 +289,19 @@ export function ResearchRoute({
           </div>
 
           <div className="route-actions">
-            <span>Question and evidence first. Reusable practice comes next.</span>
+            <span>
+              {starterPackId && starterPackIntent === "use"
+                ? "Add the question and evidence context. Final review comes next."
+                : "Question and evidence first. Then tune the practice."}
+            </span>
             <button
               className="primary-action"
               type="submit"
               disabled={!questionsComplete}
             >
-              Review suggested practice
+              {starterPackId && starterPackIntent === "use"
+                ? "Review this Rack"
+                : "Tune the practice"}
             </button>
           </div>
         </form>
