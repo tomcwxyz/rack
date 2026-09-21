@@ -26,6 +26,7 @@ import "../proposition-creation.css";
 
 type ResearchRouteProps = {
   starterPackId: string | null;
+  starterPackModuleIds: string[] | null;
   starterPackIntent: StarterPackIntent;
   onCancel: () => void;
   onCreated: (snapshot: ProjectSnapshot) => void;
@@ -49,6 +50,7 @@ const initialDraft: ResearchDraft = {
 
 export function ResearchRoute({
   starterPackId,
+  starterPackModuleIds,
   starterPackIntent,
   onCancel,
   onCreated,
@@ -109,6 +111,7 @@ export function ResearchRoute({
       const withStartingPoint = await applyStarterPackToCreatedRack(
         snapshot,
         starterPackId,
+        starterPackModuleIds,
       );
       onCreated(withStartingPoint);
     } catch (reason) {
@@ -156,6 +159,7 @@ export function ResearchRoute({
 
       <SelectedStarterPack
         templateId={starterPackId}
+        moduleIds={starterPackModuleIds}
         intent={starterPackIntent}
         onChange={onCancel}
       />
@@ -419,7 +423,10 @@ export function ResearchRoute({
             </article>
           </div>
 
-          <StarterPackReview templateId={starterPackId} />
+          <StarterPackReview
+            templateId={starterPackId}
+            moduleIds={starterPackModuleIds}
+          />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>
