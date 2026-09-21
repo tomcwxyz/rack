@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import {
+  buildHostCapabilityPlan,
   buildTarget,
+  buildVerificationPlan,
+  deriveHostCapabilityNeeds,
   getHostIntegration,
   type HostIntegrationId,
   type RackProject,
 } from "@rack/core";
 import { useHostInstallation } from "../useHostInstallation.js";
+import { HostCapabilitySummary } from "./HostCapabilitySummary.js";
 import { HostRuntimePanel } from "./HostRuntimePanel.js";
 
 type HostHandoffSectionProps = {
@@ -51,6 +55,18 @@ export function HostHandoffSection({
     [integration, project, selectedProfile],
   );
   const artifacts = useMemo(() => targetBuild?.artifacts ?? [], [targetBuild]);
+  const verification = useMemo(
+    () => buildVerificationPlan(project, selectedProfile),
+    [project, selectedProfile],
+  );
+  const capabilityPlan = useMemo(
+    () =>
+      buildHostCapabilityPlan(
+        hostId,
+        deriveHostCapabilityNeeds(targetBuild?.compiled ?? null, verification),
+      ),
+    [hostId, targetBuild?.compiled, verification],
+  );
   const host = useHostInstallation({
     rackRoot: project.root,
     workRoot,
@@ -132,6 +148,8 @@ export function HostHandoffSection({
           <small>{artifacts.length} {artifacts.length === 1 ? "managed file" : "managed files"}</small>
         </div>
       </div>
+
+      {capabilityPlan ? <HostCapabilitySummary plan={capabilityPlan} /> : null}
 
       {hasBuildErrors ? (
         <div className="notice notice--error" role="alert">
