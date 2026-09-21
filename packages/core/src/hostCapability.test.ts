@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildHostCapabilityPlan,
+  deriveHostCapabilityNeeds,
+  resolveHostCapability,
+  type HostCapabilityNeed,
+} from "./hostCapability.js";
+import type { CompiledProfile } from "./compiler.js";
+import type { VerificationPlan } from "./verificationPlan.js";
+
+const coreNeeds: HostCapabilityNeed[] = [
+  { id: "practice.standing-guidance" },
+  { id: "practice.on-demand-skill", count: 2 },
+  { id: "context.transient-task" },
+  { id: "verification.pre-completion", count: 3 },
+  { id: "verification.human-review", count: 1 },
+];
+
+describe("host capability application", () => {
+  it("derives needs from the compiled Set-up rather than pack metadata", () => {
+    const compiled = {
+      modules: [
+        {
+          type: "instruction",
+          harness: { trigger: {} },
+        },
+        {
+          type: "task",
+          harness: { trigger: { command: "review" } },
+        },
+      ],
+    } as unknown as CompiledProfile;
+    const verification = {
+      counts: {
+        automatic: 1,
+        judgement: 1,
+        human: 1,
+        taskSuites: 1,
+        unconfigured: 0,
+      },
+      unconfigured: [],
+    } as unknown as VerificationPlan;
+
+    expect(
+      deriveHostCapabilityNeeds(compiled, verification).map((item) => item.id),
+    ).toEqual([
+      "practice.standing-guidance",
+      "practice.on-demand-skill",
+      "context.transient-task",
+      "verification.pre-completion",
+      "verification.human-review",
+    ]);
+  });
+
+  it("maps Claude Code without silently losing the selected practice", () => {
+    const plan = buildHostCapabilityPlan("claude-code", coreNeeds);
+
+    expect(plan).not.toBeNull();
+    expect(plan?.hasUnavailable).toBe(false);
+    expect(plan?.hasDegradation).toBe(false);
+    expect(plan?.outcomes.map((item) => [item.id, item.resolution])).toEqual([
+      ["practice.standing-guidance", "native"],
+      ["practice.on-demand-skill", "native"],
+      ["context.transient-task", "rack-provided"],
+      ["verification.pre-completion", "rack-provided"],
+      ["verification.human-review", "human"],
+    ]);
+    expect(plan?.outcomes.every((item) => item.preserved)).toBe(true);
+  });
+
+  it("makes Codex command degradation explicit rather than dropping tasks", () => {
+    const task = resolveHostCapability("codex", {
+      id: "practice.on-demand-skill",
+      count: 2,
+    });
+
+    expect(task?.resolution).toBe("degraded");
+    expect(task?.preserved).toBe(true);
+    expect(task?.summary).toContain("documented procedures");
+    expect(task?.consequence).toContain("AGENTS.md");
+  });
+
+  it("does not claim OpenCode has a proved transient task channel", () => {
+    const context = resolveHostCapability("opencode", {
+      id: "context.transient-task",
+    });
+
+    expect(context?.resolution).toBe("unavailable");
+    expect(context?.preserved).toBe(false);
+    expect(context?.consequence).toContain("will not silently persist");
+  });
+
+  it("marks unconfigured verification as a visible degradation", () => {
+    const verification = resolveHostCapability("claude-code", {
+      id: "verification.pre-completion",
+      count: 2,
+      unconfiguredCount: 1,
+    });
+
+    expect(verification?.resolution).toBe("degraded");
+    expect(verification?.preserved).toBe(true);
+    expect(verification?.summary).toContain("needs configuration");
+  });
+
+  it("keeps completion verification with RACK until a native host gate exists", () => {
+    for (const hostId of ["claude-code", "codex", "opencode"] as const) {
+      const verification = resolveHostCapability(hostId, {
+        id: "verification.pre-completion",
+      });
+      expect(verification?.resolution).toBe("rack-provided");
+      expect(verification?.preserved).toBe(true);
+    }
+  });
+
+  it("deduplicates repeated needs while preserving first-use detail", () => {
+    const plan = buildHostCapabilityPlan("claude-code", [
+      { id: "practice.standing-guidance", detail: "first" },
+      { id: "practice.standing-guidance", detail: "second" },
+    ]);
+
+    expect(plan?.outcomes).toHaveLength(1);
+    expect(plan?.outcomes[0]?.detail).toBe("first");
+  });
+});

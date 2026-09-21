@@ -207,7 +207,9 @@ Scope:
 - promote Hermes Agent and OpenClaw from simple Preview-destination thinking into agent-runtime integration experiments;
 - test RACK as governed practice plus TOPO as durable context alongside an agent's own short-term/native memory;
 - use external portability projects such as Honey for Devs as compatibility research and attributed practice sources, not as runtime dependencies or reasons to adopt silent installers;
-- map Starter Pack capability needs onto the host compatibility model so RACK can explain which parts become guidance, hooks/checks or human review on each supported host.
+- map Starter Pack capability needs onto the host compatibility model so RACK can explain which parts become guidance, hooks/checks or human review on each supported host;
+- treat capability application as a consequence model, not just a compatibility matrix: resolve each need as native, RACK-provided, human, degraded or unavailable and make any loss/change of form explicit before installation;
+- derive those needs from the current compiled Set-up and verification plan so the explanation stays true after a person edits or extends their Rack rather than depending on stale Starter Pack metadata.
 
 #### Iteration 35 — deterministic verifier registry and local execution · in progress
 

@@ -188,6 +188,7 @@ export * from "./completionGate.js";
 export * from "./contextSources.js";
 export * from "./flatInstructions.js";
 export * from "./hostAdapters.js";
+export * from "./hostCapability.js";
 export * from "./hostIntegration.js";
 export * from "./hostRuntime.js";
 export * from "./practiceProject.js";
