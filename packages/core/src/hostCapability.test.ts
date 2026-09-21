@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   buildHostCapabilityPlan,
+  deriveHostCapabilityNeeds,
   resolveHostCapability,
   type HostCapabilityNeed,
 } from "./hostCapability.js";
+import type { CompiledProfile } from "./compiler.js";
+import type { VerificationPlan } from "./verificationPlan.js";
 
 const coreNeeds: HostCapabilityNeed[] = [
   { id: "practice.standing-guidance" },
@@ -14,6 +17,41 @@ const coreNeeds: HostCapabilityNeed[] = [
 ];
 
 describe("host capability application", () => {
+  it("derives needs from the compiled Set-up rather than pack metadata", () => {
+    const compiled = {
+      modules: [
+        {
+          type: "instruction",
+          harness: { trigger: {} },
+        },
+        {
+          type: "task",
+          harness: { trigger: { command: "review" } },
+        },
+      ],
+    } as unknown as CompiledProfile;
+    const verification = {
+      counts: {
+        automatic: 1,
+        judgement: 1,
+        human: 1,
+        taskSuites: 1,
+        unconfigured: 0,
+      },
+      unconfigured: [],
+    } as unknown as VerificationPlan;
+
+    expect(
+      deriveHostCapabilityNeeds(compiled, verification).map((item) => item.id),
+    ).toEqual([
+      "practice.standing-guidance",
+      "practice.on-demand-skill",
+      "context.transient-task",
+      "verification.pre-completion",
+      "verification.human-review",
+    ]);
+  });
+
   it("maps Claude Code without silently losing the selected practice", () => {
     const plan = buildHostCapabilityPlan("claude-code", coreNeeds);
 
