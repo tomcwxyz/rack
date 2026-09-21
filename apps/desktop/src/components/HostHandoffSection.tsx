@@ -61,10 +61,12 @@ export function HostHandoffSection({
   );
   const capabilityPlan = useMemo(
     () =>
-      buildHostCapabilityPlan(
-        hostId,
-        deriveHostCapabilityNeeds(targetBuild?.compiled ?? null, verification),
-      ),
+      targetBuild?.compiled
+        ? buildHostCapabilityPlan(
+            hostId,
+            deriveHostCapabilityNeeds(targetBuild.compiled, verification),
+          )
+        : null,
     [hostId, targetBuild?.compiled, verification],
   );
   const host = useHostInstallation({
