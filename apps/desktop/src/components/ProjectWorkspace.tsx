@@ -207,6 +207,16 @@ export function ProjectWorkspace({
             Work
           </button>
           <button
+            className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("library");
+            }}
+          >
+            Starting points
+          </button>
+          <button
             className={`nav-item ${section === "rack" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => {
@@ -259,13 +269,6 @@ export function ProjectWorkspace({
               onClick={() => setSection("checks")}
             >
               Test this Rack
-            </button>
-            <button
-              className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
-              type="button"
-              onClick={() => setSection("library")}
-            >
-              Starting points
             </button>
           </details>
         </nav>
