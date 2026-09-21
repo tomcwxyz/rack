@@ -20,6 +20,7 @@ import {
 } from "./PracticeProposition.js";
 import { MaterialImport } from "./MaterialImport.js";
 import { SelectedStarterPack } from "./SelectedStarterPack.js";
+import { StarterPackReview } from "./StarterPackReview.js";
 import { TopoCreationContext } from "./TopoCreationContext.js";
 import "../proposition-creation.css";
 
@@ -395,6 +396,8 @@ export function CodingRoute({
               <p>{draft.taskPurpose}</p>
             </article>
           </div>
+
+          <StarterPackReview templateId={starterPackId} />
 
           <details className="file-plan">
             <summary>Show the files Rack will create</summary>
