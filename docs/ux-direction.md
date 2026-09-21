@@ -1,7 +1,7 @@
 # RACK UX direction
 
 **Status:** active design direction  
-**Updated:** 31 August 2026
+**Updated:** 21 September 2026
 
 RACK should feel like a practical way to teach AI how to work with you, not like a configuration editor for an instruction compiler.
 
@@ -12,15 +12,18 @@ The underlying architecture remains inspectable. The ordinary interface should e
 The preferred mental model is:
 
 ```text
-What are you doing?
+What do you want to do?
+        ↓
+A good starting way to work
+use this · change a few things · show me why
         ↓
 What do we already know?
-TOPO · existing Rack · imported material
+existing Rack · imported material · optional TOPO
         ↓
-What is still missing?
+Only the genuine gaps
         ↓
-Suggested working practice
-accept · change · leave out
+Your working practice
+shaped through use
         ↓
 Set-up for this kind of work
         ↓
@@ -31,6 +34,20 @@ Do the work
 Verify / review / improve
 ```
 
+## 0. Start with something good
+
+RACK should not assume that somebody can already describe their own “AI working practice”. That is often the thing they need help discovering.
+
+The first interaction should therefore start from a concrete job or outcome and offer an opinionated Starter Pack which is good enough to use immediately. A person should be able to:
+
+- **use this** — accept the starting point and get to real work quickly;
+- **change a few things** — adapt the obvious preferences without learning RACK internals;
+- **show me why** — inspect the underlying practices, provenance and consequences when they want to understand more.
+
+The individual module catalogue remains important infrastructure, but it should not be the primary first-run product. Packs describe benefits and behaviour; modules remain the inspectable ingredients.
+
+RACK should then help a person's actual practice emerge from experience: what they keep changing, what consistently helps, what creates friction and what checks repeatedly matter.
+
 ## 1. Ask for less
 
 The proposition-first work remains the right direction, but TOPO changes what counts as a genuine gap.
@@ -40,7 +57,7 @@ Before asking a person to type context, RACK should consider:
 1. reviewed TOPO context, when local sharing is enabled;
 2. existing local Rack context;
 3. material the person has explicitly imported;
-4. safe Starter defaults;
+4. the selected Starter Pack and safe Starter defaults;
 5. only then, a direct question.
 
 TOPO is not automatically correct. Memory should be shown as reviewable material which can be selected, corrected or ignored.
