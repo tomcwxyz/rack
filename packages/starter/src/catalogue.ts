@@ -41,6 +41,15 @@ export type StarterTemplate = {
   title: string;
   description: string;
   route: Exclude<StarterRoute, "shared">;
+  /**
+   * Plain-language promise shown before somebody needs to understand the
+   * individual practices inside the pack.
+   */
+  promise?: string;
+  /**
+   * Concrete jobs this starting point is particularly good for.
+   */
+  bestFor?: string[];
   moduleIds: string[];
 };
 
@@ -718,6 +727,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "clear-writing",
     title: "Clear everyday writing",
     description: "A small shared writing set for clear, audience-aware drafting and rewriting.",
+    promise: "Start with clear, readable writing that respects the audience and does not make facts up.",
+    bestFor: ["Everyday drafting and rewriting","Notes, updates and explainers"],
     route: "writing",
     moduleIds: [
       "@rack-starter/context.audience",
@@ -731,6 +742,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "client-communication",
     title: "Client communication",
     description: "Warm, concise client-facing writing with clear evidence and next steps.",
+    promise: "Start with warm, concise client communication that stays clear about evidence and what happens next.",
+    bestFor: ["Client emails and updates","Follow-ups and requests"],
     route: "writing",
     moduleIds: [
       "@rack-starter/context.audience",
@@ -745,6 +758,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "evidence-review",
     title: "Evidence review",
     description: "A source-aware research set for assessing, tracing and synthesising evidence.",
+    promise: "Start with careful research that checks sources, traces claims and keeps uncertainty visible.",
+    bestFor: ["Evidence reviews","Briefings and literature scans"],
     route: "research",
     moduleIds: [
       "@rack-starter/context.research-question",
@@ -760,6 +775,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "decision-research",
     title: "Decision research",
     description: "Question-led research that compares options without hiding gaps or uncertainty.",
+    promise: "Start with decision-focused research that compares options without pretending the evidence is stronger than it is.",
+    bestFor: ["Options appraisals","Recommendations and decisions"],
     route: "research",
     moduleIds: [
       "@rack-starter/method.question-first",
@@ -773,6 +790,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "careful-code-change",
     title: "Careful code change",
     description: "A practical coding set for small, componentised changes with real verification.",
+    promise: "Start with restrained coding practice: understand the repository, make the smallest coherent change and verify it properly.",
+    bestFor: ["Feature and bug changes","Existing codebases"],
     route: "coding",
     moduleIds: [
       "@rack-starter/context.repository",
@@ -792,6 +811,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "repository-review",
     title: "Repository review",
     description: "A focused set for reviewing code against intent, safety, compatibility and tests.",
+    promise: "Start with a review practice that looks for real defects, regressions and missing proof rather than reviewing by taste.",
+    bestFor: ["Pull requests and diffs","Safety and regression review"],
     route: "coding",
     moduleIds: [
       "@rack-starter/context.repository",
@@ -806,6 +827,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "lean-code-change",
     title: "Lean code change",
     description: "A restrained implementation set that favours the smallest useful change, disciplined dependencies and explicit verification.",
+    promise: "Start with lean implementation practice that resists speculative abstractions, unnecessary dependencies and unverified completion.",
+    bestFor: ["Small product changes","Maintenance and refactoring"],
     route: "coding",
     moduleIds: [
       "@rack-starter/context.repository",
@@ -823,6 +846,8 @@ export const starterTemplates: readonly StarterTemplate[] = [
     id: "agent-code-handoff",
     title: "Agent code hand-off",
     description: "A coding set for work that may move between AI tools or agents without losing decisions, evidence or safety boundaries.",
+    promise: "Start with a hand-off-friendly practice that keeps decisions, evidence, unresolved risks and next actions intact between agents.",
+    bestFor: ["Multi-agent coding","Long-running technical work"],
     route: "coding",
     moduleIds: [
       "@rack-starter/context.repository",
