@@ -75,6 +75,16 @@ export function RackSection({
     () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
     [reviewReport],
   );
+  const latestReviewByModuleId = useMemo(() => {
+    const latest = new Map<string, (typeof reviewHistory.reviews)[number]>();
+    for (const item of reviewHistory.reviews) {
+      const current = latest.get(item.moduleId);
+      if (!current || item.reviewedAt >= current.reviewedAt) {
+        latest.set(item.moduleId, item);
+      }
+    }
+    return latest;
+  }, [reviewHistory.reviews]);
   const ordinaryDueCount =
     reviewReport.dueCount - reviewReport.experimentDueCount;
 
@@ -102,7 +112,7 @@ export function RackSection({
         </div>
       ) : null}
 
-      {reviewReport.experimentDueCount > 0 ? (
+      {!reviewHistory.loading && reviewReport.experimentDueCount > 0 ? (
         <section aria-labelledby="experiment-review-heading">
           <div className="section-heading">
             <div>
@@ -123,7 +133,7 @@ export function RackSection({
         </section>
       ) : null}
 
-      {ordinaryDueCount > 0 ? (
+      {!reviewHistory.loading && ordinaryDueCount > 0 ? (
         <section aria-labelledby="review-due-heading">
           <div className="section-heading">
             <div>
@@ -184,6 +194,7 @@ export function RackSection({
               <div className="card-grid">
                 {modules.map((module) => {
                   const review = reviewByModuleId.get(module.harness.id);
+                  const latestReview = latestReviewByModuleId.get(module.harness.id);
                   const experiment = module.harness.experiment;
                   const applicationLabels = [
                     ...(module.harness.enforcement.includes("instruction")
@@ -229,6 +240,14 @@ export function RackSection({
                             : review.status === "upcoming"
                               ? `review soon · ${review.reviewAfter}`
                               : `review · ${review.reviewAfter}`}
+                        </span>
+                      ) : latestReview ? (
+                        <span
+                          title={`Reviewed ${new Date(latestReview.reviewedAt * 1000).toLocaleDateString()}`}
+                        >
+                          {latestReview.decision === "remove"
+                            ? "remove decision · still active"
+                            : `reviewed · ${latestReview.decision}`}
                         </span>
                       ) : null}
                       <code>{module.harness.id}</code>
