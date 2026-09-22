@@ -46,9 +46,14 @@ jobs:
             fi
 
             if git merge-base --is-ancestor "refs/remotes/origin/$branch" "refs/remotes/origin/main"; then
-              echo "Deleting merged branch: $branch"
-              gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch"
-              deleted=$((deleted + 1))
+              fetched_sha="$(git rev-parse "refs/remotes/origin/$branch")"
+              echo "Deleting merged branch only if it is still at $fetched_sha: $branch"
+              if git push                 --force-with-lease="refs/heads/$branch:$fetched_sha"                 origin                 --delete "$branch"; then
+                deleted=$((deleted + 1))
+              else
+                echo "Keeping $branch because its remote tip changed or deletion is protected."
+                kept=$((kept + 1))
+              fi
             else
               echo "Keeping branch with commits not contained in main: $branch"
               kept=$((kept + 1))
