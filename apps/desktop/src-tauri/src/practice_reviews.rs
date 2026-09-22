@@ -90,6 +90,40 @@ fn write_new_file(path: &Path, content: &[u8], label: &str) -> Result<(), String
     Ok(())
 }
 
+fn unique_local_path(directory: &Path, prefix: &str, suffix: &str) -> Result<PathBuf, String> {
+    let unique = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|_| "System clock is before the Unix epoch.".to_string())?
+        .as_nanos();
+    Ok(directory.join(format!(
+        "{prefix}-{}-{unique}{suffix}",
+        std::process::id()
+    )))
+}
+
+fn replace_file_atomically(
+    directory: &Path,
+    target: &Path,
+    content: &[u8],
+    temporary_prefix: &str,
+    label: &str,
+) -> Result<(), String> {
+    if path_entry_exists(target)? {
+        ordinary_file(target)?;
+    }
+
+    let temporary = unique_local_path(directory, temporary_prefix, ".tmp")?;
+    write_new_file(&temporary, content, label)?;
+    ordinary_file(&temporary)?;
+
+    if let Err(error) = fs::rename(&temporary, target) {
+        let _ = fs::remove_file(&temporary);
+        return Err(format!("{label}: {error}"));
+    }
+
+    Ok(())
+}
+
 fn inspect_metadata_dir(rack_root: &Path) -> Result<Option<PathBuf>, String> {
     let directory = metadata_dir(rack_root);
     if !path_entry_exists(&directory)? {
@@ -111,11 +145,71 @@ fn inspect_metadata_dir(rack_root: &Path) -> Result<Option<PathBuf>, String> {
     Ok(Some(canonical))
 }
 
+fn prepare_metadata_dir(rack_root: &Path) -> Result<PathBuf, String> {
+    if let Some(directory) = inspect_metadata_dir(rack_root)? {
+        return Ok(directory);
+    }
+
+    let directory = metadata_dir(rack_root);
+    fs::create_dir(&directory)
+        .map_err(|error| format!("Could not prepare Rack local metadata: {error}"))?;
+
+    inspect_metadata_dir(rack_root)?
+        .ok_or_else(|| "Rack local metadata folder disappeared after creation.".to_string())
+}
+
+struct ReviewStateLock {
+    file: fs::File,
+}
+
+impl Drop for ReviewStateLock {
+    fn drop(&mut self) {
+        let _ = self.file.unlock();
+    }
+}
+
+fn acquire_review_lock(directory: &Path) -> Result<ReviewStateLock, String> {
+    let path = directory.join(".practice-reviews.lock");
+    let file = match OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(&path)
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+            ordinary_file(&path)?;
+            OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&path)
+                .map_err(|error| format!("Could not open Rack practice-review lock: {error}"))?
+        }
+        Err(error) => {
+            return Err(format!(
+                "Could not create Rack practice-review lock: {error}"
+            ))
+        }
+    };
+
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| format!("Could not resolve Rack practice-review lock: {error}"))?;
+    if !canonical.starts_with(directory) {
+        return Err("Rack practice-review lock resolves outside local metadata.".to_string());
+    }
+
+    file.lock()
+        .map_err(|error| format!("Could not lock Rack practice-review history: {error}"))?;
+
+    Ok(ReviewStateLock { file })
+}
+
 fn ensure_local_ignore(directory: &Path) -> Result<(), String> {
-    const PRIVATE_BLOCK: &str = "# RACK local review history — keep this block last.\npractice-reviews.json\n.practice-reviews-*.tmp\n.practice-reviews-*.bak\n";
+    const PRIVATE_BLOCK: &str = "# RACK local review history — keep this block last.\npractice-reviews.json\n.practice-reviews-*.tmp\n.practice-reviews.lock\n.rack-gitignore-*.tmp\n";
 
     let ignore = directory.join(".gitignore");
-    if path_entry_exists(&ignore)? {
+    let content = if path_entry_exists(&ignore)? {
         ordinary_file(&ignore)?;
         let existing = fs::read_to_string(&ignore)
             .map_err(|error| format!("Could not read Rack local ignore rules: {error}"))?;
@@ -130,35 +224,20 @@ fn ensure_local_ignore(directory: &Path) -> Result<(), String> {
         }
         updated.push('\n');
         updated.push_str(PRIVATE_BLOCK);
-        fs::write(&ignore, updated)
-            .map_err(|error| format!("Could not update Rack local ignore rules: {error}"))?;
-        return Ok(());
-    }
+        updated
+    } else {
+        format!(
+            "# RACK local state stays out of Git by default.\n*\n!.gitignore\n\n{PRIVATE_BLOCK}"
+        )
+    };
 
-    let content = format!(
-        "# RACK local state stays out of Git by default.\n*\n!.gitignore\n\n{PRIVATE_BLOCK}"
-    );
-    write_new_file(
+    replace_file_atomically(
+        directory,
         &ignore,
         content.as_bytes(),
-        "Could not create Rack local ignore rules",
+        ".rack-gitignore",
+        "Could not update Rack local ignore rules",
     )
-}
-
-fn prepare_metadata_dir(rack_root: &Path) -> Result<PathBuf, String> {
-    if let Some(directory) = inspect_metadata_dir(rack_root)? {
-        ensure_local_ignore(&directory)?;
-        return Ok(directory);
-    }
-
-    let directory = metadata_dir(rack_root);
-    fs::create_dir(&directory)
-        .map_err(|error| format!("Could not prepare Rack local metadata: {error}"))?;
-
-    let canonical = inspect_metadata_dir(rack_root)?
-        .ok_or_else(|| "Rack local metadata folder disappeared after creation.".to_string())?;
-    ensure_local_ignore(&canonical)?;
-    Ok(canonical)
 }
 
 fn valid_date(value: &str) -> bool {
@@ -215,10 +294,6 @@ fn parse_state_file(path: &Path) -> Result<PracticeReviewState, String> {
     Ok(state)
 }
 
-fn backup_path(directory: &Path) -> PathBuf {
-    directory.join(".practice-reviews-recovery.bak")
-}
-
 fn read_state(rack_root: &Path) -> Result<PracticeReviewState, String> {
     let Some(directory) = inspect_metadata_dir(rack_root)? else {
         return Ok(PracticeReviewState {
@@ -228,83 +303,29 @@ fn read_state(rack_root: &Path) -> Result<PracticeReviewState, String> {
     };
 
     let path = directory.join("practice-reviews.json");
-    if path_entry_exists(&path)? {
-        return parse_state_file(&path);
+    if !path_entry_exists(&path)? {
+        return Ok(PracticeReviewState {
+            schema_version: REVIEW_SCHEMA_VERSION.to_string(),
+            reviews: Vec::new(),
+        });
     }
 
-    let backup = backup_path(&directory);
-    if path_entry_exists(&backup)? {
-        let state = parse_state_file(&backup)?;
-        fs::rename(&backup, &path)
-            .map_err(|error| format!("Could not recover Rack practice-review history: {error}"))?;
-        return Ok(state);
-    }
-
-    Ok(PracticeReviewState {
-        schema_version: REVIEW_SCHEMA_VERSION.to_string(),
-        reviews: Vec::new(),
-    })
+    parse_state_file(&path)
 }
 
 fn write_state(rack_root: &Path, state: &PracticeReviewState) -> Result<(), String> {
     let parent = prepare_metadata_dir(rack_root)?;
     let path = parent.join("practice-reviews.json");
-    let backup = backup_path(&parent);
-
-    let path_present = path_entry_exists(&path)?;
-    if path_present {
-        ordinary_file(&path)?;
-    }
-
-    if path_entry_exists(&backup)? {
-        ordinary_file(&backup)?;
-        if path_present {
-            fs::remove_file(&backup)
-                .map_err(|error| format!("Could not clear stale Rack practice-review backup: {error}"))?;
-        } else {
-            fs::rename(&backup, &path)
-                .map_err(|error| format!("Could not recover Rack practice-review history: {error}"))?;
-        }
-    }
-
     let content = serde_json::to_vec_pretty(state)
         .map_err(|error| format!("Could not encode Rack practice-review state: {error}"))?;
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|_| "System clock is before the Unix epoch.".to_string())?
-        .as_nanos();
-    let temporary = parent.join(format!(
-        ".practice-reviews-{}-{unique}.tmp",
-        std::process::id()
-    ));
 
-    write_new_file(
-        &temporary,
+    replace_file_atomically(
+        &parent,
+        &path,
         &content,
-        "Could not prepare Rack practice-review state",
-    )?;
-    ordinary_file(&temporary)?;
-
-    if path_entry_exists(&path)? {
-        ordinary_file(&path)?;
-        fs::rename(&path, &backup)
-            .map_err(|error| format!("Could not back up Rack practice-review state: {error}"))?;
-    }
-
-    if let Err(error) = fs::rename(&temporary, &path) {
-        let _ = fs::remove_file(&temporary);
-        if path_entry_exists(&backup).unwrap_or(false) && !path_entry_exists(&path).unwrap_or(true) {
-            let _ = fs::rename(&backup, &path);
-        }
-        return Err(format!("Could not finish Rack practice-review state: {error}"));
-    }
-
-    if path_entry_exists(&backup)? {
-        ordinary_file(&backup)?;
-        fs::remove_file(&backup)
-            .map_err(|error| format!("Could not remove Rack practice-review backup: {error}"))?;
-    }
-    Ok(())
+        ".practice-reviews",
+        "Could not save Rack practice-review state",
+    )
 }
 
 #[tauri::command]
@@ -312,6 +333,11 @@ pub(crate) fn read_practice_reviews(
     rack_root: String,
 ) -> Result<Vec<PracticeReviewRecord>, String> {
     let rack_root = canonical_rack_root(rack_root)?;
+    let Some(directory) = inspect_metadata_dir(&rack_root)? else {
+        return Ok(Vec::new());
+    };
+    let _lock = acquire_review_lock(&directory)?;
+    ensure_local_ignore(&directory)?;
     Ok(read_state(&rack_root)?.reviews)
 }
 
@@ -322,6 +348,9 @@ pub(crate) fn save_practice_review(
 ) -> Result<Vec<PracticeReviewRecord>, String> {
     validate_input(&review)?;
     let rack_root = canonical_rack_root(rack_root)?;
+    let directory = prepare_metadata_dir(&rack_root)?;
+    let _lock = acquire_review_lock(&directory)?;
+    ensure_local_ignore(&directory)?;
     let mut state = read_state(&rack_root)?;
 
     let reviewed_at = SystemTime::now()
@@ -445,7 +474,8 @@ mod tests {
         let ignore = fs::read_to_string(metadata.join(".gitignore")).unwrap();
         assert!(ignore.lines().any(|line| line.trim() == "practice-reviews.json"));
         assert!(ignore.lines().any(|line| line.trim() == ".practice-reviews-*.tmp"));
-        assert!(ignore.lines().any(|line| line.trim() == ".practice-reviews-*.bak"));
+        assert!(ignore.lines().any(|line| line.trim() == ".practice-reviews.lock"));
+        assert!(ignore.lines().any(|line| line.trim() == ".rack-gitignore-*.tmp"));
         let _ = fs::remove_dir_all(rack);
     }
 
@@ -521,29 +551,31 @@ mod tests {
         let negative = ignore.rfind("!practice-reviews.json").unwrap();
         assert!(positive > negative);
         assert!(ignore.ends_with(
-            "# RACK local review history — keep this block last.\npractice-reviews.json\n.practice-reviews-*.tmp\n.practice-reviews-*.bak\n"
+            "# RACK local review history — keep this block last.\npractice-reviews.json\n.practice-reviews-*.tmp\n.practice-reviews.lock\n.rack-gitignore-*.tmp\n"
         ));
         let _ = fs::remove_dir_all(rack);
     }
 
     #[test]
-    fn interrupted_backup_is_recovered_on_read() {
+    fn review_updates_are_serialized_across_file_handles() {
         let rack = fixture();
-        save_practice_review(
-            rack.to_string_lossy().to_string(),
-            input("keep"),
-        )
-        .unwrap();
+        let directory = prepare_metadata_dir(&rack).unwrap();
+        let first = acquire_review_lock(&directory).unwrap();
 
-        let metadata = rack.join(".rack");
-        let state = metadata.join("practice-reviews.json");
-        let backup = backup_path(&metadata);
-        fs::rename(&state, &backup).unwrap();
+        let second_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(directory.join(".practice-reviews.lock"))
+            .unwrap();
 
-        let read = read_practice_reviews(rack.to_string_lossy().to_string()).unwrap();
-        assert_eq!(read.len(), 1);
-        assert!(state.is_file());
-        assert!(!backup.exists());
+        assert!(matches!(
+            second_file.try_lock(),
+            Err(std::fs::TryLockError::WouldBlock)
+        ));
+
+        drop(first);
+        second_file.try_lock().unwrap();
+        second_file.unlock().unwrap();
         let _ = fs::remove_dir_all(rack);
     }
 
