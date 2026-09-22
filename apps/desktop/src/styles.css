@@ -1229,12 +1229,6 @@ pre {
   --shadow-soft: 0 10px 28px rgb(46 39 28 / 5%);
 }
 
-body {
-  background:
-    linear-gradient(90deg, rgb(49 92 67 / 3%) 0 1px, transparent 1px 100%) 0 0 / 72px 72px,
-    var(--ground);
-}
-
 .wordmark {
   display: inline-flex;
   align-items: center;
