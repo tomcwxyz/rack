@@ -48,7 +48,7 @@ jobs:
             if git merge-base --is-ancestor "refs/remotes/origin/$branch" "refs/remotes/origin/main"; then
               fetched_sha="$(git rev-parse "refs/remotes/origin/$branch")"
               echo "Deleting merged branch only if it is still at $fetched_sha: $branch"
-              if git push                 --force-with-lease="refs/heads/$branch:$fetched_sha"                 origin                 --delete "$branch"; then
+              if git push --force-with-lease="refs/heads/$branch:$fetched_sha" origin ":refs/heads/$branch"; then
                 deleted=$((deleted + 1))
               else
                 echo "Keeping $branch because its remote tip changed or deletion is protected."
