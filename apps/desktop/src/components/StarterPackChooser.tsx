@@ -96,7 +96,7 @@ export function StarterPackChooser({
       </header>
 
       <div className="starter-pack-grid">
-        {packs.map((pack) => {
+        {packs.map((pack, index) => {
           const entries = pack.moduleIds
             .map((id) => getStarterEntry(id))
             .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
@@ -106,12 +106,21 @@ export function StarterPackChooser({
           const selectedCount = pack.moduleIds.filter((id) => customModules.has(id)).length;
 
           return (
-            <article className="starter-pack-card" key={pack.id}>
+            <article
+              className={`starter-pack-card${index === 0 ? " starter-pack-card--recommended" : ""}`}
+              key={pack.id}
+            >
               <div className="starter-pack-card__copy">
-                <p className="eyebrow">{pack.route}</p>
+                <div className="starter-pack-card__meta">
+                  <p className="eyebrow">{pack.route}</p>
+                  {index === 0 ? <span>Good default</span> : null}
+                </div>
                 <h2>{pack.title}</h2>
                 <p className="starter-pack-card__promise">
                   {pack.promise ?? pack.description}
+                </p>
+                <p className="starter-pack-card__count">
+                  {entries.length} practice{entries.length === 1 ? "" : "s"} inside
                 </p>
                 {pack.bestFor?.length ? (
                   <div className="starter-pack-best-for">
@@ -122,7 +131,7 @@ export function StarterPackChooser({
               </div>
 
               <details className="starter-pack-details">
-                <summary>Show me why</summary>
+                <summary>Why this works</summary>
                 <p>{pack.description}</p>
                 <div className="starter-pack-ingredients">
                   {entries.map((entry) => (
@@ -143,10 +152,10 @@ export function StarterPackChooser({
               {customising ? (
                 <div className="starter-pack-customise">
                   <div>
-                    <strong>Choose what to keep</strong>
+                    <strong>Choose what stays</strong>
                     <span>
-                      Start with everything selected. Remove anything that does not fit;
-                      you can inspect exact source at final review.
+                      Everything starts selected. Untick anything that does not fit;
+                      you can still inspect the exact source before Rack writes it.
                     </span>
                   </div>
                   <div className="starter-pack-customise__items">
@@ -218,10 +227,10 @@ export function StarterPackChooser({
 
       <aside className="starter-pack-scratch">
         <div>
-          <strong>None of these quite fit?</strong>
+          <strong>Prefer to build your own?</strong>
           <span>
-            Start from the basic route and build your practice yourself. Nothing
-            stops you adding a Starter Pack later.
+            Start with the route basics and shape the practice yourself. You can
+            still add one of these starting points later.
           </span>
         </div>
         <button
@@ -229,7 +238,7 @@ export function StarterPackChooser({
           type="button"
           onClick={() => onSelect(null, "tune", null)}
         >
-          Start from the basics
+          Build my own
         </button>
       </aside>
     </section>
