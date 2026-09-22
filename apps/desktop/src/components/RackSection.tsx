@@ -327,13 +327,21 @@ export function RackSection({
             decision: PracticeReviewDecision,
             input: PracticeReviewInput,
           ) => {
-            await reviewHistory.save(input);
+            const savedReview = await reviewHistory.save(input);
             const module = reviewing.module;
+            const reconciled =
+              savedReview.decision !== decision ||
+              savedReview.reflection !== input.reflection;
+            const recordedDecision = savedReview.decision;
             setReviewing(null);
 
-            if (decision === "change") {
+            const reconciliationNote = reconciled
+              ? " Rack found that this logical review had already been saved and kept the earlier local record rather than creating a duplicate."
+              : "";
+
+            if (recordedDecision === "change") {
               onStatus(
-                `Review saved for ${module.title}. Change the practice deliberately using the editor now.`,
+                `Review saved for ${module.title}.${reconciliationNote} Change the practice deliberately using the editor now.`,
               );
               if (guidedTypes.has(module.type)) {
                 onGuidedEdit(module as GuidedModule);
@@ -343,15 +351,15 @@ export function RackSection({
               return;
             }
 
-            if (decision === "remove") {
+            if (recordedDecision === "remove") {
               onStatus(
-                `Review saved for ${module.title}: remove was recorded as an explicit decision. The instruction remains active until you deliberately change the Rack or Set-up.`,
+                `Review saved for ${module.title}: remove was recorded as an explicit decision.${reconciliationNote} The instruction remains active until you deliberately change the Rack or Set-up.`,
               );
               return;
             }
 
             onStatus(
-              `Review saved for ${module.title}. This review date is complete and the practice remains active.`,
+              `Review saved for ${module.title}.${reconciliationNote} This review date is complete and the practice remains active.`,
             );
           }}
         />
