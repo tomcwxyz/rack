@@ -271,3 +271,80 @@
   color: var(--muted);
   line-height: 1.4;
 }
+
+/* Alpha polish: Starting points should read like editorial choices, not settings cards. */
+.starter-pack-grid {
+  gap: 1.15rem;
+}
+
+.starter-pack-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: none;
+}
+
+.starter-pack-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--line-strong);
+}
+
+.starter-pack-card--recommended {
+  border-color: #c7b3e6;
+  background: color-mix(in srgb, var(--paper) 96%, var(--accent) 4%);
+}
+
+.starter-pack-card--recommended::before {
+  width: 4px;
+  background: var(--accent);
+}
+
+.starter-pack-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.starter-pack-card__meta .eyebrow {
+  margin-bottom: 0;
+}
+
+.starter-pack-card__meta > span {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #c7b3e6;
+  border-radius: 999px;
+  color: var(--accent-ink);
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.starter-pack-card__count {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.starter-pack-details {
+  border-top-style: dashed;
+}
+
+.starter-pack-details summary {
+  width: fit-content;
+}
+
+.starter-pack-ingredients > div {
+  border-left: 2px solid var(--line-strong);
+  border-radius: 0 0.65rem 0.65rem 0;
+  background: color-mix(in srgb, var(--ground) 72%, var(--paper) 28%);
+}
+
+.starter-pack-scratch {
+  border-radius: 0.75rem;
+  background: rgb(255 253 247 / 35%);
+}
+
