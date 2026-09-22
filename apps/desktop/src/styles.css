@@ -1220,3 +1220,139 @@ pre {
     flex-direction: column;
   }
 }
+
+/* Alpha visual system: quieter workbench surfaces, clearer hierarchy. */
+:root {
+  --line-strong: #bdb5a7;
+  --paper-raised: #fffefa;
+  --accent-ink: #4d277f;
+  --shadow-soft: 0 10px 28px rgb(46 39 28 / 5%);
+}
+
+body {
+  background:
+    linear-gradient(90deg, rgb(49 92 67 / 3%) 0 1px, transparent 1px 100%) 0 0 / 72px 72px,
+    var(--ground);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.07em;
+}
+
+.wordmark::before {
+  content: "";
+  width: 15px;
+  height: 19px;
+  flex: none;
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  background:
+    linear-gradient(var(--accent), var(--accent)) 50% 22% / 100% 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 50% 50% / 100% 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) 50% 78% / 100% 2px no-repeat;
+}
+
+.sidebar {
+  background: rgb(248 245 237 / 92%);
+  backdrop-filter: blur(12px);
+}
+
+.nav-item--active {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.welcome-card,
+.route-form,
+.proposal-review,
+.proposal-card,
+.diagnostic-card,
+.instruction-card,
+.setup-card,
+.topo-connection-indicator {
+  box-shadow: var(--shadow-soft);
+}
+
+.welcome-card {
+  border-top: 3px solid var(--accent);
+}
+
+.welcome-card ul {
+  display: grid;
+  gap: 12px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.welcome-card li {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.welcome-card li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.route-choice-grid {
+  gap: 18px;
+}
+
+.route-choice-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--line);
+  box-shadow: var(--shadow-soft);
+}
+
+.route-choice-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--line-strong);
+}
+
+.route-choice-card--writing::before {
+  background: var(--accent);
+}
+
+.route-choice-card--research::before {
+  background: var(--moss);
+}
+
+.route-choice-card--coding::before {
+  background: var(--ink);
+}
+
+.route-choice-card:hover {
+  border-color: var(--line-strong);
+}
+
+.summary-strip {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.instruction-card,
+.setup-card,
+.diagnostic-card {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.status-pill {
+  border: 1px solid currentColor;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-action,
+  .secondary-action,
+  .quiet-action {
+    transition: none;
+  }
+}
+
