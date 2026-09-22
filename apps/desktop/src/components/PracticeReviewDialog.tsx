@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   PracticeReviewDecision,
   PracticeReviewItem,
@@ -53,6 +53,16 @@ export function PracticeReviewDialog({
       "What happened when you used this practice in real work?",
     [review.experimentQuestion],
   );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const save = async () => {
     if (!reflection.trim()) {
