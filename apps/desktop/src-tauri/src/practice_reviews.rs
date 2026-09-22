@@ -634,6 +634,7 @@ mod tests {
         let rack = fixture();
         let review = input("keep");
         let request_id = review.request_id.clone();
+        let expected_request_id = request_id.clone();
 
         let first = save_practice_review(
             rack.to_string_lossy().to_string(),
@@ -660,7 +661,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(second.len(), 1);
-        assert_eq!(second[0].request_id.as_deref(), Some(second[0].request_id.as_deref().unwrap()));
+        assert_eq!(
+            second[0].request_id.as_deref(),
+            Some(expected_request_id.as_str())
+        );
         let _ = fs::remove_dir_all(rack);
     }
 
