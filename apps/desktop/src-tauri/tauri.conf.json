@@ -36,7 +36,7 @@
     "active": true,
     "targets": "all",
     "category": "DeveloperTool",
-    "shortDescription": "Build your AI working practices.",
-    "longDescription": "Build your AI working practices once, then use and test them across different AI tools."
+    "shortDescription": "Your working practice, across AI tools.",
+    "longDescription": "Start with a good AI working practice, carry it across different tools, check what matters and improve it from real use."
   }
 }
