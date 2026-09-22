@@ -67,10 +67,11 @@ export function FirstValueSection({
       <div className="first-value__hero">
         <div>
           <p className="eyebrow">Start here</p>
-          <h2 id="first-value-title">Start working. Shape the practice as you go.</h2>
+          <h2 id="first-value-title">Put it to work. Then make it yours.</h2>
           <p className="section-intro">
-            Rack has given you a useful way to start. Use it with real work first;
-            you can change the practice once you have something concrete to react to.
+            Your Rack is a starting practice, not a finished rulebook. Use it in
+            real work, check what mattered, then change it from evidence rather than
+            guesswork.
           </p>
         </div>
         <div className="first-value__host-state" aria-live="polite">
@@ -94,7 +95,7 @@ export function FirstValueSection({
         <article className="first-value__step">
           <span className="first-value__number">1</span>
           <div>
-            <p className="eyebrow">Where are you working?</p>
+            <p className="eyebrow">Place</p>
             <h3>{workRoot ? "Work project selected" : "Choose a project or folder"}</h3>
             <p>
               {workRoot
@@ -111,7 +112,7 @@ export function FirstValueSection({
         <article className="first-value__step first-value__step--primary">
           <span className="first-value__number">2</span>
           <div>
-            <p className="eyebrow">Use it</p>
+            <p className="eyebrow">Use</p>
             <h3>
               {readyHosts.length > 0
                 ? "Use a tool already on this computer"
@@ -149,7 +150,7 @@ export function FirstValueSection({
         <article className="first-value__step">
           <span className="first-value__number">3</span>
           <div>
-            <p className="eyebrow">Check it</p>
+            <p className="eyebrow">Check</p>
             <h3>Check important work afterwards</h3>
             <p>
               Run configured checks and review whether the result actually
@@ -167,8 +168,8 @@ export function FirstValueSection({
           <p className="eyebrow">Make it yours</p>
           <strong>Want AI to behave differently?</strong>
           <span>
-            Review the suggested practice, change anything you dislike, or add
-            something you always want AI to do.
+            Notice what happened in real work. Keep what earns its place, change
+            what needs tuning, and remove what is only getting in the way.
           </span>
         </div>
         <div className="button-row">
@@ -176,7 +177,7 @@ export function FirstValueSection({
             Try another starting point
           </button>
           <button className="quiet-action" type="button" onClick={onImprovePractice}>
-            Improve your practice
+            Review and improve
           </button>
         </div>
       </aside>
