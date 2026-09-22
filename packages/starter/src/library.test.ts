@@ -23,7 +23,7 @@ describe("public Starter library", () => {
     expect(starterCatalogue).toHaveLength(48);
     expect(starterTemplates).toHaveLength(9);
     expect(honeyStarterCatalogue).toHaveLength(8);
-    expect(starterCatalogueMetadata.version).toBe("0.4.0");
+    expect(starterCatalogueMetadata.version).toBe("0.5.0");
     expect(starterCatalogueMetadata.license).toBe("mixed");
     expect(starterCatalogueMetadata.licenses).toEqual(["CC BY 4.0", "MIT"]);
   });
