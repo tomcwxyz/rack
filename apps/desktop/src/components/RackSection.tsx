@@ -283,7 +283,7 @@ export function RackSection({
                       <div className="card-actions">
                         {review?.status === "due" ? (
                           <button
-                            className="source-edit-button"
+                            className="quiet-action"
                             type="button"
                             onClick={() => setReviewing({ module, review })}
                           >
