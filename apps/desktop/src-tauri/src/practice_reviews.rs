@@ -52,8 +52,12 @@ fn canonical_rack_root(root: String) -> Result<PathBuf, String> {
     Ok(canonical)
 }
 
+fn metadata_dir(rack_root: &Path) -> PathBuf {
+    rack_root.join(".rack")
+}
+
 fn state_path(rack_root: &Path) -> PathBuf {
-    rack_root.join(".rack").join("practice-reviews.json")
+    metadata_dir(rack_root).join("practice-reviews.json")
 }
 
 fn ordinary_file(path: &Path) -> Result<(), String> {
@@ -63,6 +67,74 @@ fn ordinary_file(path: &Path) -> Result<(), String> {
         return Err("Rack practice-review state is not an ordinary file.".to_string());
     }
     Ok(())
+}
+
+fn inspect_metadata_dir(rack_root: &Path) -> Result<Option<PathBuf>, String> {
+    let directory = metadata_dir(rack_root);
+    if !directory.exists() {
+        return Ok(None);
+    }
+
+    let metadata = fs::symlink_metadata(&directory)
+        .map_err(|error| format!("Could not inspect Rack local metadata: {error}"))?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err("Rack local metadata folder is not an ordinary directory.".to_string());
+    }
+
+    let canonical = directory
+        .canonicalize()
+        .map_err(|error| format!("Could not resolve Rack local metadata: {error}"))?;
+    if !canonical.starts_with(rack_root) {
+        return Err("Rack local metadata resolves outside the selected Rack.".to_string());
+    }
+    Ok(Some(canonical))
+}
+
+fn ensure_local_ignore(directory: &Path) -> Result<(), String> {
+    let ignore = directory.join(".gitignore");
+    if ignore.exists() {
+        ordinary_file(&ignore)?;
+        let existing = fs::read_to_string(&ignore)
+            .map_err(|error| format!("Could not read Rack local ignore rules: {error}"))?;
+        if existing.lines().any(|line| line.trim() == "practice-reviews.json")
+            || existing.lines().any(|line| line.trim() == "*")
+        {
+            return Ok(());
+        }
+
+        let mut updated = existing;
+        if !updated.ends_with('\n') {
+            updated.push('\n');
+        }
+        updated.push_str(
+            "\n# RACK local review history\npractice-reviews.json\n.practice-reviews-*.tmp\n.practice-reviews-*.bak\n",
+        );
+        fs::write(&ignore, updated)
+            .map_err(|error| format!("Could not update Rack local ignore rules: {error}"))?;
+        return Ok(());
+    }
+
+    fs::write(
+        &ignore,
+        "# RACK local state stays out of Git by default.\n*\n!.gitignore\n",
+    )
+    .map_err(|error| format!("Could not create Rack local ignore rules: {error}"))
+}
+
+fn prepare_metadata_dir(rack_root: &Path) -> Result<PathBuf, String> {
+    if let Some(directory) = inspect_metadata_dir(rack_root)? {
+        ensure_local_ignore(&directory)?;
+        return Ok(directory);
+    }
+
+    let directory = metadata_dir(rack_root);
+    fs::create_dir(&directory)
+        .map_err(|error| format!("Could not prepare Rack local metadata: {error}"))?;
+
+    let canonical = inspect_metadata_dir(rack_root)?
+        .ok_or_else(|| "Rack local metadata folder disappeared after creation.".to_string())?;
+    ensure_local_ignore(&canonical)?;
+    Ok(canonical)
 }
 
 fn valid_date(value: &str) -> bool {
@@ -105,7 +177,13 @@ fn validate_input(input: &PracticeReviewInput) -> Result<(), String> {
 }
 
 fn read_state(rack_root: &Path) -> Result<PracticeReviewState, String> {
-    let path = state_path(rack_root);
+    let Some(directory) = inspect_metadata_dir(rack_root)? else {
+        return Ok(PracticeReviewState {
+            schema_version: REVIEW_SCHEMA_VERSION.to_string(),
+            reviews: Vec::new(),
+        });
+    };
+    let path = directory.join("practice-reviews.json");
     if !path.exists() {
         return Ok(PracticeReviewState {
             schema_version: REVIEW_SCHEMA_VERSION.to_string(),
@@ -128,12 +206,8 @@ fn read_state(rack_root: &Path) -> Result<PracticeReviewState, String> {
 }
 
 fn write_state(rack_root: &Path, state: &PracticeReviewState) -> Result<(), String> {
-    let path = state_path(rack_root);
-    let parent = path
-        .parent()
-        .ok_or_else(|| "Rack practice-review state has no parent folder.".to_string())?;
-    fs::create_dir_all(parent)
-        .map_err(|error| format!("Could not prepare Rack local metadata: {error}"))?;
+    let parent = prepare_metadata_dir(rack_root)?;
+    let path = parent.join("practice-reviews.json");
 
     if path.exists() {
         ordinary_file(&path)?;
@@ -257,7 +331,35 @@ mod tests {
         assert_eq!(read.len(), 1);
         assert_eq!(read[0].review_after, "2026-09-22");
         assert!(rack.join(".rack").join("practice-reviews.json").is_file());
+        let ignore = fs::read_to_string(rack.join(".rack").join(".gitignore")).unwrap();
+        assert!(ignore.lines().any(|line| line.trim() == "*"));
         let _ = fs::remove_dir_all(rack);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_metadata_directory_is_rejected() {
+        use std::os::unix::fs::symlink;
+
+        let rack = fixture();
+        let outside = std::env::temp_dir().join(format!(
+            "rack-practice-review-outside-{}-{}",
+            std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(&outside).unwrap();
+        symlink(&outside, rack.join(".rack")).unwrap();
+
+        let error = save_practice_review(
+            rack.to_string_lossy().to_string(),
+            input("keep"),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("not an ordinary directory"));
+        assert!(!outside.join("practice-reviews.json").exists());
+        let _ = fs::remove_dir_all(rack);
+        let _ = fs::remove_dir_all(outside);
     }
 
     #[test]
