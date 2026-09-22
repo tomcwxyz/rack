@@ -9,7 +9,7 @@ const REVIEW_SCHEMA_VERSION: &str = "0.1";
 const MAX_TEXT_LENGTH: usize = 8_000;
 const MAX_REVIEWS: usize = 2_000;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PracticeReviewRecord {
     schema_version: String,
