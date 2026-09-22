@@ -168,7 +168,7 @@ export function App() {
     <main className="welcome-shell">
       <header className="welcome-header">
         <span className="wordmark">rack</span>
-        <p>Teach AI how you work.</p>
+        <p>Your working practice, across AI tools.</p>
       </header>
 
       {openError ? (
@@ -185,9 +185,9 @@ export function App() {
           <p className="eyebrow">Local-first · no account needed</p>
           <h1>Teach AI how you work.</h1>
           <p className="lede">
-            Choose the kind of work you do. Rack gives you a strong starting
-            practice, lets you change anything you dislike, then helps you use
-            it across different AI tools.
+            Start from a good way of working, not an empty prompt. Keep what
+            helps, change what does not, then carry that practice across the AI
+            tools you already use.
           </p>
           <div className="button-row button-row--large">
             <button
@@ -209,15 +209,15 @@ export function App() {
         </div>
         <aside className="welcome-card">
           <p className="eyebrow">Useful in minutes</p>
-          <h2>Start with the work, not the machinery</h2>
+          <h2>A practice you can carry with you</h2>
           <p>
-            Rack proposes a practical way for AI to work with you. You stay in
-            control of what is kept, changed, shared or used for a task.
+            Rack keeps the useful part — how you want AI to work — separate
+            from whichever tool happens to be doing the work today.
           </p>
           <ul>
-            <li>Pick writing, research or coding</li>
-            <li>Review a useful starting practice</li>
-            <li>Use it with the AI tools you already have</li>
+            <li><strong>Start well.</strong> Pick a proven starting point for the work.</li>
+            <li><strong>Use it.</strong> Carry the practice into the AI tool you choose.</li>
+            <li><strong>Learn from it.</strong> Keep, change or remove what real use teaches you.</li>
           </ul>
         </aside>
       </section>
