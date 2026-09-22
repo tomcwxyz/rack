@@ -148,3 +148,36 @@
     min-height: 0;
   }
 }
+
+/* Alpha polish: make Work read as one loop, with one obvious next action. */
+.first-value__step {
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.first-value__step--primary {
+  position: relative;
+  border-color: #c7b3e6;
+  background: var(--paper);
+}
+
+.first-value__step--primary::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 16px 0 0 16px;
+  background: var(--accent);
+}
+
+.first-value__number {
+  border: 1px solid #c7b3e6;
+  background: transparent;
+}
+
+.first-value__improve {
+  border-radius: 12px;
+  border-style: dashed;
+  background: rgb(255 253 247 / 42%);
+}
+
