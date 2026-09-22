@@ -4,6 +4,7 @@ export type PracticeReviewDecision = "keep" | "change" | "remove";
 
 export type PracticeReviewRecord = {
   schemaVersion: "0.1";
+  requestId?: string;
   moduleId: string;
   moduleTitle: string;
   modulePath: string;
