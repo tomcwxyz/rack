@@ -44,9 +44,9 @@ export function PracticeReviewDialog({
 }: PracticeReviewDialogProps) {
   const [decision, setDecision] = useState<PracticeReviewDecision>("keep");
   const [reflection, setReflection] = useState("");
-  const [requestId] = useState(() =>
-    globalThis.crypto?.randomUUID?.() ??
-    `review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+  const requestId = useMemo(
+    () => `practice-review:${module.harness.id}:${review.reviewAfter}`,
+    [module.harness.id, review.reviewAfter],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
