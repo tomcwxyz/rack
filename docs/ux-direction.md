@@ -1,7 +1,7 @@
 # RACK UX direction
 
 **Status:** active design direction  
-**Updated:** 21 September 2026
+**Updated:** 22 September 2026
 
 RACK should feel like a practical way to teach AI how to work with you, not like a configuration editor for an instruction compiler.
 
@@ -15,7 +15,7 @@ The preferred mental model is:
 What do you want to do?
         ↓
 A good starting way to work
-use this · change a few things · show me why
+use this · change a few things · why this works
         ↓
 What do we already know?
 existing Rack · imported material · optional TOPO
@@ -31,7 +31,11 @@ Send/use with an AI tool
         ↓
 Do the work
         ↓
-Verify / review / improve
+Check what matters
+        ↓
+Keep · Change · Remove
+        ↓
+Improve the practice
 ```
 
 ## 0. Start with something good
@@ -42,11 +46,21 @@ The first interaction should therefore start from a concrete job or outcome and 
 
 - **use this** — accept the starting point and get to real work quickly;
 - **change a few things** — adapt the obvious preferences without learning RACK internals;
-- **show me why** — inspect the underlying practices, provenance and consequences when they want to understand more.
+- **why this works** — inspect the underlying practices, provenance and consequences when they want to understand more.
 
 The individual module catalogue remains important infrastructure, but it should not be the primary first-run product. Packs describe benefits and behaviour; modules remain the inspectable ingredients.
 
 RACK should then help a person's actual practice emerge from experience: what they keep changing, what consistently helps, what creates friction and what checks repeatedly matter.
+
+## Alpha interaction and brand rule
+
+For the next alpha, the interface should make the working loop visible without adding another product concept:
+
+> **Start well → use it → check it → learn from it.**
+
+The visual hierarchy should support that loop. Warm paper and ink carry ordinary structure; purple is reserved mainly for choice, action and selected practice; moss is used for calm context, provenance and healthy state. Default surfaces should feel flatter and more editorial, with stronger elevation or colour reserved for a genuine next action. The small rail/rung RACK mark is a signature, not a decorative theme.
+
+Once a Rack exists, primary navigation should follow the same sequence: **Work → Use with AI → Check work → Improve → Starting points**. Technical and organisational machinery stays under progressive disclosure.
 
 ## 1. Ask for less
 
