@@ -158,7 +158,10 @@ fn inspect_metadata_dir(rack_root: &Path) -> Result<Option<PathBuf>, String> {
     let canonical = directory
         .canonicalize()
         .map_err(|error| format!("Could not resolve Rack local metadata: {error}"))?;
-    if !canonical.starts_with(rack_root) {
+    let canonical_root = rack_root
+        .canonicalize()
+        .map_err(|error| format!("Could not resolve the selected Rack: {error}"))?;
+    if !canonical.starts_with(&canonical_root) {
         return Err("Rack local metadata resolves outside the selected Rack.".to_string());
     }
     Ok(Some(canonical))
