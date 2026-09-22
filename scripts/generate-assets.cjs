@@ -14,7 +14,7 @@ if (fs.existsSync(pngSource)) {
   );
 }
 
-const createPlaceholderIco = () => {
+const createRackIco = () => {
   const width = 32;
   const height = 32;
   const pixelBytes = width * height * 4;
@@ -22,7 +22,6 @@ const createPlaceholderIco = () => {
   const maskBytes = maskStride * height;
   const imageBytes = 40 + pixelBytes + maskBytes;
   const imageOffset = 6 + 16;
-
   const output = Buffer.alloc(imageOffset + imageBytes);
 
   // ICONDIR
@@ -50,17 +49,49 @@ const createPlaceholderIco = () => {
   output.writeUInt32LE(pixelBytes, imageOffset + 20);
 
   const pixelsStart = imageOffset + 40;
-  for (let index = 0; index < width * height; index += 1) {
-    const offset = pixelsStart + index * 4;
-    output[offset] = 184; // blue
-    output[offset + 1] = 71; // green
-    output[offset + 2] = 113; // red
-    output[offset + 3] = 255; // alpha
+  const paper = [232, 239, 242, 255]; // BGRA for #f2efe8
+  const accent = [184, 71, 113, 255]; // BGRA for #7147b8
+  const moss = [67, 92, 49, 255]; // BGRA for #315c43
+
+  const insideRoundedTile = (x, y) => {
+    const inset = 2;
+    const radius = 7;
+    if (x < inset || x >= width - inset || y < inset || y >= height - inset) return false;
+    const cx = x < inset + radius ? inset + radius : x >= width - inset - radius ? width - inset - radius - 1 : x;
+    const cy = y < inset + radius ? inset + radius : y >= height - inset - radius ? height - inset - radius - 1 : y;
+    const dx = x - cx;
+    const dy = y - cy;
+    return dx * dx + dy * dy <= radius * radius;
+  };
+
+  const isRail = (x, y) =>
+    y >= 7 && y <= 25 && ((x >= 9 && x <= 11) || (x >= 21 && x <= 23));
+  const isRung = (x, y) =>
+    x >= 11 && x <= 21 && (
+      (y >= 10 && y <= 11) ||
+      (y >= 15 && y <= 16) ||
+      (y >= 20 && y <= 21)
+    );
+
+  // ICO DIB rows are bottom-up.
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const dibY = height - 1 - y;
+      const offset = pixelsStart + (dibY * width + x) * 4;
+      let colour = [0, 0, 0, 0];
+
+      if (insideRoundedTile(x, y)) colour = paper;
+      if (isRail(x, y) || isRung(x, y)) colour = accent;
+      if (x >= 11 && x <= 21 && y >= 15 && y <= 16) colour = moss;
+
+      output[offset] = colour[0];
+      output[offset + 1] = colour[1];
+      output[offset + 2] = colour[2];
+      output[offset + 3] = colour[3];
+    }
   }
 
   return output;
 };
 
-if (!fs.existsSync(icoDestination)) {
-  fs.writeFileSync(icoDestination, createPlaceholderIco());
-}
+fs.writeFileSync(icoDestination, createRackIco());
