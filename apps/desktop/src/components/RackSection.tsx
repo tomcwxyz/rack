@@ -1,9 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   assessPracticeReviews,
+  outstandingPracticeReviews,
+  type PracticeReviewDecision,
+  type PracticeReviewItem,
   type RackProject,
 } from "@rack/core";
 import { localCalendarDate } from "../date.js";
+import { usePracticeReviews, type PracticeReviewInput } from "../usePracticeReviews.js";
+import { PracticeReviewDialog } from "./PracticeReviewDialog.js";
 
 type GuidedModule = Extract<
   RackProject["modules"][number],
@@ -14,6 +19,7 @@ type RackSectionProps = {
   project: RackProject;
   onGuidedEdit: (module: GuidedModule) => void;
   onSourceEdit: (path: string, title: string) => void;
+  onStatus: (message: string) => void;
 };
 
 const typeLabels: Record<string, string> = {
@@ -38,7 +44,13 @@ export function RackSection({
   project,
   onGuidedEdit,
   onSourceEdit,
+  onStatus,
 }: RackSectionProps) {
+  const reviewHistory = usePracticeReviews(project.root);
+  const [reviewing, setReviewing] = useState<{
+    module: RackProject["modules"][number];
+    review: PracticeReviewItem;
+  } | null>(null);
   const groupedModules = useMemo(() => {
     const groups = new Map<string, RackProject["modules"]>();
     for (const module of project.modules) {
@@ -47,9 +59,17 @@ export function RackSection({
     return groups;
   }, [project]);
   const errors = project.diagnostics.filter((item) => item.severity === "error");
-  const reviewReport = useMemo(
+  const scheduledReviewReport = useMemo(
     () => assessPracticeReviews(project.modules, localCalendarDate()),
     [project.modules],
+  );
+  const reviewReport = useMemo(
+    () =>
+      outstandingPracticeReviews(
+        scheduledReviewReport,
+        reviewHistory.reviews,
+      ),
+    [reviewHistory.reviews, scheduledReviewReport],
   );
   const reviewByModuleId = useMemo(
     () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
@@ -74,6 +94,13 @@ export function RackSection({
           <span>{errors.length === 0 ? "Source is ready to build" : "Source needs attention"}</span>
         </div>
       </section>
+
+      {reviewHistory.error ? (
+        <div className="notice notice--error" role="alert">
+          <strong>Local review history could not be read.</strong>
+          <span>{reviewHistory.error}</span>
+        </div>
+      ) : null}
 
       {reviewReport.experimentDueCount > 0 ? (
         <section aria-labelledby="experiment-review-heading">
@@ -235,6 +262,15 @@ export function RackSection({
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">
+                        {review?.status === "due" ? (
+                          <button
+                            className="source-edit-button"
+                            type="button"
+                            onClick={() => setReviewing({ module, review })}
+                          >
+                            Review what happened
+                          </button>
+                        ) : null}
                         {guidedTypes.has(module.type) ? (
                           <button
                             className="source-edit-button"
@@ -261,6 +297,45 @@ export function RackSection({
           ))}
         </div>
       </section>
+
+      {reviewing ? (
+        <PracticeReviewDialog
+          module={reviewing.module}
+          review={reviewing.review}
+          onClose={() => setReviewing(null)}
+          onSaved={async (
+            decision: PracticeReviewDecision,
+            input: PracticeReviewInput,
+          ) => {
+            await reviewHistory.save(input);
+            const module = reviewing.module;
+            setReviewing(null);
+
+            if (decision === "change") {
+              onStatus(
+                `Review saved for ${module.title}. Change the practice deliberately using the editor now.`,
+              );
+              if (guidedTypes.has(module.type)) {
+                onGuidedEdit(module as GuidedModule);
+              } else {
+                onSourceEdit(module.path, module.title);
+              }
+              return;
+            }
+
+            if (decision === "remove") {
+              onStatus(
+                `Review saved for ${module.title}: remove was recorded as an explicit decision. The instruction remains active until you deliberately change the Rack or Set-up.`,
+              );
+              return;
+            }
+
+            onStatus(
+              `Review saved for ${module.title}. This review date is complete and the practice remains active.`,
+            );
+          }}
+        />
+      ) : null}
     </>
   );
 }
