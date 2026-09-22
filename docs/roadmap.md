@@ -114,7 +114,9 @@ This means:
 - use genuine harness projects as practice and compatibility research, following the Honey model, without turning RACK into another harness-specific runtime;
 - make host capability differences legible in human terms: what becomes standing guidance, what can be mechanically enforced, what remains a RACK check and what still needs human review.
 
-The immediate implementation order is: **first-run language → Starter Packs v2 → harness-pack programme → capability-aware application → practice refinement from use**. TOPO, verification and Ship Check work continue where they make this loop better, rather than as separate concepts a new user must understand first.
+The immediate implementation order is: **first-run language → Starter Packs v2 → harness-pack programme → capability-aware application → practice refinement from use → alpha UI/brand release gate**. TOPO, verification and Ship Check work continue where they make this loop better, rather than as separate concepts a new user must understand first.
+
+Before the next alpha is cut, RACK should pass a focused product-quality gate: tighten the warm editorial visual system, reduce competing card/chrome treatments, make the **start well → use it → check it → learn from it** loop legible across surfaces, deepen the existing Writing and Research starting points rather than growing the catalogue, and run the packaged install/launch/first-use path again. The review criteria are recorded in [ui-brand-alpha-review.md](ui-brand-alpha-review.md).
 
 The intended host model is:
 
@@ -156,7 +158,7 @@ Scope:
 
 Linux support remains labelled experimental until this iteration's release and smoke criteria are met. The intended outcome is **supported Linux pilot**, beginning with a reliable x86_64 Debian/Ubuntu-compatible distribution path; arm64 and Flatpak should follow as release reliability permits.
 
-#### Iteration 33 — lovely first use and Starter Packs v2 · active
+#### Iteration 33 — lovely first use and Starter Packs v2 · alpha polish
 
 Outcome: somebody can start with a good way of working before they know how to describe their own practice.
 
