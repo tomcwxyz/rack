@@ -1,0 +1,63 @@
+name: Prune merged branches
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/prune-merged-branches.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rack-prune-merged-branches
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Delete branch tips already contained in main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all branch tips
+        shell: bash
+        run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
+
+      - name: Delete only branches fully merged into main
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          deleted=0
+          kept=0
+
+          while IFS= read -r remote_ref; do
+            branch="${remote_ref#origin/}"
+
+            if [[ "$branch" == "HEAD" || "$branch" == "main" ]]; then
+              continue
+            fi
+
+            if git merge-base --is-ancestor "refs/remotes/origin/$branch" "refs/remotes/origin/main"; then
+              fetched_sha="$(git rev-parse "refs/remotes/origin/$branch")"
+              echo "Deleting merged branch only if it is still at $fetched_sha: $branch"
+              if git push --force-with-lease="refs/heads/$branch:$fetched_sha" origin ":refs/heads/$branch"; then
+                deleted=$((deleted + 1))
+              else
+                echo "Keeping $branch because its remote tip changed or deletion is protected."
+                kept=$((kept + 1))
+              fi
+            else
+              echo "Keeping branch with commits not contained in main: $branch"
+              kept=$((kept + 1))
+            fi
+          done < <(git for-each-ref refs/remotes/origin --format='%(refname:short)' | sort)
+
+          echo "Deleted $deleted merged branches; kept $kept branches with unmerged history."
