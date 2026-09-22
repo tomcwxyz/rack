@@ -25,7 +25,7 @@ describe("Starter catalogue", () => {
     expect(starterTemplates).toHaveLength(8);
     expect(new Set(starterCatalogue.map((entry) => entry.id)).size).toBe(40);
     expect(new Set(starterTemplates.map((template) => template.id)).size).toBe(8);
-    expect(starterCatalogueMetadata.version).toBe("0.2.0");
+    expect(starterCatalogueMetadata.version).toBe("0.3.0");
     expect(starterCatalogueMetadata.license).toBe("CC BY 4.0");
 
     const titles = starterCatalogue.map((entry) => entry.title);
@@ -58,6 +58,37 @@ describe("Starter catalogue", () => {
 
     expect(starterTemplates.find((template) => template.id === "lean-code-change")).toBeDefined();
     expect(starterTemplates.find((template) => template.id === "agent-code-handoff")).toBeDefined();
+  });
+
+  it("gives Writing and Research starting points a complete working loop", () => {
+    const clearWriting = starterTemplates.find((template) => template.id === "clear-writing");
+    expect(clearWriting?.moduleIds).toEqual(
+      expect.arrayContaining([
+        "@rack-starter/method.question-first",
+        "@rack-starter/craft.structure",
+        "@rack-starter/method.draft-review",
+        "@rack-starter/guardrail.evidence",
+      ]),
+    );
+
+    const evidenceReview = starterTemplates.find((template) => template.id === "evidence-review");
+    expect(evidenceReview?.moduleIds).toEqual(
+      expect.arrayContaining([
+        "@rack-starter/method.question-first",
+        "@rack-starter/method.triangulation",
+        "@rack-starter/guardrail.uncertainty",
+      ]),
+    );
+
+    const decisionResearch = starterTemplates.find((template) => template.id === "decision-research");
+    expect(decisionResearch?.moduleIds).toEqual(
+      expect.arrayContaining([
+        "@rack-starter/method.triangulation",
+        "@rack-starter/method.synthesis",
+        "@rack-starter/craft.citation-notes",
+        "@rack-starter/guardrail.source-boundaries",
+      ]),
+    );
   });
 
   it("renders every entry as valid Rack source with attached provenance", () => {
