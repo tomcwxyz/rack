@@ -56,7 +56,13 @@ export function usePracticeReviews(rackRoot: string) {
           { rackRoot, review },
         );
         setReviews(value);
-        return value;
+        const saved = value.find((item) => item.requestId === review.requestId);
+        if (!saved) {
+          throw new Error(
+            "Rack saved review history but could not identify this review afterwards.",
+          );
+        }
+        return saved;
       } catch (reason) {
         const message =
           reason instanceof Error
