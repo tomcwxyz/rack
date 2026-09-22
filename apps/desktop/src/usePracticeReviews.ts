@@ -6,6 +6,7 @@ import type {
 } from "@rack/core";
 
 export type PracticeReviewInput = {
+  requestId: string;
   moduleId: string;
   moduleTitle: string;
   modulePath: string;
