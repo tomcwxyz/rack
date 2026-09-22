@@ -193,6 +193,7 @@ export * from "./hostIntegration.js";
 export * from "./hostRuntime.js";
 export * from "./practiceProject.js";
 export * from "./practiceReview.js";
+export * from "./practiceReviewHistory.js";
 export * from "./practiceResolution.js";
 export * from "./profilePatching.js";
 export * from "./sharedPractice.js";
