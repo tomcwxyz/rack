@@ -180,7 +180,7 @@ export function ProjectWorkspace({
       }
     : null;
 
-  const advancedActive = ["shared", "setups", "checks", "library"].includes(section);
+  const advancedActive = ["shared", "setups", "checks"].includes(section);
   const showWorkTarget = ["preview", "verify", "checks"].includes(section);
   const goHome = () => {
     setHandoffHost(null);
@@ -207,26 +207,6 @@ export function ProjectWorkspace({
             Work
           </button>
           <button
-            className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => {
-              setHandoffHost(null);
-              setSection("library");
-            }}
-          >
-            Starting points
-          </button>
-          <button
-            className={`nav-item ${section === "rack" ? "nav-item--active" : ""}`}
-            type="button"
-            onClick={() => {
-              setHandoffHost(null);
-              setSection("rack");
-            }}
-          >
-            Improve
-          </button>
-          <button
             className={`nav-item ${section === "preview" ? "nav-item--active" : ""}`}
             type="button"
             onClick={() => {
@@ -245,6 +225,26 @@ export function ProjectWorkspace({
             }}
           >
             Check work
+          </button>
+          <button
+            className={`nav-item ${section === "rack" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("rack");
+            }}
+          >
+            Improve
+          </button>
+          <button
+            className={`nav-item ${section === "library" ? "nav-item--active" : ""}`}
+            type="button"
+            onClick={() => {
+              setHandoffHost(null);
+              setSection("library");
+            }}
+          >
+            Starting points
           </button>
 
           <details className="sidebar-advanced" open={advancedActive || undefined}>
