@@ -241,7 +241,8 @@ export function RackSection({
                               ? `review soon · ${review.reviewAfter}`
                               : `review · ${review.reviewAfter}`}
                         </span>
-                      ) : latestReview ? (
+                      ) : null}
+                      {latestReview ? (
                         <span
                           title={`Reviewed ${new Date(latestReview.reviewedAt * 1000).toLocaleDateString()}`}
                         >
