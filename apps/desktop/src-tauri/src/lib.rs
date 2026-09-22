@@ -4,6 +4,7 @@ mod host_discovery;
 mod host_install;
 mod host_runtime;
 mod repository_checks;
+mod practice_reviews;
 mod starter;
 mod topo_local;
 mod work_target;
@@ -662,6 +663,8 @@ pub fn run() {
             host_runtime::run_transient_host_task,
             repository_checks::inspect_repository_checks,
             repository_checks::run_repository_checks,
+            practice_reviews::read_practice_reviews,
+            practice_reviews::save_practice_review,
             work_target::read_work_target,
             work_target::set_work_target,
             topo_local::topo_local_status,
