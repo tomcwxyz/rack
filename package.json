@@ -2,7 +2,7 @@
   "name": "rack",
   "version": "0.0.0",
   "private": true,
-  "description": "Build your AI working practices once, then use and test them across different AI tools.",
+  "description": "Start with a good AI working practice, carry it across tools, check it and improve it from real use.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.15.0",
   "engines": { "node": ">=22.12.0" },
