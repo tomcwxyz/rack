@@ -14,6 +14,7 @@ const MAX_REVIEWS: usize = 2_000;
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PracticeReviewRecord {
     schema_version: String,
+    request_id: Option<String>,
     module_id: String,
     module_title: String,
     module_path: String,
@@ -27,6 +28,7 @@ pub(crate) struct PracticeReviewRecord {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PracticeReviewInput {
+    request_id: String,
     module_id: String,
     module_title: String,
     module_path: String,
@@ -285,6 +287,7 @@ fn validate_text(value: &str, label: &str, required: bool) -> Result<(), String>
 }
 
 fn validate_input(input: &PracticeReviewInput) -> Result<(), String> {
+    validate_text(&input.request_id, "Review request ID", true)?;
     validate_text(&input.module_id, "Practice ID", true)?;
     validate_text(&input.module_title, "Practice title", true)?;
     validate_text(&input.module_path, "Practice path", true)?;
@@ -374,6 +377,15 @@ pub(crate) fn save_practice_review(
     let _lock = acquire_review_lock(&directory)?;
     ensure_local_ignore(&directory)?;
     let mut state = read_state(&rack_root)?;
+    let request_id = review.request_id.trim().to_string();
+
+    if state
+        .reviews
+        .iter()
+        .any(|existing| existing.request_id.as_deref() == Some(request_id.as_str()))
+    {
+        return Ok(state.reviews);
+    }
 
     let reviewed_at = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -382,6 +394,7 @@ pub(crate) fn save_practice_review(
 
     state.reviews.push(PracticeReviewRecord {
         schema_version: REVIEW_SCHEMA_VERSION.to_string(),
+        request_id: Some(request_id),
         module_id: review.module_id.trim().to_string(),
         module_title: review.module_title.trim().to_string(),
         module_path: review.module_path.trim().to_string(),
@@ -424,6 +437,10 @@ mod tests {
 
     fn input(decision: &str) -> PracticeReviewInput {
         PracticeReviewInput {
+            request_id: format!(
+                "review-request-{}",
+                NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+            ),
             module_id: "practice.clear-writing".to_string(),
             module_title: "Clear writing".to_string(),
             module_path: "modules/clear-writing.md".to_string(),
@@ -609,6 +626,41 @@ mod tests {
         drop(first);
         second_file.try_lock().unwrap();
         second_file.unlock().unwrap();
+        let _ = fs::remove_dir_all(rack);
+    }
+
+    #[test]
+    fn repeated_request_id_is_idempotent() {
+        let rack = fixture();
+        let review = input("keep");
+        let request_id = review.request_id.clone();
+
+        let first = save_practice_review(
+            rack.to_string_lossy().to_string(),
+            review,
+        )
+        .unwrap();
+        assert_eq!(first.len(), 1);
+
+        let duplicate = PracticeReviewInput {
+            request_id,
+            module_id: "practice.clear-writing".to_string(),
+            module_title: "Clear writing".to_string(),
+            module_path: "modules/clear-writing.md".to_string(),
+            review_after: "2026-09-22".to_string(),
+            experiment_question: Some("Did this make drafts clearer?".to_string()),
+            reflection: "A retry after an uncertain commit.".to_string(),
+            decision: "keep".to_string(),
+        };
+
+        let second = save_practice_review(
+            rack.to_string_lossy().to_string(),
+            duplicate,
+        )
+        .unwrap();
+
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0].request_id.as_deref(), Some(second[0].request_id.as_deref().unwrap()));
         let _ = fs::remove_dir_all(rack);
     }
 
