@@ -56,10 +56,6 @@ fn metadata_dir(rack_root: &Path) -> PathBuf {
     rack_root.join(".rack")
 }
 
-fn state_path(rack_root: &Path) -> PathBuf {
-    metadata_dir(rack_root).join("practice-reviews.json")
-}
-
 fn ordinary_file(path: &Path) -> Result<(), String> {
     let metadata = fs::symlink_metadata(path)
         .map_err(|error| format!("Could not inspect Rack practice-review state: {error}"))?;
