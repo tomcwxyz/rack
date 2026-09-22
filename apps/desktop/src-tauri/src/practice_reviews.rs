@@ -90,6 +90,22 @@ fn write_new_file(path: &Path, content: &[u8], label: &str) -> Result<(), String
     Ok(())
 }
 
+fn sync_directory(directory: &Path) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        fs::File::open(directory)
+            .and_then(|file| file.sync_all())
+            .map_err(|error| format!("Could not sync Rack local metadata directory: {error}"))?;
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = directory;
+    }
+
+    Ok(())
+}
+
 fn unique_local_path(directory: &Path, prefix: &str, suffix: &str) -> Result<PathBuf, String> {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -121,6 +137,7 @@ fn replace_file_atomically(
         return Err(format!("{label}: {error}"));
     }
 
+    sync_directory(directory)?;
     Ok(())
 }
 
@@ -151,8 +168,13 @@ fn prepare_metadata_dir(rack_root: &Path) -> Result<PathBuf, String> {
     }
 
     let directory = metadata_dir(rack_root);
-    fs::create_dir(&directory)
-        .map_err(|error| format!("Could not prepare Rack local metadata: {error}"))?;
+    match fs::create_dir(&directory) {
+        Ok(()) => sync_directory(rack_root)?,
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(error) => {
+            return Err(format!("Could not prepare Rack local metadata: {error}"))
+        }
+    }
 
     inspect_metadata_dir(rack_root)?
         .ok_or_else(|| "Rack local metadata folder disappeared after creation.".to_string())
@@ -456,6 +478,17 @@ mod tests {
         assert!(!outside.join("practice-reviews.json").exists());
         let _ = fs::remove_dir_all(rack);
         let _ = fs::remove_dir_all(outside);
+    }
+
+    #[test]
+    fn metadata_prepare_accepts_an_existing_directory() {
+        let rack = fixture();
+        fs::create_dir(rack.join(".rack")).unwrap();
+
+        let directory = prepare_metadata_dir(&rack).unwrap();
+
+        assert_eq!(directory, rack.join(".rack").canonicalize().unwrap());
+        let _ = fs::remove_dir_all(rack);
     }
 
     #[test]
