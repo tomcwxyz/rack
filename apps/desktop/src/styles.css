@@ -1297,10 +1297,18 @@ body {
 }
 
 .route-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
 }
 
 .route-choice-card {
+  min-height: 340px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 24px;
   position: relative;
   overflow: hidden;
   border-color: var(--line);
@@ -1329,6 +1337,40 @@ body {
 
 .route-choice-card:hover {
   border-color: var(--line-strong);
+}
+
+.route-choice-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.65rem;
+}
+
+.route-choice-card p:not(.eyebrow),
+.route-choice-card li {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.route-choice-card ul {
+  margin: 18px 0 0;
+  padding-left: 18px;
+}
+
+.route-choice-card .primary-action {
+  align-self: flex-start;
+}
+
+.route-chooser-note {
+  margin-top: 22px;
+  padding: 16px 18px;
+  display: grid;
+  gap: 5px;
+  border-left: 3px solid var(--moss);
+  background: rgb(255 253 247 / 42%);
+}
+
+.route-chooser-note span {
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .summary-strip {
