@@ -1,19 +1,19 @@
-name: Pilot desktop release
+name: Desktop alpha release
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Desktop version to release (must match tauri.conf.json)"
+        description: "Desktop alpha version to release (must match tauri.conf.json)"
         required: true
         type: string
       confirm:
-        description: "Type RELEASE to confirm a signed draft pilot release"
+        description: "Type RELEASE to confirm a signed draft alpha release"
         required: true
         type: string
 
 concurrency:
-  group: pilot-desktop-release
+  group: rack-desktop-alpha-release
   cancel-in-progress: false
 
 jobs:
@@ -40,12 +40,17 @@ jobs:
           set -euo pipefail
 
           if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::Pilot releases must be dispatched from main."
+            echo "::error::Desktop alpha releases must be dispatched from main."
             exit 1
           fi
 
           if [[ "$RELEASE_CONFIRMATION" != "RELEASE" ]]; then
             echo "::error::Type RELEASE in the confirmation input."
+            exit 1
+          fi
+
+          if [[ ! "$EXPECTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-alpha\.[0-9]+$ ]]; then
+            echo "::error::Desktop alpha releases require an x.y.z-alpha.N version."
             exit 1
           fi
 
@@ -71,7 +76,7 @@ jobs:
           [[ "$APPLE_API_KEY_BASE64_SET" != "true" ]] && missing+=("APPLE_API_KEY_BASE64 secret")
 
           if (( ${#missing[@]} > 0 )); then
-            printf '::error::Pilot release configuration is incomplete: %s\n' "$(IFS=', '; echo "${missing[*]}")"
+            printf '::error::Desktop alpha release configuration is incomplete: %s\n' "$(IFS=', '; echo "${missing[*]}")"
             exit 1
           fi
 
@@ -187,12 +192,221 @@ jobs:
             throw "The imported Windows certificate did not expose a thumbprint."
           }
 
-          $pilotVersion = [regex]::Match($env:RELEASE_VERSION, '^(\d+)\.(\d+)\.(\d+)-pilot\.(\d+)$')
-          if (-not $pilotVersion.Success) {
-            throw "Windows pilot releases require an x.y.z-pilot.N version."
+          $alphaVersion = [regex]::Match($env:RELEASE_VERSION, '^(\d+)\.(\d+)\.(\d+)-alpha\.(\d+)
+
+          $config = @{
+            bundle = @{
+              windows = @{
+                certificateThumbprint = $certificate.Thumbprint
+                digestAlgorithm = "sha256"
+                timestampUrl = $env:WINDOWS_TIMESTAMP_URL
+                wix = @{
+                  version = $wixVersion
+                }
+              }
+            }
           }
 
-          $wixVersion = "$($pilotVersion.Groups[1].Value).$($pilotVersion.Groups[2].Value).$($pilotVersion.Groups[3].Value).$($pilotVersion.Groups[4].Value)"
+          $config | ConvertTo-Json -Depth 6 | Set-Content -Path "apps/desktop/src-tauri/release.windows.json" -Encoding utf8
+          Remove-Item $certificatePath -Force
+
+      - name: Import macOS Developer ID certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          certificate_path="$RUNNER_TEMP/rack-developer-id.p12"
+          keychain_path="$RUNNER_TEMP/rack-signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$certificate_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security default-keychain -s "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security import "$certificate_path" -k "$keychain_path" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain_path"
+          security list-keychain -d user -s "$keychain_path"
+
+          signing_identity="$(
+            security find-identity -v -p codesigning "$keychain_path" |
+              sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' |
+              head -n 1
+          )"
+
+          if [[ -z "$signing_identity" ]]; then
+            echo "::error::No Developer ID Application identity was found in APPLE_CERTIFICATE."
+            exit 1
+          fi
+
+          echo "APPLE_SIGNING_IDENTITY=$signing_identity" >> "$GITHUB_ENV"
+          rm -f "$certificate_path"
+
+      - name: Prepare macOS notarisation key
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY}.p8"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$api_key_path"
+          chmod 600 "$api_key_path"
+          echo "APPLE_API_KEY_PATH=$api_key_path" >> "$GITHUB_ENV"
+
+      - name: Build signed alpha installers and draft release
+        uses: tauri-apps/tauri-action@action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
+          CI: true
+        with:
+          projectPath: apps/desktop
+          tagName: rack-v__VERSION__
+          releaseName: "Rack __VERSION__ · alpha"
+          releaseBody: |
+            Rack desktop alpha for hands-on testing across Windows, macOS and Linux.
+
+            This build includes the task-led Starter Pack flow, capability-aware host hand-off and the explicit Keep / Change / Remove practice-refinement loop.
+
+            Release commit: `${{ github.sha }}`
+
+            This release is created as a draft and pre-release. Review every generated artefact and the signing/notarisation checks before publishing it to alpha testers.
+          releaseDraft: true
+          prerelease: true
+          releaseAssetNamePattern: "[name]_[version]_[platform]_[arch][setup][ext]"
+          uploadUpdaterJson: false
+          uploadUpdaterSignatures: false
+          args: ${{ matrix.args }}
+
+      - name: Verify Windows installer signatures
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bundleRoot = "apps/desktop/src-tauri/target/release/bundle"
+          $installers = Get-ChildItem $bundleRoot -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".msi" }
+
+          if (-not $installers) {
+            throw "No Windows installer artefacts were produced."
+          }
+
+          foreach ($installer in $installers) {
+            $signature = Get-AuthenticodeSignature $installer.FullName
+            if ($signature.Status -ne "Valid") {
+              throw "Invalid Authenticode signature for $($installer.FullName): $($signature.Status)"
+            }
+            Write-Host "Valid signature: $($installer.FullName)"
+          }
+
+      - name: Verify macOS signing and notarisation staple
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          app_count=0
+          while IFS= read -r -d '' app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+            app_count=$((app_count + 1))
+          done < <(find apps/desktop/src-tauri/target -type d -name '*.app' -path '*/release/bundle/*' -print0)
+
+          dmg_count=0
+          while IFS= read -r -d '' dmg; do
+            xcrun stapler validate "$dmg"
+            dmg_count=$((dmg_count + 1))
+          done < <(find apps/desktop/src-tauri/target -type f -name '*.dmg' -path '*/release/bundle/*' -print0)
+
+          if (( app_count == 0 || dmg_count == 0 )); then
+            echo "::error::Expected signed .app and notarised .dmg artefacts were not both produced."
+            exit 1
+          fi
+
+      - name: Verify Linux release packages
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          deb="$(find apps/desktop/src-tauri/target -type f -name '*.deb' -path '*/release/bundle/*' -print -quit)"
+          appimage="$(find apps/desktop/src-tauri/target -type f -name '*.AppImage' -path '*/release/bundle/*' -print -quit)"
+
+          if [[ -z "$deb" || -z "$appimage" ]]; then
+            echo "::error::Expected both .deb and AppImage alpha artefacts."
+            exit 1
+          fi
+
+          dpkg-deb --info "$deb" >/dev/null
+          test -s "$appimage"
+          file "$appimage"
+
+  checksums:
+    name: Publish alpha release checksums
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download draft release artefacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets
+
+      - name: Create SHA-256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f release-assets/SHA256SUMS.txt
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f -printf '%f\n' |
+              sort |
+              while IFS= read -r file; do
+                sha256sum "$file"
+              done
+          ) > SHA256SUMS.txt
+
+          if [[ ! -s SHA256SUMS.txt ]]; then
+            echo "::error::No pilot release artefacts were available to checksum."
+            exit 1
+          fi
+
+          cat SHA256SUMS.txt
+
+      - name: Upload SHA-256 manifest
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+)
+          if (-not $alphaVersion.Success) {
+            throw "Windows alpha releases require an x.y.z-alpha.N version."
+          }
+
+          $wixVersion = "$($alphaVersion.Groups[1].Value).$($alphaVersion.Groups[2].Value).$($alphaVersion.Groups[3].Value).$($alphaVersion.Groups[4].Value)"
 
           $config = @{
             bundle = @{

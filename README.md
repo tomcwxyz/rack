@@ -6,7 +6,7 @@ Rack is a local-first desktop application for authoring, assembling, compiling a
 
 ## Status
 
-Rack is in active pre-release development. The repository contains a working local application rather than only a scaffold.
+Rack is in active pre-release development. The first proper cross-platform desktop alpha is **0.2.0-alpha.1**. The repository contains a working local application rather than only a scaffold.
 
 A user can:
 
@@ -24,6 +24,7 @@ A user can:
 - distinguish binding shared practice from adaptable defaults which can be changed or left out locally;
 - review incoming shared-practice updates, including tightening changes, before they apply;
 - mark practice for later review and describe adaptable instructions as experiments with explicit learning questions;
+- review due practice explicitly as **Keep / Change / Remove**, with bounded local review history rather than passive telemetry or automatic source rewriting;
 - publish selected local practice as a validated shared-practice file from either the desktop or CLI;
 - compile a Set-up deterministically;
 - preview, copy and export generated instructions;
@@ -43,13 +44,15 @@ The accepted v0.1 specification, Architecture Decision Records and implementatio
 
 ### Current development focus
 
-Iterations 1–15 established portable local working practice and the optional managed evaluation boundary. Iterations 16–31 extended Rack into shared organisational practice, pilot-ready distribution and explicit verification planning, including the first bounded semantic verification gate.
+RACK is now preparing **0.2.0-alpha.1**, the first proper cross-platform desktop alpha. The task-led first-use flow and Starter Packs v2 are in place, host hand-off explains capability consequences rather than silently dropping practice, and due practice can now be reviewed explicitly as **Keep / Change / Remove**.
 
-The latest work has also proved a local TOPO → Rack context path. Rack can discover a running TOPO desktop, request purpose-bound context with explicit local permission, let the person review what will be used, and keep that context separate from canonical Rack practice.
+The alpha test is the whole loop rather than another architecture milestone:
 
-Rack is now in **Phase 3 — put practice into context**. The immediate product priority is **lovely first use and Starter Packs v2**: make Rack useful before somebody understands Rack, then let their own working practice emerge through real use. TOPO context, host delivery and verification continue where they strengthen that core loop.
+> start with a good way of working → use it with a real AI host → inspect what survives the hand-off → do real work → review what happened → keep, change or remove the practice.
 
-Linux has been promoted in this phase from a later experimental platform to a **supported-pilot target**. It remains experimental in the current release until the Phase 3 packaging, smoke-test and paired-TOPO acceptance criteria are met.
+TOPO context, RACK-owned verification and optional Ship Check evidence remain part of Phase 3 where they strengthen that loop without becoming prerequisites for ordinary local use.
+
+Windows x64, macOS Apple Silicon, macOS Intel and Linux x64 are all built by the alpha release workflow. Linux remains an experimental alpha target until its paired-TOPO and wider pilot acceptance criteria are met.
 
 See [`docs/roadmap.md`](docs/roadmap.md) for the active roadmap and [`docs/ux-direction.md`](docs/ux-direction.md) for the current UX direction.
 
