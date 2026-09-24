@@ -7,9 +7,13 @@ on:
       - main
     paths:
       - ".github/workflows/prune-merged-branches.yml"
+  pull_request_target:
+    types:
+      - closed
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: rack-prune-merged-branches
@@ -17,7 +21,11 @@ concurrency:
 
 jobs:
   prune:
-    name: Delete branch tips already contained in main
+    name: Delete safely merged branch tips
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      (github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -28,16 +36,135 @@ jobs:
         shell: bash
         run: git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
 
-      - name: Delete only branches fully merged into main
+      - name: Delete the just-merged PR branch when its tip is unchanged
+        if: github.event_name == 'pull_request_target'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGED_BRANCH: ${{ github.event.pull_request.head.ref }}
+          MERGED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$MERGED_BRANCH" || "$MERGED_BRANCH" == "main" ]]; then
+            exit 0
+          fi
+
+          if ! open_pr_output="$(
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
+              --jq '.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'") | .head.ref'
+          )"; then
+            echo "::error::Could not fetch the complete open pull-request inventory; refusing to prune."
+            exit 1
+          fi
+
+          while IFS= read -r open_branch; do
+            if [[ "$open_branch" == "$MERGED_BRANCH" ]]; then
+              echo "Keeping $MERGED_BRANCH because it still backs another open pull request."
+              exit 0
+            fi
+          done <<< "$open_pr_output"
+
+          remote_ref="refs/remotes/origin/$MERGED_BRANCH"
+          if ! git show-ref --verify --quiet "$remote_ref"; then
+            echo "Branch is already absent: $MERGED_BRANCH"
+            exit 0
+          fi
+
+          current_sha="$(git rev-parse "$remote_ref")"
+          if [[ "$current_sha" != "$MERGED_HEAD_SHA" ]]; then
+            echo "Keeping $MERGED_BRANCH because its remote tip changed after the merged PR."
+            exit 0
+          fi
+
+          echo "Deleting merged PR branch at unchanged tip $MERGED_HEAD_SHA: $MERGED_BRANCH"
+          git push \
+            --force-with-lease="refs/heads/$MERGED_BRANCH:$MERGED_HEAD_SHA" \
+            origin \
+            ":refs/heads/$MERGED_BRANCH"
+
+      - name: Prune historical merged branches safely
+        if: github.event_name != 'pull_request_target'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
+          if ! open_pr_output="$(
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
+              --jq '.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'") | .head.ref'
+          )"; then
+            echo "::error::Could not fetch the complete open pull-request inventory; refusing to prune."
+            exit 1
+          fi
+
+          if ! merged_pr_output="$(
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/pulls?state=closed&per_page=100&sort=updated&direction=desc" \
+              --jq '.[] | select(.merged_at != null and .head.repo.full_name == "'"$GITHUB_REPOSITORY"'") | [.head.ref, .head.sha] | @tsv'
+          )"; then
+            echo "::error::Could not fetch the complete merged pull-request inventory; refusing to prune."
+            exit 1
+          fi
+
+          declare -A open_pr_branches=()
+          while IFS= read -r open_branch; do
+            [[ -n "$open_branch" ]] && open_pr_branches["$open_branch"]=1
+          done <<< "$open_pr_output"
+
           deleted=0
           kept=0
 
+          is_open_pr_branch() {
+            local candidate="$1"
+            [[ -n "${open_pr_branches[$candidate]+x}" ]]
+          }
+
+          delete_if_unchanged() {
+            local branch="$1"
+            local expected_sha="$2"
+            local reason="$3"
+
+            if [[ -z "$branch" || "$branch" == "main" ]]; then
+              return
+            fi
+
+            if is_open_pr_branch "$branch"; then
+              echo "Keeping open PR branch: $branch"
+              kept=$((kept + 1))
+              return
+            fi
+
+            local remote_ref="refs/remotes/origin/$branch"
+            if ! git show-ref --verify --quiet "$remote_ref"; then
+              return
+            fi
+
+            local current_sha
+            current_sha="$(git rev-parse "$remote_ref")"
+            if [[ "$current_sha" != "$expected_sha" ]]; then
+              echo "Keeping $branch because its tip changed after $reason."
+              kept=$((kept + 1))
+              return
+            fi
+
+            echo "Deleting $reason branch at unchanged tip $expected_sha: $branch"
+            if git push \
+              --force-with-lease="refs/heads/$branch:$expected_sha" \
+              origin \
+              ":refs/heads/$branch"; then
+              deleted=$((deleted + 1))
+              git update-ref -d "$remote_ref" || true
+            else
+              echo "Keeping $branch because deletion was protected or its remote tip changed."
+              kept=$((kept + 1))
+            fi
+          }
+
+          # Catch ordinary merge commits and branches merged outside a pull request.
           while IFS= read -r remote_ref; do
             branch="${remote_ref#origin/}"
 
@@ -45,19 +172,21 @@ jobs:
               continue
             fi
 
-            if git merge-base --is-ancestor "refs/remotes/origin/$branch" "refs/remotes/origin/main"; then
-              fetched_sha="$(git rev-parse "refs/remotes/origin/$branch")"
-              echo "Deleting merged branch only if it is still at $fetched_sha: $branch"
-              if git push --force-with-lease="refs/heads/$branch:$fetched_sha" origin ":refs/heads/$branch"; then
-                deleted=$((deleted + 1))
-              else
-                echo "Keeping $branch because its remote tip changed or deletion is protected."
-                kept=$((kept + 1))
-              fi
-            else
-              echo "Keeping branch with commits not contained in main: $branch"
-              kept=$((kept + 1))
+            if git merge-base --is-ancestor \
+              "refs/remotes/origin/$branch" \
+              "refs/remotes/origin/main"; then
+              sha="$(git rev-parse "refs/remotes/origin/$branch")"
+              delete_if_unchanged "$branch" "$sha" "fully merged"
             fi
-          done < <(git for-each-ref refs/remotes/origin --format='%(refname:short)' | sort)
+          done < <(
+            git for-each-ref refs/remotes/origin --format='%(refname:short)' | sort
+          )
 
-          echo "Deleted $deleted merged branches; kept $kept branches with unmerged history."
+          # Catch squash/rebase merges. Only delete when the branch still points
+          # at the exact head SHA recorded on a merged, same-repository PR.
+          while IFS=$'\t' read -r branch merged_sha; do
+            [[ -z "$branch" || -z "$merged_sha" ]] && continue
+            delete_if_unchanged "$branch" "$merged_sha" "merged PR"
+          done <<< "$merged_pr_output"
+
+          echo "Deleted $deleted merged branches; kept $kept protected, changed or active branches."
