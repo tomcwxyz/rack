@@ -60,13 +60,13 @@ export function PracticeReviewDialog({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || saving) return;
       event.preventDefault();
       onClose();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, saving]);
 
   const save = async () => {
     if (!reflection.trim()) {
@@ -116,7 +116,12 @@ export function PracticeReviewDialog({
             <h2 id="practice-review-title">{module.title}</h2>
             <span className="muted-copy">Review due {review.reviewAfter}</span>
           </div>
-          <button className="quiet-action" type="button" onClick={onClose}>
+          <button
+            className="quiet-action"
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+          >
             Close
           </button>
         </header>
@@ -195,7 +200,12 @@ export function PracticeReviewDialog({
             Review history stays local in <code>.rack/practice-reviews.json</code>.
           </span>
           <div className="button-row">
-            <button className="quiet-action" type="button" onClick={onClose}>
+            <button
+              className="quiet-action"
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancel
             </button>
             <button
