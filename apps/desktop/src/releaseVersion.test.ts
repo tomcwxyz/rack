@@ -18,7 +18,7 @@ const cargoLock = readFileSync(
   new URL("../src-tauri/Cargo.lock", import.meta.url),
   "utf8",
 );
-const pilotReleaseWorkflow = readFileSync(
+const alphaReleaseWorkflow = readFileSync(
   new URL("../../../.github/workflows/pilot-release.yml", import.meta.url),
   "utf8",
 );
@@ -33,7 +33,7 @@ const lockedRackVersion =
   )?.[1] ?? "";
 
 const publishJob =
-  pilotReleaseWorkflow.split("\n  publish:")[1]?.split("\n  checksums:")[0] ?? "";
+  alphaReleaseWorkflow.split("\n  publish:")[1]?.split("\n  checksums:")[0] ?? "";
 
 const semver =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -52,13 +52,13 @@ describe("desktop release version", () => {
     expect(bundle.icon).toEqual(["icons/icon.png"]);
   });
 
-  it("keeps Linux in the supported pilot release matrix", () => {
-    expect(pilotReleaseWorkflow).toContain("label: Linux x64");
-    expect(pilotReleaseWorkflow).toContain('--bundles deb,appimage');
+  it("keeps Linux in the supported alpha release matrix", () => {
+    expect(alphaReleaseWorkflow).toContain("label: Linux x64");
+    expect(alphaReleaseWorkflow).toContain('--bundles deb,appimage');
     expect(publishJob).toContain("Install Linux desktop dependencies");
     expect(publishJob).toContain("libwebkit2gtk-4.1-dev");
     expect(publishJob).toContain("patchelf");
-    expect(pilotReleaseWorkflow).toContain("Publish release checksums");
-    expect(pilotReleaseWorkflow).toContain("SHA256SUMS.txt");
+    expect(alphaReleaseWorkflow).toContain("Publish alpha release checksums");
+    expect(alphaReleaseWorkflow).toContain("SHA256SUMS.txt");
   });
 });

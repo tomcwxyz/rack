@@ -2,11 +2,11 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const nextVersion = process.argv[2];
-const pilotVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-pilot\.(0|[1-9]\d*)$/;
+const desktopPrereleaseVersion = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-(alpha|pilot)\.(0|[1-9]\d*)$/;
 
-if (!nextVersion || !pilotVersion.test(nextVersion)) {
+if (!nextVersion || !desktopPrereleaseVersion.test(nextVersion)) {
   console.error(
-    "Usage: pnpm desktop:version <semver-pilot-version>, for example 0.1.0-pilot.2",
+    "Usage: pnpm desktop:version <semver-prerelease-version>, for example 0.2.0-alpha.1 or 0.2.0-pilot.1",
   );
   process.exit(1);
 }
