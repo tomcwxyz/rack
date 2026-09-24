@@ -21,16 +21,16 @@ jobs:
     name: Release preflight
     runs-on: ubuntu-latest
     env:
-      EXPECTED_VERSION: \${{ inputs.version }}
-      RELEASE_CONFIRMATION: \${{ inputs.confirm }}
-      WINDOWS_CERTIFICATE_SET: \${{ secrets.WINDOWS_CERTIFICATE != '' }}
-      WINDOWS_CERTIFICATE_PASSWORD_SET: \${{ secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
-      WINDOWS_TIMESTAMP_URL_SET: \${{ vars.WINDOWS_TIMESTAMP_URL != '' }}
-      APPLE_CERTIFICATE_SET: \${{ secrets.APPLE_CERTIFICATE != '' }}
-      APPLE_CERTIFICATE_PASSWORD_SET: \${{ secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
-      APPLE_API_KEY_SET: \${{ secrets.APPLE_API_KEY != '' }}
-      APPLE_API_ISSUER_SET: \${{ secrets.APPLE_API_ISSUER != '' }}
-      APPLE_API_KEY_BASE64_SET: \${{ secrets.APPLE_API_KEY_BASE64 != '' }}
+      EXPECTED_VERSION: ${{ inputs.version }}
+      RELEASE_CONFIRMATION: ${{ inputs.confirm }}
+      WINDOWS_CERTIFICATE_SET: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+      WINDOWS_CERTIFICATE_PASSWORD_SET: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD != '' }}
+      WINDOWS_TIMESTAMP_URL_SET: ${{ vars.WINDOWS_TIMESTAMP_URL != '' }}
+      APPLE_CERTIFICATE_SET: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      APPLE_CERTIFICATE_PASSWORD_SET: ${{ secrets.APPLE_CERTIFICATE_PASSWORD != '' }}
+      APPLE_API_KEY_SET: ${{ secrets.APPLE_API_KEY != '' }}
+      APPLE_API_ISSUER_SET: ${{ secrets.APPLE_API_ISSUER != '' }}
+      APPLE_API_KEY_BASE64_SET: ${{ secrets.APPLE_API_KEY_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -75,8 +75,8 @@ jobs:
           [[ "$APPLE_API_ISSUER_SET" != "true" ]] && missing+=("APPLE_API_ISSUER secret")
           [[ "$APPLE_API_KEY_BASE64_SET" != "true" ]] && missing+=("APPLE_API_KEY_BASE64 secret")
 
-          if (( \${#missing[@]} > 0 )); then
-            printf '::error::Desktop alpha release configuration is incomplete: %s\n' "$(IFS=', '; echo "\${missing[*]}")"
+          if (( ${#missing[@]} > 0 )); then
+            printf '::error::Desktop alpha release configuration is incomplete: %s\n' "$(IFS=', '; echo "${missing[*]}")"
             exit 1
           fi
 
@@ -98,7 +98,7 @@ jobs:
         run: pnpm check
 
   publish:
-    name: \${{ matrix.label }}
+    name: ${{ matrix.label }}
     needs: preflight
     permissions:
       contents: write
@@ -124,7 +124,7 @@ jobs:
             macos: false
             linux: true
 
-    runs-on: \${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}
     timeout-minutes: 45
 
     steps:
@@ -142,7 +142,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: \${{ matrix.macos && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.macos && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Cache Rust build output
         uses: Swatinem/rust-cache@v2
@@ -177,10 +177,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         env:
-          WINDOWS_CERTIFICATE: \${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: \${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-          WINDOWS_TIMESTAMP_URL: \${{ vars.WINDOWS_TIMESTAMP_URL }}
-          RELEASE_VERSION: \${{ inputs.version }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ vars.WINDOWS_TIMESTAMP_URL }}
+          RELEASE_VERSION: ${{ inputs.version }}
         run: |
           $ErrorActionPreference = "Stop"
           $certificatePath = Join-Path $env:RUNNER_TEMP "rack-code-signing.pfx"
@@ -219,8 +219,8 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         env:
-          APPLE_CERTIFICATE: \${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: \${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           set -euo pipefail
 
@@ -256,12 +256,12 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         env:
-          APPLE_API_KEY: \${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_BASE64: \${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
         run: |
           set -euo pipefail
 
-          api_key_path="$RUNNER_TEMP/AuthKey_\${APPLE_API_KEY}.p8"
+          api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY}.p8"
           printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$api_key_path"
           chmod 600 "$api_key_path"
           echo "APPLE_API_KEY_PATH=$api_key_path" >> "$GITHUB_ENV"
@@ -269,11 +269,11 @@ jobs:
       - name: Build signed alpha installers and draft release
         uses: tauri-apps/tauri-action@action-v1.0.0
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: \${{ env.APPLE_SIGNING_IDENTITY }}
-          APPLE_API_KEY: \${{ secrets.APPLE_API_KEY }}
-          APPLE_API_ISSUER: \${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY_PATH: \${{ env.APPLE_API_KEY_PATH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
           CI: true
         with:
           projectPath: apps/desktop
@@ -284,7 +284,7 @@ jobs:
 
             This build includes the task-led Starter Pack flow, capability-aware host hand-off and the explicit Keep / Change / Remove practice-refinement loop.
 
-            Release commit: \`\${{ github.sha }}\`
+            Release commit: \`${{ github.sha }}\`
 
             This release is created as a draft and pre-release. Review every generated artefact and the signing/notarisation checks before publishing it to alpha testers.
           releaseDraft: true
@@ -292,7 +292,7 @@ jobs:
           releaseAssetNamePattern: "[name]_[version]_[platform]_[arch][setup][ext]"
           uploadUpdaterJson: false
           uploadUpdaterSignatures: false
-          args: \${{ matrix.args }}
+          args: ${{ matrix.args }}
 
       - name: Verify Windows installer signatures
         if: runner.os == 'Windows'
@@ -366,8 +366,8 @@ jobs:
       - name: Download draft release artefacts
         shell: bash
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: rack-v\${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
         run: |
           set -euo pipefail
           mkdir release-assets
@@ -399,8 +399,8 @@ jobs:
       - name: Upload SHA-256 manifest
         shell: bash
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: rack-v\${{ inputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: rack-v${{ inputs.version }}
         run: |
           set -euo pipefail
           gh release upload "$RELEASE_TAG" SHA256SUMS.txt \
