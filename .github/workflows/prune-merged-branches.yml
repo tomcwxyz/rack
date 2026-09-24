@@ -50,22 +50,6 @@ jobs:
             exit 0
           fi
 
-          if ! open_pr_output="$(
-            gh api --paginate \
-              "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
-              --jq '.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'") | .head.ref'
-          )"; then
-            echo "::error::Could not fetch the complete open pull-request inventory; refusing to prune."
-            exit 1
-          fi
-
-          while IFS= read -r open_branch; do
-            if [[ "$open_branch" == "$MERGED_BRANCH" ]]; then
-              echo "Keeping $MERGED_BRANCH because it still backs another open pull request."
-              exit 0
-            fi
-          done <<< "$open_pr_output"
-
           remote_ref="refs/remotes/origin/$MERGED_BRANCH"
           if ! git show-ref --verify --quiet "$remote_ref"; then
             echo "Branch is already absent: $MERGED_BRANCH"
@@ -75,6 +59,24 @@ jobs:
           current_sha="$(git rev-parse "$remote_ref")"
           if [[ "$current_sha" != "$MERGED_HEAD_SHA" ]]; then
             echo "Keeping $MERGED_BRANCH because its remote tip changed after the merged PR."
+            exit 0
+          fi
+
+          repo_owner="${GITHUB_REPOSITORY%%/*}"
+          if ! open_count="$(
+            gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/pulls" \
+              -f state=open \
+              -f head="$repo_owner:$MERGED_BRANCH" \
+              -f per_page=100 \
+              --jq '[.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'")] | length'
+          )"; then
+            echo "::error::Could not recheck open pull requests for $MERGED_BRANCH; refusing to prune."
+            exit 1
+          fi
+
+          if [[ "$open_count" != "0" ]]; then
+            echo "Keeping $MERGED_BRANCH because it still backs another open pull request."
             exit 0
           fi
 
@@ -92,15 +94,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          if ! open_pr_output="$(
-            gh api --paginate \
-              "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
-              --jq '.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'") | .head.ref'
-          )"; then
-            echo "::error::Could not fetch the complete open pull-request inventory; refusing to prune."
-            exit 1
-          fi
-
           if ! merged_pr_output="$(
             gh api --paginate \
               "repos/$GITHUB_REPOSITORY/pulls?state=closed&per_page=100&sort=updated&direction=desc" \
@@ -110,17 +103,27 @@ jobs:
             exit 1
           fi
 
-          declare -A open_pr_branches=()
-          while IFS= read -r open_branch; do
-            [[ -n "$open_branch" ]] && open_pr_branches["$open_branch"]=1
-          done <<< "$open_pr_output"
-
           deleted=0
           kept=0
+          repo_owner="${GITHUB_REPOSITORY%%/*}"
 
-          is_open_pr_branch() {
-            local candidate="$1"
-            [[ -n "${open_pr_branches[$candidate]+x}" ]]
+          has_open_pr() {
+            local branch="$1"
+            local open_count
+
+            if ! open_count="$(
+              gh api --method GET \
+                "repos/$GITHUB_REPOSITORY/pulls" \
+                -f state=open \
+                -f head="$repo_owner:$branch" \
+                -f per_page=100 \
+                --jq '[.[] | select(.head.repo.full_name == "'"$GITHUB_REPOSITORY"'")] | length'
+            )"; then
+              echo "::error::Could not recheck open pull requests for $branch; refusing to prune."
+              exit 1
+            fi
+
+            [[ "$open_count" != "0" ]]
           }
 
           delete_if_unchanged() {
@@ -129,12 +132,6 @@ jobs:
             local reason="$3"
 
             if [[ -z "$branch" || "$branch" == "main" ]]; then
-              return
-            fi
-
-            if is_open_pr_branch "$branch"; then
-              echo "Keeping open PR branch: $branch"
-              kept=$((kept + 1))
               return
             fi
 
@@ -147,6 +144,14 @@ jobs:
             current_sha="$(git rev-parse "$remote_ref")"
             if [[ "$current_sha" != "$expected_sha" ]]; then
               echo "Keeping $branch because its tip changed after $reason."
+              kept=$((kept + 1))
+              return
+            fi
+
+            # Recheck GitHub immediately before deletion so a PR opened during
+            # this workflow protects its branch too.
+            if has_open_pr "$branch"; then
+              echo "Keeping open PR branch: $branch"
               kept=$((kept + 1))
               return
             fi
