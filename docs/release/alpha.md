@@ -41,6 +41,77 @@ It builds a draft GitHub pre-release for:
 
 It then verifies Windows Authenticode signatures, macOS code signatures and notarisation staples, Linux packages, and publishes `SHA256SUMS.txt`.
 
+## GitHub signing configuration
+
+The release workflow expects the following repository configuration.
+
+### Windows
+
+Secrets:
+
+- `WINDOWS_CERTIFICATE` — base64-encoded PFX certificate;
+- `WINDOWS_CERTIFICATE_PASSWORD` — password used to export/import that PFX.
+
+Repository variable:
+
+- `WINDOWS_TIMESTAMP_URL` — timestamp server recommended by the certificate issuer.
+
+The runner imports the certificate into the current-user certificate store, derives its thumbprint and writes a temporary Tauri configuration override. No thumbprint is committed to the repository.
+
+The temporary override sets SHA-256 signing, the configured timestamp URL and a WiX-compatible numeric installer version derived from the alpha version. For example, `0.2.0-alpha.1` becomes `0.2.0.1`.
+
+### macOS
+
+Secrets:
+
+- `APPLE_CERTIFICATE` — base64-encoded Developer ID Application `.p12`;
+- `APPLE_CERTIFICATE_PASSWORD` — export password for the `.p12`;
+- `APPLE_API_KEY` — App Store Connect API key ID;
+- `APPLE_API_ISSUER` — App Store Connect issuer ID;
+- `APPLE_API_KEY_BASE64` — base64-encoded `.p8` private key.
+
+The runner creates an ephemeral keychain, imports the certificate as PKCS#12 and derives the Developer ID Application identity. It writes the App Store Connect private key only into the runner's temporary directory for notarisation. No Apple certificate or API-key file is committed to the repository.
+
+## Preparing certificate values
+
+### Windows PFX
+
+Create or export the signing PFX according to the certificate provider's instructions, then base64-encode the binary before storing it in `WINDOWS_CERTIFICATE`.
+
+On PowerShell:
+
+```powershell
+[Convert]::ToBase64String(
+  [IO.File]::ReadAllBytes("certificate.pfx")
+) | Set-Clipboard
+```
+
+Store the PFX password separately in `WINDOWS_CERTIFICATE_PASSWORD`.
+
+### macOS Developer ID certificate
+
+Export the Developer ID Application certificate and private key from Keychain Access as a password-protected `.p12`, then encode it:
+
+```bash
+openssl base64 -A -in DeveloperIDApplication.p12
+```
+
+Store that output as `APPLE_CERTIFICATE`, and the export password as `APPLE_CERTIFICATE_PASSWORD`.
+
+### App Store Connect API key
+
+Download the `.p8` private key when creating the App Store Connect API key, then encode it:
+
+```bash
+openssl base64 -A -in AuthKey_ABC123DEFG.p8
+```
+
+Store:
+
+- the base64 output as `APPLE_API_KEY_BASE64`;
+- `ABC123DEFG` as `APPLE_API_KEY`;
+- the associated issuer ID as `APPLE_API_ISSUER`.
+
 ## Version bumping
 
 Use:
