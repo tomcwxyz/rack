@@ -402,6 +402,7 @@ export function ProjectWorkspace({
             project={project}
             onGuidedEdit={(module) => setEditing({ kind: "guided", module })}
             onSourceEdit={sourceEdit}
+            onStatus={setActionStatus}
           />
         ) : null}
 

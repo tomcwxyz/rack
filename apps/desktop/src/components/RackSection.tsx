@@ -1,9 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   assessPracticeReviews,
+  outstandingPracticeReviews,
+  type PracticeReviewDecision,
+  type PracticeReviewItem,
   type RackProject,
 } from "@rack/core";
 import { localCalendarDate } from "../date.js";
+import { usePracticeReviews, type PracticeReviewInput } from "../usePracticeReviews.js";
+import { PracticeReviewDialog } from "./PracticeReviewDialog.js";
 
 type GuidedModule = Extract<
   RackProject["modules"][number],
@@ -14,6 +19,7 @@ type RackSectionProps = {
   project: RackProject;
   onGuidedEdit: (module: GuidedModule) => void;
   onSourceEdit: (path: string, title: string) => void;
+  onStatus: (message: string) => void;
 };
 
 const typeLabels: Record<string, string> = {
@@ -38,7 +44,13 @@ export function RackSection({
   project,
   onGuidedEdit,
   onSourceEdit,
+  onStatus,
 }: RackSectionProps) {
+  const reviewHistory = usePracticeReviews(project.root);
+  const [reviewing, setReviewing] = useState<{
+    module: RackProject["modules"][number];
+    review: PracticeReviewItem;
+  } | null>(null);
   const groupedModules = useMemo(() => {
     const groups = new Map<string, RackProject["modules"]>();
     for (const module of project.modules) {
@@ -47,14 +59,32 @@ export function RackSection({
     return groups;
   }, [project]);
   const errors = project.diagnostics.filter((item) => item.severity === "error");
-  const reviewReport = useMemo(
+  const scheduledReviewReport = useMemo(
     () => assessPracticeReviews(project.modules, localCalendarDate()),
     [project.modules],
+  );
+  const reviewReport = useMemo(
+    () =>
+      outstandingPracticeReviews(
+        scheduledReviewReport,
+        reviewHistory.reviews,
+      ),
+    [reviewHistory.reviews, scheduledReviewReport],
   );
   const reviewByModuleId = useMemo(
     () => new Map(reviewReport.items.map((item) => [item.moduleId, item])),
     [reviewReport],
   );
+  const latestReviewByModuleId = useMemo(() => {
+    const latest = new Map<string, (typeof reviewHistory.reviews)[number]>();
+    for (const item of reviewHistory.reviews) {
+      const current = latest.get(item.moduleId);
+      if (!current || item.reviewedAt >= current.reviewedAt) {
+        latest.set(item.moduleId, item);
+      }
+    }
+    return latest;
+  }, [reviewHistory.reviews]);
   const ordinaryDueCount =
     reviewReport.dueCount - reviewReport.experimentDueCount;
 
@@ -75,7 +105,14 @@ export function RackSection({
         </div>
       </section>
 
-      {reviewReport.experimentDueCount > 0 ? (
+      {reviewHistory.error ? (
+        <div className="notice notice--error" role="alert">
+          <strong>Local review history could not be read.</strong>
+          <span>{reviewHistory.error}</span>
+        </div>
+      ) : null}
+
+      {!reviewHistory.loading && reviewReport.experimentDueCount > 0 ? (
         <section aria-labelledby="experiment-review-heading">
           <div className="section-heading">
             <div>
@@ -96,7 +133,7 @@ export function RackSection({
         </section>
       ) : null}
 
-      {ordinaryDueCount > 0 ? (
+      {!reviewHistory.loading && ordinaryDueCount > 0 ? (
         <section aria-labelledby="review-due-heading">
           <div className="section-heading">
             <div>
@@ -157,6 +194,7 @@ export function RackSection({
               <div className="card-grid">
                 {modules.map((module) => {
                   const review = reviewByModuleId.get(module.harness.id);
+                  const latestReview = latestReviewByModuleId.get(module.harness.id);
                   const experiment = module.harness.experiment;
                   const applicationLabels = [
                     ...(module.harness.enforcement.includes("instruction")
@@ -204,6 +242,15 @@ export function RackSection({
                               : `review · ${review.reviewAfter}`}
                         </span>
                       ) : null}
+                      {latestReview ? (
+                        <span
+                          title={`Reviewed ${new Date(latestReview.reviewedAt * 1000).toLocaleDateString()}`}
+                        >
+                          {latestReview.decision === "remove"
+                            ? "remove decision · still active"
+                            : `reviewed · ${latestReview.decision}`}
+                        </span>
+                      ) : null}
                       <code>{module.harness.id}</code>
                     </div>
                     <h4>{module.title}</h4>
@@ -235,6 +282,15 @@ export function RackSection({
                     <div className="card-footer">
                       <span className="source-label">Yours · local</span>
                       <div className="card-actions">
+                        {review?.status === "due" ? (
+                          <button
+                            className="quiet-action"
+                            type="button"
+                            onClick={() => setReviewing({ module, review })}
+                          >
+                            Review what happened
+                          </button>
+                        ) : null}
                         {guidedTypes.has(module.type) ? (
                           <button
                             className="source-edit-button"
@@ -261,6 +317,53 @@ export function RackSection({
           ))}
         </div>
       </section>
+
+      {reviewing ? (
+        <PracticeReviewDialog
+          module={reviewing.module}
+          review={reviewing.review}
+          onClose={() => setReviewing(null)}
+          onSaved={async (
+            decision: PracticeReviewDecision,
+            input: PracticeReviewInput,
+          ) => {
+            const savedReview = await reviewHistory.save(input);
+            const module = reviewing.module;
+            const reconciled =
+              savedReview.decision !== decision ||
+              savedReview.reflection !== input.reflection;
+            const recordedDecision = savedReview.decision;
+            setReviewing(null);
+
+            const reconciliationNote = reconciled
+              ? " Rack found that this logical review had already been saved and kept the earlier local record rather than creating a duplicate."
+              : "";
+
+            if (recordedDecision === "change") {
+              onStatus(
+                `Review saved for ${module.title}.${reconciliationNote} Change the practice deliberately using the editor now.`,
+              );
+              if (guidedTypes.has(module.type)) {
+                onGuidedEdit(module as GuidedModule);
+              } else {
+                onSourceEdit(module.path, module.title);
+              }
+              return;
+            }
+
+            if (recordedDecision === "remove") {
+              onStatus(
+                `Review saved for ${module.title}: remove was recorded as an explicit decision.${reconciliationNote} The instruction remains active until you deliberately change the Rack or Set-up.`,
+              );
+              return;
+            }
+
+            onStatus(
+              `Review saved for ${module.title}.${reconciliationNote} This review date is complete and the practice remains active.`,
+            );
+          }}
+        />
+      ) : null}
     </>
   );
 }

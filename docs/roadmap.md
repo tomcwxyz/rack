@@ -269,6 +269,21 @@ Scope:
 - test whether required boundaries, task procedures, transient context and verification survive each host translation;
 - report known degradation explicitly rather than treating file generation as proof of host support.
 
+#### Iteration 36.5 — explicit practice refinement from use · in progress
+
+Outcome: real use can improve a Rack without passive telemetry or automatic rewriting of canonical practice.
+
+Scope:
+
+- turn due review dates and experiment learning questions into an explicit **what happened? → Keep / Change / Remove** review flow;
+- store bounded review history as local RACK metadata under `.rack/`, separate from canonical practice and excluded from Git by default;
+- record the exact practice ID and review-date snapshot so completing one review does not permanently suppress later review dates;
+- keep review notes deliberately small and user-authored rather than capturing prompts, conversations, full outputs or passive usage histories;
+- make **Change** hand deliberately into the existing practice editor rather than letting observations rewrite source automatically;
+- treat **Remove** as a visible decision until a separate explicit source/Set-up change actually stops the practice applying;
+- keep previous review decisions inspectable on the practice itself, especially when a remove decision is recorded but the instruction remains active;
+- use this loop in the private pilot to learn which practices people keep, adapt or remove without turning individual behaviour into organisational analytics.
+
 #### Iteration 37 — paired private pilot
 
 Outcome: test the proposition in real work rather than feature demonstrations.
