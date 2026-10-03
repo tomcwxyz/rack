@@ -1,7 +1,7 @@
 # RACK roadmap
 
 **Status:** active  
-**Updated:** 21 September 2026
+**Updated:** 24 September 2026
 
 This is the active product and implementation roadmap. Earlier iteration notes and the initial backlog remain useful implementation history, but they no longer describe the current priority order.
 
@@ -269,7 +269,7 @@ Scope:
 - test whether required boundaries, task procedures, transient context and verification survive each host translation;
 - report known degradation explicitly rather than treating file generation as proof of host support.
 
-#### Iteration 36.5 — explicit practice refinement from use · in progress
+#### Iteration 36.5 — explicit practice refinement from use · complete
 
 Outcome: real use can improve a Rack without passive telemetry or automatic rewriting of canonical practice.
 
