@@ -45,12 +45,14 @@ type EditingSource =
 
 type ProjectWorkspaceProps = {
   project: RackProject;
+  initialHost?: HostIntegrationId | null;
   onOpenAnother: () => void;
   onProjectChanged: (snapshot: ProjectSnapshot) => void;
 };
 
 export function ProjectWorkspace({
   project,
+  initialHost = null,
   onOpenAnother,
   onProjectChanged,
 }: ProjectWorkspaceProps) {
@@ -60,7 +62,7 @@ export function ProjectWorkspace({
   const [selectedProfile, setSelectedProfile] = useState(defaultProfile);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [workRoot, setWorkRoot] = useState<string | null>(null);
-  const [handoffHost, setHandoffHost] = useState<HostIntegrationId | null>(null);
+  const [handoffHost, setHandoffHost] = useState<HostIntegrationId | null>(initialHost);
 
   useEffect(() => {
     let active = true;
@@ -528,3 +530,4 @@ export function ProjectWorkspace({
     </div>
   );
 }
+
