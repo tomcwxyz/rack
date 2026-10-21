@@ -16,8 +16,27 @@ permissions:
   contents: write
 
 jobs:
+  check:
+    name: Check source before internal packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+
   build:
     name: Build Rack Windows test installer
+    needs: check
     runs-on: windows-latest
     timeout-minutes: 45
 
@@ -38,8 +57,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check source and desktop interactions
-        run: pnpm check
+      - name: Build desktop dependencies
+        run: pnpm turbo run build --filter=@rack/core --filter=@rack/managed
+
+      - name: Check desktop interactions on Windows
+        run: pnpm --filter @rack/desktop check
 
       - name: Build unsigned Windows installer and draft test release
         uses: tauri-apps/tauri-action@action-v1.0.0
