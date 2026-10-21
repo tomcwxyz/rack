@@ -1,4 +1,4 @@
-name: Windows test installer
+name: Internal unsigned Windows test installer
 
 on:
   workflow_dispatch:
@@ -38,8 +38,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check Windows-safe desktop release version
-        run: pnpm --filter @rack/desktop exec vitest run src/releaseVersion.test.ts
+      - name: Check source and desktop interactions
+        run: pnpm check
 
       - name: Build unsigned Windows installer and draft test release
         uses: tauri-apps/tauri-action@action-v1.0.0
@@ -49,9 +49,9 @@ jobs:
         with:
           projectPath: apps/desktop
           tagName: rack-test-${{ github.run_number }}
-          releaseName: "Rack Windows test · run ${{ github.run_number }}"
+          releaseName: "Rack internal unsigned Windows test · run ${{ github.run_number }}"
           releaseBody: |
-            Windows test installer built from current Rack main for hands-on loop testing.
+            Internal Windows test installer built from commit ${{ github.sha }} for hands-on testing.\n\n            Test the Write, Research and Build journeys, copying before saving, cancellation, and reopening saved approaches.
 
             This is an unsigned development/test build. Windows SmartScreen may warn before installation.
 
@@ -59,6 +59,8 @@ jobs:
           releaseDraft: true
           prerelease: true
           releaseAssetNamePattern: "Rack_Windows_Test_[version]_[arch][setup][ext]"
+          uploadWorkflowArtifacts: true
+          workflowArtifactNamePattern: "Rack_Internal_Unsigned_[version]_[arch][setup][ext]"
           uploadUpdaterJson: false
           uploadUpdaterSignatures: false
           args: "--bundles nsis"
@@ -131,3 +133,4 @@ jobs:
 
           Stop-Process -Id $process.Id -Force
           Write-Host "Installed Rack remained running through the startup smoke window."
+

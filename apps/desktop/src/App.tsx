@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { FirstRun } from "./components/FirstRun.js";
+import type { FirstRunHost } from "./components/FirstRunHandoff.js";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -21,6 +23,7 @@ import type { StarterPackIntent } from "./creationStarterPack.js";
 type CreationState = "choose" | "pack" | CreationRouteId | null;
 
 export function App() {
+  const [initialHost, setInitialHost] = useState<FirstRunHost | null>(null);
   const [project, setProject] = useState<RackProject | null>(null);
   const [creating, setCreating] = useState<CreationState>(null);
   const [creationRoute, setCreationRoute] = useState<CreationRouteId | null>(null);
@@ -33,6 +36,7 @@ export function App() {
   const [openError, setOpenError] = useState<string | null>(null);
 
   const applySnapshot = (snapshot: ProjectSnapshot) => {
+    setInitialHost(null);
     setProject(parseProjectSnapshot(snapshot));
     setCreating(null);
     setCreationRoute(null);
@@ -76,6 +80,7 @@ export function App() {
       <ProjectWorkspace
         key={project.root}
         project={project}
+        initialHost={initialHost}
         onOpenAnother={() => {
           void chooseRack();
         }}
@@ -165,62 +170,15 @@ export function App() {
   }
 
   return (
-    <main className="welcome-shell">
-      <header className="welcome-header">
-        <span className="wordmark">rack</span>
-        <p>Teach AI how you work.</p>
-      </header>
-
-      {openError ? (
-        <div className="notice notice--error" role="alert">
-          <strong>That Rack could not be opened.</strong>
-          <span>{openError}</span>
-        </div>
-      ) : null}
-
-      <TopoConnectionIndicator />
-
-      <section className="welcome-hero">
-        <div>
-          <p className="eyebrow">Local-first · no account needed</p>
-          <h1>Teach AI how you work.</h1>
-          <p className="lede">
-            Choose the kind of work you do. Rack gives you a strong starting
-            practice, lets you change anything you dislike, then helps you use
-            it across different AI tools.
-          </p>
-          <div className="button-row button-row--large">
-            <button
-              className="primary-action"
-              type="button"
-              onClick={() => setCreating("choose")}
-            >
-              Get started
-            </button>
-            <button
-              className="secondary-action secondary-action--light"
-              type="button"
-              onClick={chooseRack}
-              disabled={loading}
-            >
-              {loading ? "Opening…" : "Open an existing Rack"}
-            </button>
-          </div>
-        </div>
-        <aside className="welcome-card">
-          <p className="eyebrow">Useful in minutes</p>
-          <h2>Start with the work, not the machinery</h2>
-          <p>
-            Rack proposes a practical way for AI to work with you. You stay in
-            control of what is kept, changed, shared or used for a task.
-          </p>
-          <ul>
-            <li>Pick writing, research or coding</li>
-            <li>Review a useful starting practice</li>
-            <li>Use it with the AI tools you already have</li>
-          </ul>
-        </aside>
-      </section>
-    </main>
+    <FirstRun
+      onOpen={() => void chooseRack()}
+      opening={loading}
+      openError={openError}
+      onAdvanced={() => setCreating("choose")}
+      onCreated={(snapshot, host) => {
+        applySnapshot(snapshot);
+        setInitialHost(host);
+      }}
+    />
   );
 }
