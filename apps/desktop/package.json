@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc -b && vite build",
-    "check": "pnpm typecheck",
+    "check": "pnpm typecheck && pnpm test",
     "dev": "vite",
     "tauri": "tauri",
     "test": "vitest run --passWithNoTests",
@@ -31,6 +31,8 @@
     "@vitejs/plugin-react": "^6.0.1",
     "typescript": "^5.9.2",
     "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@testing-library/react": "^16.3.0",
+    "jsdom": "^26.1.0"
   }
 }

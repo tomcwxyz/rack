@@ -25,4 +25,12 @@ The detailed creation routes and Starter Pack catalogue remain available through
 
 ## Verification for this change
 
-Eight committed compiler/source tests cover the three routes, adjusted instructions, saved-source parity, invalid edits and supported coding destinations. Six additional local DOM interaction checks covered the screen transitions, copy, download, cancellation, write-error recovery and the selected host callback using mocked native calls. Focused TypeScript checks and a standalone Vite build passed. Native desktop acceptance remains required; these checks do not claim a signed installer or real filesystem-dialog test.
+Eight compiler/source tests cover the three routes, adjusted instructions, saved-source parity, invalid edits and supported coding destinations. Seven committed DOM interaction tests cover screen transitions, copy, download, cancellation, write-error recovery, the selected host callback and opening errors staying on the work screen. These run in the desktop check task.
+
+Browser checks passed at 1280 × 1000 and 860 × 620, including all three routes and cancellation/error recovery; screenshots were inspected. Native calls were mocked. All 52 desktop tests, focused TypeScript checks and a standalone Vite build passed. Real filesystem dialogs and saved-project reopening still need hands-on desktop acceptance.
+
+## Internal unsigned Windows package
+
+The Windows test installer workflow runs source checks, creates a draft prerelease and uploads an Actions artifact, then silently installs and launches the packaged app on the Windows runner. Draft release notes record the source commit. The installer is unsigned and Windows SmartScreen may warn. No Node, pnpm, Rust or Cargo installation is required for testers.
+
+Keep this release as an internal draft. The signed pilot release workflow is unchanged. A successful startup smoke test does not replace the acceptance checks above.

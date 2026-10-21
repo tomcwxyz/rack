@@ -70,6 +70,7 @@ export function FirstRun({
   const [status, setStatus] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const approach = approaches[route];
+  const visibleError = error || (step === "work" ? openError : null);
 
   useEffect(() => {
     heading.current?.focus();
@@ -184,9 +185,9 @@ export function FirstRun({
             to use or adjust.
           </p>
         ) : null}
-        {error || openError ? (
+        {visibleError ? (
           <div className="notice notice--error" role="alert">
-            {error || openError}
+            {visibleError}
           </div>
         ) : null}
         {status ? (
