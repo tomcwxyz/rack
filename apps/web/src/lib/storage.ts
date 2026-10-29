@@ -1,5 +1,5 @@
-import type { FirstRunApproach } from "../../../desktop/src/firstRun.js";
-import type { CreationRouteId } from "../../../desktop/src/components/RouteChooser.js";
+import type { FirstRunApproach } from "@rack/creation";
+import type { CreationRouteId } from "@rack/creation";
 
 export type ReviewDecision = "keep" | "change" | "remove";
 export type PracticeReview = {
