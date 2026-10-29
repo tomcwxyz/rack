@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import {
   firstRunApproaches, firstRunInstructions, firstRunProposal,
   type FirstRunApproach,
-} from "../../desktop/src/firstRun.js";
-import type { CreationRouteId } from "../../desktop/src/components/RouteChooser.js";
+} from "@rack/creation";
+import type { CreationRouteId } from "@rack/creation";
 import { downloadRack } from "./lib/archive.js";
 import { loadPractices, persistPractices, type SavedPractice, type PracticeReview, type ReviewDecision } from "./lib/storage.js";
 import { ManagedTrial } from "./components/ManagedTrial.js";
