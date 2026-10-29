@@ -1,4 +1,4 @@
-import type { RackProposal } from "../../../desktop/src/projectFiles.js";
+import type { RackProposal } from "@rack/creation/projectFiles";
 
 // Uncompressed USTAR archives contain the canonical source files unchanged.
 // No remote service or third-party archive library is involved.
