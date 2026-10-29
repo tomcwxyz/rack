@@ -9,8 +9,8 @@ From the repository root:
 ```bash
 pnpm install --frozen-lockfile
 pnpm --filter @rack/web dev
-pnpm --filter @rack/web check
-pnpm --filter @rack/web build
+pnpm turbo run check --filter=@rack/web...
+pnpm turbo run build --filter=@rack/web...
 ```
 
 ## Pilot behaviour
@@ -23,8 +23,8 @@ pnpm --filter @rack/web build
 
 ## Vercel
 
-Create a Vercel project connected to `tomcwxyz/rack`, root directory `apps/web`, framework **Vite**, build command `pnpm --filter @rack/web build`, output `dist`, install command `pnpm install --frozen-lockfile`. Enable **Include source files outside the Root Directory** because the pilot shares the desktop's pure TypeScript creation helpers.
+Create a Vercel project connected to `tomcwxyz/rack`, root directory `apps/web`, framework **Vite**, build command `pnpm turbo run build --filter=@rack/web...`, output `dist`, install command `pnpm install --frozen-lockfile`. Enable **Include source files outside the Root Directory** because the pilot shares the desktop's pure TypeScript creation helpers.
 
-Only set `VITE_RACK_SERVICE_URL`, `VITE_NEON_AUTH_URL` and `VITE_RACK_QUICK_MODEL_ALIAS` after confirming the managed service's deployment and a permitted browser origin/CORS. Never expose provider keys or database URLs as `VITE_` variables. Restrict pilot access at the Vercel deployment level until privacy and model cost limits are verified.
+Only set `VITE_RACK_MANAGED_ENABLED=true`, `VITE_NEON_AUTH_URL` and `VITE_RACK_QUICK_MODEL_ALIAS` after confirming the managed service and server-only `RACK_SERVICE_URL`. The web app uses a same-origin authenticated proxy. Never expose provider keys or database URLs as `VITE_` variables. Restrict pilot access at the Vercel deployment level until privacy and model cost limits are verified.
 
 The web app does not run local repository commands, inspect devices, install AI host files or retrieve TOPO context. Those remain desktop capabilities. Managed AI trial results are transient by the service's policy; browser-local practice/review data is kept separately on the tester's own device.
