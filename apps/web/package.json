@@ -16,7 +16,8 @@
     "@neondatabase/auth": "0.4.2-beta",
     "@neondatabase/auth-ui": "0.2.1-beta",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "@rack/creation": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
