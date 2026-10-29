@@ -16,7 +16,7 @@ const CHOICES: {id: CreationRouteId; title: string; description: string; icon: s
 ];
 const errorText = (reason: unknown) => reason instanceof Error ? reason.message : String(reason);
 function downloadText(name: string, content: string) {
-  const url = URL.createObjectURL(new Blob([content], { type: "text/markdown;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob([content], { type: name.endsWith(".json") ? "application/json;charset=utf-8" : "text/markdown;charset=utf-8" }));
   const link = document.createElement("a"); link.href=url; link.download=name; document.body.append(link); link.click(); link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
@@ -65,6 +65,21 @@ export function App() {
     setReviews(next); setReviewNote(""); save(next);
     if (reviewDecision === "change") navigate("adjust"); else navigate("use");
   };
+  const exportPilotNotes = () => {
+    const notes = saved.map(item => ({
+      route: item.route, approachTitle: item.approach.title,
+      reviews: item.reviews.map(review => ({
+        decision: review.decision, note: review.note, recordedAt: review.recordedAt,
+      })),
+    }));
+    downloadText("rack-pilot-notes.json", JSON.stringify({ version: 1, notes }, null, 2));
+    setNotice("Downloaded a feedback file. Nothing was uploaded to RACK.");
+  };
+  const clearSaved = () => {
+    if (!window.confirm("Delete all saved approaches and review notes from this browser? Export anything you want to keep first.")) return;
+    try { persistPractices([]); setSaved([]); setSelectedId(null); setReviews([]); setNotice("Browser-local library cleared."); }
+    catch { setError("Your browser could not clear the saved approaches."); }
+  };
   const copy = async () => {
     try { await navigator.clipboard.writeText(preview.instructions); setNotice("Instructions copied. Paste them into your AI tool and add the task materials."); }
     catch { setError("Clipboard access was blocked. Select and copy the instructions below, or download them."); }
@@ -93,7 +108,7 @@ export function App() {
             <span className="choice-icon">{item.icon}</span><strong>{item.title}</strong><span>{item.description}</span><span className="choice-arrow">→</span>
           </button>)}</div>
         </section>
-        {saved.length > 0 ? <section className="saved-section"><div className="section-top"><h2>Saved in this browser</h2><span className="muted small">{saved.length} {saved.length===1?"approach":"approaches"}</span></div>
+        {saved.length > 0 ? <section className="saved-section"><div className="section-top"><h2>Saved in this browser</h2><div className="button-row"><button type="button" className="secondary-btn" onClick={exportPilotNotes}>Download pilot notes</button><button type="button" className="text-btn" onClick={clearSaved}>Clear browser library</button></div></div><p className="muted small">Notes are never sent automatically. Download and share the feedback file only if you choose to.</p>
           <div className="saved-grid">{saved.map(item=><div className="saved-item" key={item.id}><div><span className="eyebrow">{item.route}</span><h3>{item.approach.title}</h3><p className="muted small">{item.task || "General approach"} · {item.reviews.length} reviews</p></div>
             <button type="button" className="secondary-btn" onClick={()=>load(item)}>Open</button></div>)}</div>
         </section> : null}
