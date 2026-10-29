@@ -97,7 +97,7 @@ function TrialBody({ instructions, route, initialTask, onReviewed }: Props) {
 
 export function ManagedTrial(props: Props) {
   if (!enabled || !auth) return <section className="panel trial-panel"><span className="eyebrow">Optional · managed service</span><h2>AI trials are not connected yet</h2><p className="muted">You can create, use, copy and export the complete practice without signing in. Managed model trials will appear here once the pilot service is configured.</p></section>;
-  return <NeonAuthUIProvider authClient={auth.adapter} emailOTP defaultTheme="light" onSessionChange={() => window.dispatchEvent(new Event("rack-auth-changed"))}>
+  return <NeonAuthUIProvider authClient={auth.adapter} emailOTP defaultTheme="light" onSessionChange={() => { window.dispatchEvent(new Event("rack-auth-changed")); }}>
     <TrialBody {...props} />
   </NeonAuthUIProvider>;
 }
