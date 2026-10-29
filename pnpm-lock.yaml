@@ -29,6 +29,9 @@ importers:
       '@neondatabase/auth-ui':
         specifier: 0.2.1-beta
         version: 0.2.1-beta(f270a9da6352a46bef21d56fdb0f7aa2)
+      '@rack/creation':
+        specifier: workspace:*
+        version: link:../../packages/creation
       '@rack/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -82,6 +85,49 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(jsdom@26.1.0)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
 
+  apps/web:
+    dependencies:
+      '@neondatabase/auth':
+        specifier: 0.4.2-beta
+        version: 0.4.2-beta(dbeaa9fd9e70f32f939557feba577497)
+      '@neondatabase/auth-ui':
+        specifier: 0.2.1-beta
+        version: 0.2.1-beta(f270a9da6352a46bef21d56fdb0f7aa2)
+      '@rack/creation':
+        specifier: workspace:*
+        version: link:../../packages/creation
+      '@rack/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@rack/managed':
+        specifier: workspace:*
+        version: link:../../packages/managed
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.1
+        version: 6.0.5(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vite:
+        specifier: ^8.1.5
+        version: 8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(jsdom@26.1.0)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   apps/service:
     dependencies:
       '@rack/database':
@@ -109,6 +155,19 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.13.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(jsdom@26.1.0)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
+  packages/creation:
+    dependencies:
+      '@rack/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
