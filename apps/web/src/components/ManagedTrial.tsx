@@ -23,7 +23,12 @@ function TrialBody({ instructions, route, initialTask, onReviewed }: Props) {
     try { return await auth.getJWTToken(); } catch { return null; }
   }, []);
   const refresh = useCallback(async () => setSignedIn(Boolean(await getAccessToken())), [getAccessToken]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    const listener = () => { void refresh(); };
+    window.addEventListener("rack-auth-changed", listener);
+    return () => window.removeEventListener("rack-auth-changed", listener);
+  }, [refresh]);
   const client = useMemo(() => createManagedServiceClient({ baseUrl: window.location.origin, getAccessToken }), [getAccessToken]);
 
   const runSafely = async (action: () => Promise<void>) => {
