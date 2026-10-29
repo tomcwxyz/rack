@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildRackTar } from "./archive.js";
-import { firstRunApproaches, firstRunProposal, firstRunInstructions } from "../../../desktop/src/firstRun.js";
+import { firstRunApproaches, firstRunProposal, firstRunInstructions } from "@rack/creation";
 
 describe("portable Rack exports", () => {
   it("includes the exact canonical files for all three routes", () => {
