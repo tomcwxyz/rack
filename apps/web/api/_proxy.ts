@@ -6,7 +6,8 @@ export async function proxyManaged(request: Request, path: "preflight" | "confir
   if (!authorization?.startsWith("Bearer ") || authorization.length > 8192) {
     return Response.json({ error: { code: "unauthorised", message: "Sign in to run an AI trial." } }, { status: 401 });
   }
-  const target = process.env.RACK_SERVICE_URL?.replace(/\/+$/, "");
+  const runtime = globalThis as typeof globalThis & { process?: { env: Record<string, string | undefined> } };
+  const target = runtime.process?.env.RACK_SERVICE_URL?.replace(/\/+$/, "");
   if (!target || !/^https:\/\//i.test(target)) {
     return Response.json({ error: { code: "service-not-configured", message: "Managed AI trials are not available on this pilot yet." } }, { status: 503 });
   }
