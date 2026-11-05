@@ -23,6 +23,7 @@ function downloadText(name: string, content: string) {
 
 export function App() {
   const [step, setStep] = useState<Step>("choose");
+  const [editingApproach, setEditingApproach] = useState(false);
   const [route, setRoute] = useState<CreationRouteId>("writing");
   const [task, setTask] = useState("");
   const [approach, setApproach] = useState<FirstRunApproach>({...firstRunApproaches.writing});
@@ -44,6 +45,7 @@ export function App() {
   const navigate = (next: Step) => { setNotice(""); setError(""); setStep(next); window.scrollTo({top:0, behavior:"smooth"}); };
   const choose = (next: CreationRouteId) => {
     setRoute(next); setApproach({...firstRunApproaches[next]}); setSelectedId(null); setReviews([]);
+    setEditingApproach(false);
     navigate("adjust");
   };
   const load = (item: SavedPractice) => {
@@ -93,10 +95,10 @@ export function App() {
     </div></header>
     <main className="site-main">
       <div className="page-heading"><span className="eyebrow">A better way to work with AI</span>
-        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "adjust" ? <>Start with a <em>good approach.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
-        <p className="page-lede">{step === "choose" ? "You don't need to know how to write a perfect prompt. Tell rack what you want to do, start with a thoughtful approach, and shape it as you learn." : step === "adjust" ? "Start with this suggested way of working. Change anything you want, and decide which boundaries matter." : step === "review" ? "What happened when you used it? Keep what helped, change what didn't, or mark an instruction for removal." : "Take these instructions into your AI tool, or try them with our optional managed service. Come back and improve them whenever you're ready."}</p>
+        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "adjust" ? <>Here’s a <em>starting point.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
+        <p className="page-lede">{step === "choose" ? "You don't need to know how to write a perfect prompt. Tell rack what you want to do, start with a thoughtful approach, and shape it as you learn." : step === "adjust" ? "You can use this as it is. Make changes only if something doesn’t fit." : step === "review" ? "What happened when you used it? Keep what helped, change what didn't, or mark an instruction for removal." : "Take these instructions into your AI tool, or try them with our optional managed service. Come back and improve them whenever you're ready."}</p>
       </div>
-      <nav className="progress" aria-label="Progress"><span className={step==="choose"?"active":""}>01 Choose work</span><span className={step==="adjust"?"active":""}>02 Shape approach</span><span className={step==="use"?"active":""}>03 Use it</span><span className={step==="review"?"active":""}>04 Improve</span></nav>
+      <nav className="progress" aria-label="Progress"><span className={step==="choose"?"active":""}>1 · Create</span><span className={step==="adjust"||step==="use"?"active":""}>2 · Use</span><span className={step==="review"?"active":""}>3 · Improve</span></nav>
       {notice ? <div className="notice" role="status">{notice}</div> : null}
       {error ? <div className="notice error" role="alert">{error}</div> : null}
       {step === "choose" ? <>
@@ -114,28 +116,34 @@ export function App() {
         </section> : null}
       </> : null}
       {step === "adjust" ? <section className="panel editor-panel">
-        <div className="section-top"><span className="eyebrow">Suggested approach · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("choose")}>Change work type</button></div>
-        <div className="field"><label htmlFor="approach-title">Name your approach</label><input id="approach-title" maxLength={100} value={approach.title} onChange={e=>setApproach({...approach,title:e.target.value})}/></div>
-        <div className="field"><label htmlFor="approach-guidance">How should AI work?</label><p className="field-description">A few useful guiding principles, rather than a long technical specification.</p>
-          <textarea id="approach-guidance" rows={5} value={approach.guidance} onChange={e=>setApproach({...approach,guidance:e.target.value})}/></div>
-        <div className="field"><label htmlFor="approach-boundaries">What should it avoid or check?</label><p className="field-description">Make important boundaries explicit.</p>
-          <textarea id="approach-boundaries" rows={4} value={approach.boundary} onChange={e=>setApproach({...approach,boundary:e.target.value})}/></div>
-        <div className="button-row"><button type="button" className="primary-btn" disabled={!preview.proposal} onClick={()=>navigate("use")}>Use this approach <span aria-hidden>→</span></button><button type="button" className="secondary-btn" onClick={()=>{setApproach({...firstRunApproaches[route]});setNotice("Suggested approach restored.");}}>Restore suggestion</button></div>
+        <div className="section-top"><span className="eyebrow">Suggested way of working · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("choose")}>Choose different work</button></div>
+        <h2 className="approach-name">{approach.title}</h2>
+        <div className="approach-summary">
+          <div><strong>How AI should help</strong><p>{approach.guidance}</p></div>
+          <div><strong>What to watch out for</strong><p>{approach.boundary}</p></div>
+        </div>
+        <div className="button-row"><button type="button" className="primary-btn" disabled={!preview.proposal} onClick={()=>navigate("use")}>Use this approach <span aria-hidden>→</span></button><button type="button" className="secondary-btn" aria-expanded={editingApproach} onClick={()=>setEditingApproach(!editingApproach)}>{editingApproach ? "Finish changes" : "Change a few things"}</button></div>
+        {editingApproach ? <div className="approach-edit-fields">
+          <div className="field"><label htmlFor="approach-title">Name</label><input id="approach-title" maxLength={100} value={approach.title} onChange={e=>setApproach({...approach,title:e.target.value})}/></div>
+          <div className="field"><label htmlFor="approach-guidance">How should AI work?</label><textarea id="approach-guidance" rows={5} value={approach.guidance} onChange={e=>setApproach({...approach,guidance:e.target.value})}/></div>
+          <div className="field"><label htmlFor="approach-boundaries">What should it avoid or check?</label><textarea id="approach-boundaries" rows={4} value={approach.boundary} onChange={e=>setApproach({...approach,boundary:e.target.value})}/></div>
+          <button type="button" className="text-btn" onClick={()=>{setApproach({...firstRunApproaches[route]});setNotice("Suggested approach restored.");}}>Restore suggestion</button>
+        </div> : null}
         {preview.error ? <p role="alert" className="error">{preview.error}</p> : null}
       </section> : null}
       {step === "use" && preview.proposal ? <>
-        <section className="panel ready-panel"><div className="section-top"><span className="eyebrow">{route} practice</span><span className="privacy-pill">Portable · reviewable</span></div>
-          <h2>{approach.title}</h2><p className="muted">These are real instructions generated by RACK's existing practice compiler — not a separate demo prompt.</p>
-          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy instructions</button><button className="secondary-btn" type="button" onClick={()=>downloadText("my-ai-approach.md",preview.instructions)}>Download Markdown</button><button className="secondary-btn" type="button" onClick={()=>downloadRack(preview.proposal!)}>Export full RACK</button></div>
-          <details className="output-details"><summary>Read the exact generated instructions</summary><textarea aria-label="Compiled AI instructions" readOnly rows={16} value={preview.instructions} onFocus={e=>e.currentTarget.select()}/></details>
-          <div className="divider-line"/>
-          <div className="section-top"><div><h3>Keep this approach</h3><p className="muted small">Save on this device to return to it. It will not sync to another browser.</p></div><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save in browser"}</button></div>
+        <section className="panel ready-panel"><span className="eyebrow">Ready to work · {route}</span>
+          <h2>{approach.title}</h2><p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
+          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button></div>
+          <div className="next-step-note"><strong>Then try it on real work.</strong><span>Once you’ve used it, come back to decide what to keep or change.</span></div>
+          <div className="button-row"><button className="secondary-btn" type="button" onClick={()=>navigate("review")}>Improve this approach</button><button className="text-btn" type="button" onClick={()=>{setEditingApproach(true);navigate("adjust");}}>Edit approach</button></div>
+          <details className="calm-technical"><summary>Downloads and technical details</summary>
+            <div className="button-row"><button className="secondary-btn" type="button" onClick={()=>downloadText("my-ai-approach.md",preview.instructions)}>Download instructions</button><button className="secondary-btn" type="button" onClick={()=>downloadRack(preview.proposal!)}>Export full RACK</button></div>
+            <details className="output-details"><summary>Read the exact generated instructions</summary><textarea aria-label="Compiled AI instructions" readOnly rows={16} value={preview.instructions} onFocus={e=>e.currentTarget.select()}/></details>
+          </details>
+          {reviews.length ? <details className="calm-technical"><summary>Past reviews ({reviews.length})</summary><div className="review-history">{reviews.slice().reverse().map(item=><p key={item.id}><strong>{item.decision.toUpperCase()}</strong> · {item.note||"No note"} <span className="muted small">({new Date(item.recordedAt).toLocaleDateString("en-GB")})</span></p>)}</div></details> : null}
         </section>
-        <ManagedTrial key={route+preview.instructions} instructions={preview.instructions} route={route} initialTask={task} onReviewed={note=>{setReviewNote(note);navigate("review");}} />
-        <section className="panel after-use"><span className="eyebrow">The most important step</span><h2>What would you change?</h2><p className="muted">An approach improves through real use, not just more instructions. Make a conscious decision about what to keep, change or remove.</p>
-          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>navigate("review")}>Review this approach <span aria-hidden>→</span></button><button className="secondary-btn" type="button" onClick={()=>navigate("adjust")}>Edit instructions</button></div>
-          {reviews.length ? <div className="review-history"><h3>Review history · only in this browser</h3>{reviews.slice().reverse().map(item=><p key={item.id}><strong>{item.decision.toUpperCase()}</strong> · {item.note||"No note"} <span className="muted small">({new Date(item.recordedAt).toLocaleDateString("en-GB")})</span></p>)}</div> : null}
-        </section>
+        {import.meta.env.VITE_RACK_MANAGED_ENABLED === "true" ? <ManagedTrial key={route+preview.instructions} instructions={preview.instructions} route={route} initialTask={task} onReviewed={note=>{setReviewNote(note);navigate("review");}} /> : null}
       </> : null}
       {step === "review" ? <section className="panel review-panel"><span className="eyebrow">Practice review</span><h2>What happened when you used it?</h2>
         <div className="review-grid">{(["keep","change","remove"] as const).map(decision=><button key={decision} type="button" aria-pressed={reviewDecision===decision} className={"review-option "+(reviewDecision===decision?"selected":"")} onClick={()=>setReviewDecision(decision)}><strong>{decision[0].toUpperCase()+decision.slice(1)}</strong><span>{decision==="keep"?"This helped, and I'd use it again.":decision==="change"?"Something could work better.":"This isn't useful for my work."}</span></button>)}</div>
