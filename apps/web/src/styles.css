@@ -61,3 +61,15 @@
 .pack-basic div span{font-size:.86rem;color:#6f6b62}
 .pack-selected-note{background:#e9f0e9;color:#315c43;border-radius:10px;padding:13px 16px;font-size:.88rem;line-height:1.5}
 @media(max-width:740px){.pack-grid{grid-template-columns:1fr}.pack-basic{align-items:flex-start;flex-direction:column}.pack-card{padding:20px}}
+
+
+/* A selected pack must visibly show its real constituent practices. */
+.pack-applied-count{font-weight:650;color:#315c43;margin:20px 0 12px}
+.pack-applied-practices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pack-applied-item{display:grid;align-content:start;gap:7px;padding:17px 18px;background:#f8f6f0;border:1px solid #e0dad0;border-radius:13px;min-width:0}
+.pack-applied-item strong{color:#292923;font-size:.96rem}
+.pack-applied-item span{color:#686259;font-size:.87rem;line-height:1.48}
+.pack-extra-guidance{border-top:1px solid #e0dad0;margin-top:24px;padding-top:12px}
+.pack-extra-guidance summary{cursor:pointer;color:#315c43;font-weight:650;padding:10px 0}
+.pack-extra-guidance .approach-summary{margin:10px 0 0}
+@media(max-width:700px){.pack-applied-practices{grid-template-columns:1fr}}
