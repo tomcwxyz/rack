@@ -50,3 +50,13 @@
 .plan-item{display:grid;gap:5px}
 @media(max-width:1100px){.calm-next,.library-templates{grid-template-columns:1fr}.first-value__hero{grid-template-columns:1fr}.first-value__host-state{max-width:none}}
 @media(max-width:900px){.calm-secondary,.library-toolbar{grid-template-columns:1fr}}
+
+
+.calm-preview-options,.calm-preview-technical{border-top:1px solid var(--line);margin:20px 0;padding:12px 0}
+.calm-preview-options>summary,.calm-preview-technical>summary{cursor:pointer;color:var(--muted);font-size:.93rem;font-weight:600;padding:8px 0}
+.calm-preview-options .preview-controls{display:flex;flex-wrap:wrap;gap:14px;padding:15px 0}
+.calm-preview-options .topo-context-panel{margin-top:16px}
+.calm-prompt-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;margin:26px 0;padding:22px 24px;border:1px solid var(--line);border-radius:18px;background:var(--paper)}
+.calm-prompt-actions strong{display:block;font:normal 1.35rem Georgia,serif}
+.calm-prompt-actions p{margin:7px 0 0}
+.calm-prompt-actions .button-row{margin:0}
