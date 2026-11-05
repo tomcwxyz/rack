@@ -4,7 +4,7 @@ import {
 } from "@rack/creation";
 import { parseProjectSnapshot, type ProjectSourceFile } from "@rack/core";
 import { planStarterImport } from "@rack/core/starter";
-import { getStarterTemplate, starterTemplates } from "@rack/starter";
+import { getStarterEntry, getStarterTemplate, starterTemplates } from "@rack/starter";
 
 export { starterTemplates };
 
@@ -23,4 +23,21 @@ export function buildStarterPractice(route: CreationRouteId, task: string, appro
   );
   const proposal = { ...base, files: [...files, ...plan.files] };
   return { proposal, instructions: firstRunInstructions(proposal, route) };
+}
+
+export function getStarterPackSummary(starterPackId: string | null) {
+  if (!starterPackId) return null;
+  const template = getStarterTemplate(starterPackId);
+  if (!template) return null;
+  const practices = template.moduleIds.map(id => {
+    const entry = getStarterEntry(id);
+    if (!entry) throw new Error(`Missing starter practice: ${id}`);
+    return { id: entry.id, title: entry.title, description: entry.description, type: entry.type };
+  });
+  return {
+    title: template.title,
+    promise: template.promise || template.description,
+    bestFor: template.bestFor || [],
+    practices,
+  };
 }
