@@ -7,8 +7,10 @@ import type { CreationRouteId } from "@rack/creation";
 import { downloadRack } from "./lib/archive.js";
 import { loadPractices, persistPractices, type SavedPractice, type PracticeReview, type ReviewDecision } from "./lib/storage.js";
 import { ManagedTrial } from "./components/ManagedTrial.js";
+import { StarterPackPicker } from "./components/StarterPackPicker.js";
+import { buildStarterPractice, starterTemplates } from "./lib/starterPacks.js";
 
-type Step = "choose" | "adjust" | "use" | "review";
+type Step = "choose" | "packs" | "adjust" | "use" | "review";
 const CHOICES: {id: CreationRouteId; title: string; description: string; icon: string}[] = [
   { id: "writing", title: "Write something", description: "Reports, messages and clearer explanations", icon: "✎" },
   { id: "research", title: "Research something", description: "Questions, evidence and decisions", icon: "⌕" },
@@ -26,6 +28,7 @@ export function App() {
   const [editingApproach, setEditingApproach] = useState(false);
   const [route, setRoute] = useState<CreationRouteId>("writing");
   const [task, setTask] = useState("");
+  const [starterPackId, setStarterPackId] = useState<string | null>(null);
   const [approach, setApproach] = useState<FirstRunApproach>({...firstRunApproaches.writing});
   const [saved, setSaved] = useState<SavedPractice[]>(() => loadPractices());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -36,26 +39,32 @@ export function App() {
   const [error, setError] = useState("");
   const preview = useMemo(() => {
     try {
-      const proposal = firstRunProposal(route, task, approach);
-      const instructions = firstRunInstructions(proposal, route);
+      const { proposal, instructions } = buildStarterPractice(route, task, approach, starterPackId);
       return { proposal, instructions, error: "" };
     } catch (reason) { return { proposal: null, instructions: "", error: errorText(reason) }; }
-  }, [route, task, approach]);
+  }, [route, task, approach, starterPackId]);
 
   const navigate = (next: Step) => { setNotice(""); setError(""); setStep(next); window.scrollTo({top:0, behavior:"smooth"}); };
   const choose = (next: CreationRouteId) => {
-    setRoute(next); setApproach({...firstRunApproaches[next]}); setSelectedId(null); setReviews([]);
+    setRoute(next); setApproach({...firstRunApproaches[next]}); setStarterPackId(null); setSelectedId(null); setReviews([]);
     setEditingApproach(false);
+    navigate("packs");
+  };
+  const selectPack = (id: string | null, nextRoute: CreationRouteId) => {
+    setRoute(nextRoute);
+    setStarterPackId(id);
+    setApproach({ ...firstRunApproaches[nextRoute], ...(id ? { title: starterTemplates.find(pack=>pack.id===id)?.title || firstRunApproaches[nextRoute].title } : {}) });
+    setSelectedId(null); setReviews([]); setEditingApproach(false);
     navigate("adjust");
   };
   const load = (item: SavedPractice) => {
-    setRoute(item.route); setTask(item.task); setApproach({...item.approach}); setReviews(item.reviews);
+    setRoute(item.route); setTask(item.task); setApproach({...item.approach}); setReviews(item.reviews); setStarterPackId(item.starterPackId ?? null);
     setSelectedId(item.id); navigate("use");
   };
   const save = (nextReviews = reviews) => {
     if (!preview.proposal) { setError(preview.error); return; }
     const item: SavedPractice = {
-      id: selectedId || crypto.randomUUID(), route, task, approach, reviews: nextReviews,
+      id: selectedId || crypto.randomUUID(), route, task, approach, starterPackId, reviews: nextReviews,
       updatedAt: new Date().toISOString(),
     };
     const next = [item, ...saved.filter(entry => entry.id !== item.id)].slice(0, 30);
@@ -69,7 +78,7 @@ export function App() {
   };
   const exportPilotNotes = () => {
     const notes = saved.map(item => ({
-      route: item.route, approachTitle: item.approach.title,
+      route: item.route, approachTitle: item.approach.title, starterPackId: item.starterPackId ?? null,
       reviews: item.reviews.map(review => ({
         decision: review.decision, note: review.note, recordedAt: review.recordedAt,
       })),
@@ -95,10 +104,10 @@ export function App() {
     </div></header>
     <main className="site-main">
       <div className="page-heading"><span className="eyebrow">A better way to work with AI</span>
-        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "adjust" ? <>Here’s a <em>starting point.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
+        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "packs" ? <>Find a <em>good starting point.</em></> : step === "adjust" ? <>Here’s a <em>starting point.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
         <p className="page-lede">{step === "choose" ? "You don't need to know how to write a perfect prompt. Tell rack what you want to do, start with a thoughtful approach, and shape it as you learn." : step === "adjust" ? "You can use this as it is. Make changes only if something doesn’t fit." : step === "review" ? "What happened when you used it? Keep what helped, change what didn't, or mark an instruction for removal." : "Take these instructions into your AI tool, or try them with our optional managed service. Come back and improve them whenever you're ready."}</p>
       </div>
-      <nav className="progress" aria-label="Progress"><span className={step==="choose"?"active":""}>1 · Create</span><span className={step==="adjust"||step==="use"?"active":""}>2 · Use</span><span className={step==="review"?"active":""}>3 · Improve</span></nav>
+      <nav className="progress" aria-label="Progress"><span className={step==="choose"||step==="packs"?"active":""}>1 · Create</span><span className={step==="adjust"||step==="use"?"active":""}>2 · Use</span><span className={step==="review"?"active":""}>3 · Improve</span></nav>
       {notice ? <div className="notice" role="status">{notice}</div> : null}
       {error ? <div className="notice error" role="alert">{error}</div> : null}
       {step === "choose" ? <>
@@ -115,9 +124,11 @@ export function App() {
             <button type="button" className="secondary-btn" onClick={()=>load(item)}>Open</button></div>)}</div>
         </section> : null}
       </> : null}
+      {step === "packs" ? <StarterPackPicker key={route} route={route} selectedId={starterPackId} onSelect={selectPack} onBack={()=>navigate("choose")} /> : null}
       {step === "adjust" ? <section className="panel editor-panel">
-        <div className="section-top"><span className="eyebrow">Suggested way of working · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("choose")}>Choose different work</button></div>
+        <div className="section-top"><span className="eyebrow">{starterPackId ? "Starter pack" : "Basic suggestion"} · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("packs")}>Other starting points</button></div>
         <h2 className="approach-name">{approach.title}</h2>
+        {starterPackId ? <p className="pack-selected-note">The selected pack adds its own full set of practices to the instructions and exported RACK.</p> : null}
         <div className="approach-summary">
           <div><strong>How AI should help</strong><p>{approach.guidance}</p></div>
           <div><strong>What to watch out for</strong><p>{approach.boundary}</p></div>
@@ -127,7 +138,7 @@ export function App() {
           <div className="field"><label htmlFor="approach-title">Name</label><input id="approach-title" maxLength={100} value={approach.title} onChange={e=>setApproach({...approach,title:e.target.value})}/></div>
           <div className="field"><label htmlFor="approach-guidance">How should AI work?</label><textarea id="approach-guidance" rows={5} value={approach.guidance} onChange={e=>setApproach({...approach,guidance:e.target.value})}/></div>
           <div className="field"><label htmlFor="approach-boundaries">What should it avoid or check?</label><textarea id="approach-boundaries" rows={4} value={approach.boundary} onChange={e=>setApproach({...approach,boundary:e.target.value})}/></div>
-          <button type="button" className="text-btn" onClick={()=>{setApproach({...firstRunApproaches[route]});setNotice("Suggested approach restored.");}}>Restore suggestion</button>
+          <button type="button" className="text-btn" onClick={()=>{setApproach({...firstRunApproaches[route],...(starterPackId?{title:starterTemplates.find(pack=>pack.id===starterPackId)?.title || firstRunApproaches[route].title}:{})});setNotice("Suggested approach restored.");}}>Restore suggestion</button>
         </div> : null}
         {preview.error ? <p role="alert" className="error">{preview.error}</p> : null}
       </section> : null}
