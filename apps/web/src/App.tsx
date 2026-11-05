@@ -65,7 +65,7 @@ export function App() {
   const recordReview = () => {
     const next = [...reviews, { id: crypto.randomUUID(), decision: reviewDecision, note: reviewNote.trim(), recordedAt: new Date().toISOString() }];
     setReviews(next); setReviewNote(""); save(next);
-    if (reviewDecision === "change") navigate("adjust"); else navigate("use");
+    if (reviewDecision === "change") { setEditingApproach(true); navigate("adjust"); } else navigate("use");
   };
   const exportPilotNotes = () => {
     const notes = saved.map(item => ({
