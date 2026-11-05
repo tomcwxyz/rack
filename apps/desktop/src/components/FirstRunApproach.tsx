@@ -7,6 +7,7 @@ type Props = {
   onAdjust: () => void;
   onChange: (approach: Approach) => void;
   onContinue: () => void;
+  starterPackSelected?: boolean;
 };
 
 export function FirstRunApproach({
@@ -16,16 +17,17 @@ export function FirstRunApproach({
   onAdjust,
   onChange,
   onContinue,
+  starterPackSelected = false,
 }: Props) {
   const valid = Boolean(approach.guidance.trim() && approach.boundary.trim());
   return (
     <section className="first-run-card" aria-label="Suggested approach">
-      <p className="eyebrow">A good starting point</p>
+      <p className="eyebrow">{starterPackSelected ? "Your additional guidance" : "A good starting point"}</p>
       <h2>{approach.title}</h2>
       {task.trim() ? (
         <p className="first-run-task">For your task: {task.trim()}</p>
       ) : null}
-      <p>Ask your AI to:</p>
+      <p>{starterPackSelected ? "The starter practices above are included automatically. You can also adjust these additional instructions." : "Ask your AI to:"}</p>
       {adjusting ? (
         <div className="first-run-fields">
           <label className="field">
@@ -54,6 +56,8 @@ export function FirstRunApproach({
             <p role="status">Add both parts of the approach to continue.</p>
           ) : null}
         </div>
+      ) : starterPackSelected ? (
+        <details className="first-run-extra-guidance"><summary>Read the additional guidance</summary><ul className="first-run-principles">{[approach.guidance, approach.boundary].flatMap(text => text.split("\n")).filter(line => line.trim()).map((line, index) => <li key={index}>{line}</li>)}</ul></details>
       ) : (
         <ul className="first-run-principles">
           {[approach.guidance, approach.boundary]

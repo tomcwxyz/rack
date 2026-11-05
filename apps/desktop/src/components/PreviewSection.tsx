@@ -434,9 +434,13 @@ export function PreviewSection({
     <section aria-labelledby="preview-heading">
       <div className="section-heading section-heading--top preview-heading">
         <div>
-          <p className="eyebrow">Destination preview</p>
-          <h2 id="preview-heading">Preview and export</h2>
+          <p className="eyebrow">Use with AI</p>
+          <h2 id="preview-heading">Copy or export your approach</h2>
+          <p className="muted-copy">Use your practice with the AI tool you prefer. Only open the settings if you need a different format or additional context.</p>
         </div>
+      </div>
+      <details className="calm-preview-options">
+        <summary>Choose a different format or add context</summary>
         <div className="preview-controls">
           <label className="compact-field">
             <span>Set-up</span>
@@ -467,7 +471,6 @@ export function PreviewSection({
             </select>
           </label>
         </div>
-      </div>
 
       {target === "prompt" ? (
         <TopoContextPanel
@@ -476,6 +479,8 @@ export function PreviewSection({
           onStatus={onStatus}
         />
       ) : null}
+
+      </details>
 
       {hostIntegration ? (
         <aside className="degradation-panel" aria-label="AI tool hand-off">
@@ -657,6 +662,12 @@ export function PreviewSection({
             </div>
           ) : null}
 
+          {selectedArtifact ? <div className="calm-prompt-actions">
+            <div><strong>Use your instructions</strong><p className="muted-copy">Copy to your AI conversation, or save a local file.</p></div>
+            <div className="button-row"><button className="primary-action" type="button" onClick={() => void copyArtifact()}>Copy for AI</button><button className="quiet-action" type="button" onClick={() => void exportArtifact()}>Download file</button></div>
+          </div> : null}
+          <details className="calm-preview-technical">
+            <summary>Inspect generated files and included instructions</summary>
           <div className="package-files" aria-label="Generated package files">
             {previewTargetBuild.artifacts.map((artifact) => (
               <button
@@ -706,6 +717,7 @@ export function PreviewSection({
               </pre>
             </div>
           </div>
+          </details>
         </>
       )}
     </section>
