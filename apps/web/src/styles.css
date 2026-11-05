@@ -34,3 +34,30 @@
 .calm-technical>summary{font-weight:650;color:#575148;cursor:pointer;padding:8px 0}
 .calm-technical .output-details{margin-top:14px}
 @media(max-width:700px){.site-main{padding:26px 16px}.choice-grid{grid-template-columns:1fr}.choice-card{min-height:0;padding:20px}.topbar-inner{padding:0 16px}.brand-descriptor{display:none}}
+
+
+/* Starter-pack browser: calm selection without hiding the catalogue. */
+.pack-picker{max-width:100%;padding:clamp(22px,3vw,34px)}
+.pack-picker>h2{margin:20px 0 8px}
+.pack-picker>.muted{max-width:740px}
+.pack-categories{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
+.pack-categories button{border:1px solid #d8d2c7;background:#fffdf7;color:#4c4943;padding:10px 18px;border-radius:999px;font-weight:650}
+.pack-categories button.active{background:#315c43;color:#fff;border-color:#315c43}
+.pack-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pack-card{display:flex;flex-direction:column;align-items:flex-start;gap:11px;padding:24px;border:1px solid #ded9cf;border-radius:17px;background:#fffdf7;min-width:0;overflow-wrap:anywhere}
+.pack-card .eyebrow{margin:0}
+.pack-card h3{font:normal 1.6rem Georgia,serif;margin:0;color:#201f1c;line-height:1.2}
+.pack-card>p:not(.eyebrow){color:#666057;line-height:1.5;margin:0}
+.pack-card .pack-best{font-size:.85rem}
+.pack-card .pack-best strong{color:#315c43;display:block}
+.pack-card .primary-btn{margin-top:auto}
+.pack-contents{width:100%;padding:8px 0 12px}
+.pack-contents summary{cursor:pointer;color:#315c43;font-weight:650}
+.pack-contents ul{padding:12px 0 0 20px;margin:0;display:grid;gap:12px}
+.pack-contents li{color:#393730;line-height:1.45}
+.pack-contents li span{display:block;color:#777168;font-size:.83rem}
+.pack-basic{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-top:18px;padding:20px 0;border-top:1px solid #ded9cf}
+.pack-basic div{display:grid;gap:6px}
+.pack-basic div span{font-size:.86rem;color:#6f6b62}
+.pack-selected-note{background:#e9f0e9;color:#315c43;border-radius:10px;padding:13px 16px;font-size:.88rem;line-height:1.5}
+@media(max-width:740px){.pack-grid{grid-template-columns:1fr}.pack-basic{align-items:flex-start;flex-direction:column}.pack-card{padding:20px}}
