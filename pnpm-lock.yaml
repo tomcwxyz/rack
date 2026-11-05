@@ -102,6 +102,9 @@ importers:
       '@rack/managed':
         specifier: workspace:*
         version: link:../../packages/managed
+      '@rack/starter':
+        specifier: workspace:*
+        version: link:../../packages/starter
       react:
         specifier: ^19.2.8
         version: 19.2.8
