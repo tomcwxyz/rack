@@ -14,7 +14,8 @@ describe("real starter packs in the browser pilot", () => {
       const basic = buildStarterPractice(route, "A realistic pilot task", firstRunApproaches[route], null);
       expect(instructions).not.toBe(basic.instructions);
       const summary = getStarterPackSummary(id);
-      expect(summary?.practices).toHaveLength(starterTemplates.find(pack=>pack.id===id)?.moduleIds.length);
+      expect(summary).not.toBeNull();
+      expect(summary?.practices.length).toBe(starterTemplates.find(pack=>pack.id===id)?.moduleIds.length);
       for (const item of summary?.practices || []) {
         expect(proposal.files.some(file=>file.content.includes(item.id))).toBe(true);
       }
