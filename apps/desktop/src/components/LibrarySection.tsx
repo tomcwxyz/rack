@@ -37,12 +37,16 @@ export function LibrarySection({
   const [query, setQuery] = useState("");
   const [route, setRoute] = useState<"" | "writing" | "research" | "coding">("");
   const [type, setType] = useState<"" | StarterEntry["type"]>("");
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [profileId, setProfileId] = useState(project.manifest?.default_profile ?? "");
   const [plan, setPlan] = useState<StarterImportPlan | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const initialRoute = /coding|code|software/i.test(project.manifest?.title ?? "") ? "coding" : /research|evidence/i.test(project.manifest?.title ?? "") ? "research" : /writing|communication/i.test(project.manifest?.title ?? "") ? "writing" : "";
+  const featuredTemplates = showAllTemplates || !initialRoute ? starterTemplates : starterTemplates.filter(template => template.route === initialRoute);
 
   const visible = useMemo(
     () =>
@@ -129,19 +133,16 @@ export function LibrarySection({
       <div className="section-heading">
         <div>
           <p className="eyebrow">Good ways to start · local · inspectable</p>
-          <h2>Starting points</h2>
+          <h2>Try a different approach</h2>
           <p>
-            You do not need to design a working practice from scratch. Pick the closest
-            starting point, review what it will add, then change it as you learn what works for you.
+            Choose a starting point that fits your work. You can adjust it later.
           </p>
         </div>
-        <span className="count-badge">
-          {starterTemplates.length} starting points · {starterCatalogue.length} practices
-        </span>
+
       </div>
 
       <div className="library-templates" aria-label="Starting templates">
-        {starterTemplates.map((template) => (
+        {featuredTemplates.map((template) => (
           <button
             key={template.id}
             type="button"
@@ -159,6 +160,10 @@ export function LibrarySection({
         ))}
       </div>
 
+      {!showAllTemplates && initialRoute ? <button type="button" className="quiet-action calm-show-all" onClick={() => setShowAllTemplates(true)}>See all starting points</button> : null}
+
+      <details className="calm-library-advanced">
+        <summary>Browse individual practices and advanced options</summary>
       <div className="section-heading section-heading--compact">
         <div>
           <p className="eyebrow">Want to go deeper?</p>
@@ -362,6 +367,7 @@ export function LibrarySection({
           </div>
         </div>
       ) : null}
+      </details>
     </section>
   );
 }
