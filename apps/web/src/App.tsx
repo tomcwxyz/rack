@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  firstRunApproaches, firstRunInstructions, firstRunProposal,
+  firstRunApproaches,
   type FirstRunApproach,
 } from "@rack/creation";
 import type { CreationRouteId } from "@rack/creation";
