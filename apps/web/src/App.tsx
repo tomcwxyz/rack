@@ -8,7 +8,7 @@ import { downloadRack } from "./lib/archive.js";
 import { loadPractices, persistPractices, type SavedPractice, type PracticeReview, type ReviewDecision } from "./lib/storage.js";
 import { ManagedTrial } from "./components/ManagedTrial.js";
 import { StarterPackPicker } from "./components/StarterPackPicker.js";
-import { buildStarterPractice, starterTemplates } from "./lib/starterPacks.js";
+import { buildStarterPractice, getStarterPackSummary, starterTemplates } from "./lib/starterPacks.js";
 
 type Step = "choose" | "packs" | "adjust" | "use" | "review";
 const CHOICES: {id: CreationRouteId; title: string; description: string; icon: string}[] = [
@@ -37,6 +37,7 @@ export function App() {
   const [reviewNote, setReviewNote] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const selectedPack = useMemo(() => getStarterPackSummary(starterPackId), [starterPackId]);
   const preview = useMemo(() => {
     try {
       const { proposal, instructions } = buildStarterPractice(route, task, approach, starterPackId);
@@ -128,11 +129,26 @@ export function App() {
       {step === "adjust" ? <section className="panel editor-panel">
         <div className="section-top"><span className="eyebrow">{starterPackId ? "Starter pack" : "Basic suggestion"} · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("packs")}>Other starting points</button></div>
         <h2 className="approach-name">{approach.title}</h2>
-        {starterPackId ? <p className="pack-selected-note">The selected pack adds its own full set of practices to the instructions and exported RACK.</p> : null}
-        <div className="approach-summary">
+        {selectedPack ? <>
+          <p className="pack-selected-note">{selectedPack.promise}</p>
+          <p className="pack-applied-count">This approach includes {selectedPack.practices.length} real starter practices:</p>
+          <div className="pack-applied-practices">
+            {selectedPack.practices.map(practice => <div key={practice.id} className="pack-applied-item">
+              <strong>{practice.title}</strong><span>{practice.description}</span>
+            </div>)}
+          </div>
+          <details className="pack-extra-guidance">
+            <summary>Your additional guidance and boundaries</summary>
+            <p className="muted small">These basic instructions are added alongside the selected pack; they do not replace its practices.</p>
+            <div className="approach-summary">
+              <div><strong>Additional guidance</strong><p>{approach.guidance}</p></div>
+              <div><strong>Additional boundaries</strong><p>{approach.boundary}</p></div>
+            </div>
+          </details>
+        </> : <div className="approach-summary">
           <div><strong>How AI should help</strong><p>{approach.guidance}</p></div>
           <div><strong>What to watch out for</strong><p>{approach.boundary}</p></div>
-        </div>
+        </div>}
         <div className="button-row"><button type="button" className="primary-btn" disabled={!preview.proposal} onClick={()=>navigate("use")}>Use this approach <span aria-hidden>→</span></button><button type="button" className="secondary-btn" aria-expanded={editingApproach} onClick={()=>setEditingApproach(!editingApproach)}>{editingApproach ? "Finish changes" : "Change a few things"}</button></div>
         {editingApproach ? <div className="approach-edit-fields">
           <div className="field"><label htmlFor="approach-title">Name</label><input id="approach-title" maxLength={100} value={approach.title} onChange={e=>setApproach({...approach,title:e.target.value})}/></div>
@@ -144,7 +160,7 @@ export function App() {
       </section> : null}
       {step === "use" && preview.proposal ? <>
         <section className="panel ready-panel"><span className="eyebrow">Ready to work · {route}</span>
-          <h2>{approach.title}</h2><p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
+          <h2>{approach.title}</h2>{selectedPack ? <p className="muted">{selectedPack.practices.length} starter practices included · {selectedPack.promise}</p> : null}<p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
           <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button></div>
           <div className="next-step-note"><strong>Then try it on real work.</strong><span>Once you’ve used it, come back to decide what to keep or change.</span></div>
           <div className="button-row"><button className="secondary-btn" type="button" onClick={()=>navigate("review")}>Improve this approach</button><button className="text-btn" type="button" onClick={()=>{setEditingApproach(true);navigate("adjust");}}>Edit approach</button></div>
