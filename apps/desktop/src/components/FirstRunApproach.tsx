@@ -57,7 +57,7 @@ export function FirstRunApproach({
           ) : null}
         </div>
       ) : starterPackSelected ? (
-        <details className="first-run-extra-guidance"><summary>Read the additional guidance</summary><ul className="first-run-principles">{[approach.guidance, approach.boundary].flatMap(text => text.split("\\n")).filter(line => line.trim()).map((line, index) => <li key={index}>{line}</li>)}</ul></details>
+        <details className="first-run-extra-guidance"><summary>Read the additional guidance</summary><ul className="first-run-principles">{[approach.guidance, approach.boundary].flatMap(text => text.split("\n")).filter(line => line.trim()).map((line, index) => <li key={index}>{line}</li>)}</ul></details>
       ) : (
         <ul className="first-run-principles">
           {[approach.guidance, approach.boundary]
