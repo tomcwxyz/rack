@@ -39,6 +39,7 @@ export function LibrarySection({
   const [type, setType] = useState<"" | StarterEntry["type"]>("");
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [profileId, setProfileId] = useState(project.manifest?.default_profile ?? "");
   const [plan, setPlan] = useState<StarterImportPlan | null>(null);
   const [reviewing, setReviewing] = useState(false);
@@ -59,6 +60,7 @@ export function LibrarySection({
   );
 
   const changeSelection = (id: string, checked: boolean) => {
+    setSelectedTemplate(null);
     setSelected((current) => {
       const next = new Set(current);
       if (checked) next.add(id);
@@ -69,7 +71,8 @@ export function LibrarySection({
     setError(null);
   };
 
-  const useTemplate = (moduleIds: readonly string[]) => {
+  const useTemplate = (templateId: string, moduleIds: readonly string[]) => {
+    setSelectedTemplate(templateId);
     setSelected(new Set(moduleIds));
     setPlan(null);
     setError(null);
@@ -120,6 +123,7 @@ export function LibrarySection({
         `Practice added: ${added} added${alreadyThere ? `, ${alreadyThere} already present` : ""}.`,
       );
       setSelected(new Set());
+      setSelectedTemplate(null);
       setPlan(null);
     } catch (reason) {
       setError(errorMessage(reason));
@@ -147,7 +151,8 @@ export function LibrarySection({
             key={template.id}
             type="button"
             className="template-card"
-            onClick={() => useTemplate(template.moduleIds)}
+            aria-pressed={selectedTemplate === template.id}
+            onClick={() => useTemplate(template.id, template.moduleIds)}
           >
             <span className="template-card__route">{template.route}</span>
             <strong>{template.title}</strong>
@@ -278,9 +283,11 @@ export function LibrarySection({
         ))}
       </div>
 
+      </details>
+
       <div className="library-review-bar">
         <div>
-          <strong>{selected.size} practice{selected.size === 1 ? "" : "s"} selected</strong>
+          <strong>{selectedTemplate ? starterTemplates.find(template => template.id === selectedTemplate)?.title : `${selected.size} practice${selected.size === 1 ? "" : "s"} selected`}</strong>
           <p>Nothing is fetched remotely and no existing local practice will be replaced.</p>
         </div>
         <label className="field">
@@ -367,7 +374,6 @@ export function LibrarySection({
           </div>
         </div>
       ) : null}
-      </details>
     </section>
   );
 }
