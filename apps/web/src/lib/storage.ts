@@ -13,6 +13,7 @@ export type SavedPractice = {
   route: CreationRouteId;
   task: string;
   approach: FirstRunApproach;
+  starterPackId?: string | null;
   reviews: PracticeReview[];
   updatedAt: string;
 };
@@ -30,6 +31,7 @@ export function loadPractices(storage: Pick<Storage, "getItem"> = localStorage):
       typeof item.approach?.title === "string" &&
       typeof item.approach?.guidance === "string" &&
       typeof item.approach?.boundary === "string" &&
+      (item.starterPackId == null || typeof item.starterPackId === "string") &&
       Array.isArray(item.reviews) && typeof item.updatedAt === "string"
     ).slice(0, 30);
   } catch { return []; }
