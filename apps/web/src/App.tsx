@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   firstRunApproaches,
+  blankRackProposal,
   type FirstRunApproach,
 } from "@rack/creation";
 import type { CreationRouteId } from "@rack/creation";
@@ -85,7 +86,7 @@ export function App() {
   };
   const createBlank = (nextRoute: CreationRouteId) => {
     setRoute(nextRoute); setApproach({...firstRunApproaches[nextRoute], title:"My new RACK", guidance:"Follow the practices I have chosen.", boundary:"Ask when information is missing."});
-    setStarterPackId(null); setImportedRack(null); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
+    setStarterPackId(null); setImportedRack(blankRackProposal(nextRoute,"My new RACK")); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
   };
   const importRack = async (file: File) => {
     try {
