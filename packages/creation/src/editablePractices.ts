@@ -31,7 +31,7 @@ const customFile = (practice: EditablePractice, route: CreationRouteId) => {
     "description: \"A practice written by the RACK owner.\"", "tags: [custom]",
     "harness:", "  schema_version: \"0.1\"", "  id: context.user-" + id,
     "  version: 0.1.0", "  context_kind: organisation",
-    "  applies_to: [" + route + "]", "---", "", practice.description.trim(), ""
+    "  applies_to: [" + (route === "coding" ? "code" : route) + "]", "---", "", practice.description.trim(), ""
   ].join("\n")};
 };
 export function applyPractices(base: RackProposal, practices: EditablePractice[], route: CreationRouteId): RackProposal {
