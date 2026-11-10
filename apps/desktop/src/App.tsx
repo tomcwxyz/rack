@@ -104,7 +104,7 @@ export function App() {
           <button
             className="wordmark wordmark--button"
             type="button"
-            onClick={() => setCreating(null)}
+            onClick={() => setCreating("choose")}
             aria-label="Rack home"
           >
             rack
@@ -126,7 +126,7 @@ export function App() {
             <button
               className="sidebar-link"
               type="button"
-              onClick={() => setCreating(null)}
+              onClick={() => setCreating("choose")}
             >
               Back to Rack home
             </button>
@@ -136,7 +136,7 @@ export function App() {
           {openError ? <div className="notice notice--error" role="alert">{openError}</div> : null}
           {creating === "choose" ? (
             <RouteChooser
-              onCancel={() => setCreating(null)}
+              onCancel={() => setCreating("choose")}
               onSelect={(route) => {
                 setCreationRoute(route);
                 setStarterPackId(null);
