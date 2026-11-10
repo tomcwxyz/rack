@@ -128,7 +128,7 @@ export function App() {
               type="button"
               onClick={() => setCreating("choose")}
             >
-              Back to Rack home
+              Choose work type
             </button>
           </div>
         </aside>
@@ -136,7 +136,6 @@ export function App() {
           {openError ? <div className="notice notice--error" role="alert">{openError}</div> : null}
           {creating === "choose" ? (
             <RouteChooser
-              onCancel={() => setCreating("choose")}
               onSelect={(route) => {
                 setCreationRoute(route);
                 setStarterPackId(null);
