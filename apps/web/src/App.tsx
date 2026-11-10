@@ -5,6 +5,9 @@ import {
 } from "@rack/creation";
 import type { CreationRouteId } from "@rack/creation";
 import { downloadRack } from "./lib/archive.js";
+import { PracticeEditor } from "./components/PracticeEditor.js";
+import { compilePractices, extractPractices, readRackTar, type EditablePractice } from "./lib/practiceWorkspace.js";
+import type { RackProposal } from "@rack/creation";
 import { loadPractices, persistPractices, type SavedPractice, type PracticeReview, type ReviewDecision } from "./lib/storage.js";
 import { ManagedTrial } from "./components/ManagedTrial.js";
 import { StarterPackPicker } from "./components/StarterPackPicker.js";
@@ -31,6 +34,8 @@ export function App() {
   const [starterPackId, setStarterPackId] = useState<string | null>(null);
   const [approach, setApproach] = useState<FirstRunApproach>({...firstRunApproaches.writing});
   const [saved, setSaved] = useState<SavedPractice[]>(() => loadPractices());
+  const [practices, setPractices] = useState<EditablePractice[]>([]);
+  const [importedRack, setImportedRack] = useState<RackProposal | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviews, setReviews] = useState<PracticeReview[]>([]);
   const [reviewDecision, setReviewDecision] = useState<ReviewDecision>("keep");
@@ -40,37 +45,62 @@ export function App() {
   const selectedPack = useMemo(() => getStarterPackSummary(starterPackId), [starterPackId]);
   const preview = useMemo(() => {
     try {
-      const { proposal, instructions } = buildStarterPractice(route, task, approach, starterPackId);
+      const base = importedRack || buildStarterPractice(route, task, approach, starterPackId).proposal;
+      const { proposal, instructions } = compilePractices(base, practices, route);
       return { proposal, instructions, error: "" };
     } catch (reason) { return { proposal: null, instructions: "", error: errorText(reason) }; }
-  }, [route, task, approach, starterPackId]);
+  }, [route, task, approach, starterPackId, practices, importedRack]);
 
   const navigate = (next: Step) => { setNotice(""); setError(""); setStep(next); window.scrollTo({top:0, behavior:"smooth"}); };
   const choose = (next: CreationRouteId) => {
     setRoute(next); setApproach({...firstRunApproaches[next]}); setStarterPackId(null); setSelectedId(null); setReviews([]);
-    setEditingApproach(false);
+    setEditingApproach(false); setPractices([]); setImportedRack(null);
     navigate("packs");
   };
   const selectPack = (id: string | null, nextRoute: CreationRouteId) => {
     setRoute(nextRoute);
     setStarterPackId(id);
     setApproach({ ...firstRunApproaches[nextRoute], ...(id ? { title: starterTemplates.find(pack=>pack.id===id)?.title || firstRunApproaches[nextRoute].title } : {}) });
-    setSelectedId(null); setReviews([]); setEditingApproach(false);
+    setSelectedId(null); setReviews([]); setEditingApproach(false); setImportedRack(null);
+    try {
+      const nextApproach = { ...firstRunApproaches[nextRoute], ...(id ? { title: starterTemplates.find(pack=>pack.id===id)?.title || firstRunApproaches[nextRoute].title } : {}) };
+      setPractices(id ? extractPractices(buildStarterPractice(nextRoute, task, nextApproach, id).proposal) : []);
+    } catch (reason) { setError(errorText(reason)); setPractices([]); }
     navigate("adjust");
   };
   const load = (item: SavedPractice) => {
     setRoute(item.route); setTask(item.task); setApproach({...item.approach}); setReviews(item.reviews); setStarterPackId(item.starterPackId ?? null);
-    setSelectedId(item.id); navigate("use");
+    setPractices(item.practices || []); setImportedRack(item.importedRack || null);
+    setSelectedId(item.id); navigate("adjust");
   };
   const save = (nextReviews = reviews) => {
     if (!preview.proposal) { setError(preview.error); return; }
     const item: SavedPractice = {
-      id: selectedId || crypto.randomUUID(), route, task, approach, starterPackId, reviews: nextReviews,
+      id: selectedId || crypto.randomUUID(), route, task, approach, starterPackId, reviews: nextReviews, practices, importedRack,
       updatedAt: new Date().toISOString(),
     };
     const next = [item, ...saved.filter(entry => entry.id !== item.id)].slice(0, 30);
     try { persistPractices(next); setSaved(next); setSelectedId(item.id); setNotice("Saved in this browser. Export a copy to keep it elsewhere."); }
     catch { setError("Your browser could not save this approach. Please export a copy."); }
+  };
+  const createBlank = (nextRoute: CreationRouteId) => {
+    setRoute(nextRoute); setTask(""); setApproach({...firstRunApproaches[nextRoute], title:"My new RACK", guidance:"Follow the practices I have chosen.", boundary:"Ask when information is missing."});
+    setStarterPackId(null); setImportedRack(null); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
+  };
+  const importRack = async (file: File) => {
+    try {
+      const archive = readRackTar(new Uint8Array(await file.arrayBuffer()));
+      const detected = (["writing","research","coding"] as const).find(value=>archive.files.some(f=>f.path==="profiles/"+value+".yaml"));
+      if (!detected) throw new Error("This RACK has no supported writing, research or coding profile.");
+      // Validate before replacing the open workspace.
+      const items = extractPractices(archive);
+      compilePractices(archive, items, detected);
+      const manifest = archive.files.find(f=>f.path==="rack.yaml")?.content || "";
+      const title = manifest.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^"|"$/g,"") || "Imported RACK";
+      setRoute(detected); setApproach({...firstRunApproaches[detected],title}); setTask(""); setImportedRack(archive);
+      setPractices(items); setStarterPackId(null); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
+      setNotice("Imported locally. Review the practices, then save a copy in this browser.");
+    } catch(reason) { setError("Could not import RACK: "+errorText(reason)); }
   };
   const recordReview = () => {
     const next = [...reviews, { id: crypto.randomUUID(), decision: reviewDecision, note: reviewNote.trim(), recordedAt: new Date().toISOString() }];
@@ -120,6 +150,7 @@ export function App() {
             <span className="choice-icon">{item.icon}</span><strong>{item.title}</strong><span>{item.description}</span><span className="choice-arrow">→</span>
           </button>)}</div>
         </section>
+        <section className="choose-panel"><h2>Or make it your own</h2><div className="choice-grid"><div className="choice-card alternative-choice"><strong>Create from scratch</strong><p>Build an empty collection of practices for the work you do.</p><div className="button-row">{CHOICES.map(item=><button key={item.id} type="button" className="secondary-btn" onClick={()=>createBlank(item.id)}>{item.id}</button>)}</div></div><div className="choice-card alternative-choice"><strong>Open an existing RACK</strong><p>Import a RACK archive exported from the browser or desktop.</p><label className="secondary-btn upload-label">Choose a .tar file<input type="file" accept=".tar,application/x-tar" onChange={e=>{const file=e.target.files?.[0];if(file)void importRack(file);e.target.value="";}} /></label></div></div></section>
         {saved.length > 0 ? <section className="saved-section"><div className="section-top"><h2>Saved in this browser</h2><div className="button-row"><button type="button" className="secondary-btn" onClick={exportPilotNotes}>Download pilot notes</button><button type="button" className="text-btn" onClick={clearSaved}>Clear browser library</button></div></div><p className="muted small">Notes are never sent automatically. Download and share the feedback file only if you choose to.</p>
           <div className="saved-grid">{saved.map(item=><div className="saved-item" key={item.id}><div><span className="eyebrow">{item.route}</span><h3>{item.approach.title}</h3><p className="muted small">{item.task || "General approach"} · {item.reviews.length} reviews</p></div>
             <button type="button" className="secondary-btn" onClick={()=>load(item)}>Open</button></div>)}</div>
@@ -129,7 +160,8 @@ export function App() {
       {step === "adjust" ? <section className="panel editor-panel">
         <div className="section-top"><span className="eyebrow">{starterPackId ? "Starter pack" : "Basic suggestion"} · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("packs")}>Other starting points</button></div>
         <h2 className="approach-name">{approach.title}</h2>
-        {selectedPack ? <>
+        <PracticeEditor practices={practices} onChange={setPractices} title={approach.title} onTitleChange={title=>setApproach({...approach,title})}/>
+        {selectedPack && !importedRack ? <>
           <p className="pack-selected-note">{selectedPack.promise}</p>
           <p className="pack-applied-count">This approach includes {selectedPack.practices.length} real starter practices:</p>
           <div className="pack-applied-practices">
@@ -161,7 +193,7 @@ export function App() {
       {step === "use" && preview.proposal ? <>
         <section className="panel ready-panel"><span className="eyebrow">Ready to work · {route}</span>
           <h2>{approach.title}</h2>{selectedPack ? <p className="muted">{selectedPack.practices.length} starter practices included · {selectedPack.promise}</p> : null}<p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
-          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button></div>
+          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button><button className="secondary-btn" type="button" onClick={()=>{setSelectedId(null);save();}}>Save a copy</button></div>
           <div className="next-step-note"><strong>Then try it on real work.</strong><span>Once you’ve used it, come back to decide what to keep or change.</span></div>
           <div className="button-row"><button className="secondary-btn" type="button" onClick={()=>navigate("review")}>Improve this approach</button><button className="text-btn" type="button" onClick={()=>{setEditingApproach(true);navigate("adjust");}}>Edit approach</button></div>
           <details className="calm-technical"><summary>Downloads and technical details</summary>
