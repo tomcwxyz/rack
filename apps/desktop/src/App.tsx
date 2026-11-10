@@ -15,10 +15,11 @@ import {
 } from "./components/RouteChooser.js";
 import { WritingRoute } from "./components/WritingRoute.js";
 import { StarterPackChooser } from "./components/StarterPackChooser.js";
+import {ScratchRackCreator} from "./components/ScratchRackCreator.js";
 import { TopoConnectionIndicator } from "./components/TopoConnectionIndicator.js";
 import type { StarterPackIntent } from "./creationStarterPack.js";
 
-type CreationState = "choose" | "pack" | CreationRouteId | null;
+type CreationState = "choose" | "pack" | "scratch" | CreationRouteId | null;
 
 export function App() {
   const [project, setProject] = useState<RackProject | null>(null);
@@ -149,6 +150,7 @@ export function App() {
             <StarterPackChooser
               route={creationRoute}
               onOpenExisting={() => void chooseRack(creationRoute)}
+              onScratch={() => setCreating("scratch")}
               onBack={() => {
                 setCreationRoute(null);
                 setStarterPackId(null);
@@ -164,6 +166,7 @@ export function App() {
               }}
             />
           ) : null}
+          {creating === "scratch" && creationRoute ? <ScratchRackCreator route={creationRoute} onBack={()=>setCreating("pack")} onCreated={applySnapshot}/> : null}
           {creating === "writing" ? <WritingRoute {...routeProps} /> : null}
           {creating === "research" ? <ResearchRoute {...routeProps} /> : null}
           {creating === "coding" ? <CodingRoute {...routeProps} /> : null}
