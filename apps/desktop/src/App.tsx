@@ -60,7 +60,7 @@ export function App() {
       if (expectedRoute) {
         const opened = parseProjectSnapshot(snapshot);
         const domains = opened.profiles.flatMap(profile => profile.domains);
-        if (!domains.includes(expectedRoute)) throw new Error(`This RACK is not configured for ${expectedRoute}. Choose its work type first.`);
+        if (!domains.includes(expectedRoute === "coding" ? "code" : expectedRoute)) throw new Error(`This RACK is not configured for ${expectedRoute}. Choose its work type first.`);
       }
       applySnapshot(snapshot);
     } catch (reason) {
