@@ -84,7 +84,7 @@ export function App() {
     catch { setError("Your browser could not save this approach. Please export a copy."); }
   };
   const createBlank = (nextRoute: CreationRouteId) => {
-    setRoute(nextRoute); setTask(""); setApproach({...firstRunApproaches[nextRoute], title:"My new RACK", guidance:"Follow the practices I have chosen.", boundary:"Ask when information is missing."});
+    setRoute(nextRoute); setApproach({...firstRunApproaches[nextRoute], title:"My new RACK", guidance:"Follow the practices I have chosen.", boundary:"Ask when information is missing."});
     setStarterPackId(null); setImportedRack(null); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
   };
   const importRack = async (file: File) => {
@@ -92,12 +92,13 @@ export function App() {
       const archive = readRackTar(new Uint8Array(await file.arrayBuffer()));
       const detected = (["writing","research","coding"] as const).find(value=>archive.files.some(f=>f.path==="profiles/"+value+".yaml"));
       if (!detected) throw new Error("This RACK has no supported writing, research or coding profile.");
+      if (detected !== route) throw new Error("This RACK is for "+detected+". Go back and choose that type of work first.");
       // Validate before replacing the open workspace.
       const items = extractPractices(archive);
       compilePractices(archive, items, detected);
       const manifest = archive.files.find(f=>f.path==="rack.yaml")?.content || "";
       const title = manifest.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^"|"$/g,"") || "Imported RACK";
-      setRoute(detected); setApproach({...firstRunApproaches[detected],title}); setTask(""); setImportedRack(archive);
+      setApproach({...firstRunApproaches[detected],title}); setImportedRack(archive);
       setPractices(items); setStarterPackId(null); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
       setNotice("Imported locally. Review the practices, then save a copy in this browser.");
     } catch(reason) { setError("Could not import RACK: "+errorText(reason)); }
@@ -135,8 +136,8 @@ export function App() {
     </div></header>
     <main className="site-main">
       <div className="page-heading"><span className="eyebrow">A better way to work with AI</span>
-        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "packs" ? <>Find a <em>good starting point.</em></> : step === "adjust" ? <>Here’s a <em>starting point.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
-        <p className="page-lede">{step === "choose" ? "You don't need to know how to write a perfect prompt. Tell rack what you want to do, start with a thoughtful approach, and shape it as you learn." : step === "adjust" ? "You can use this as it is. Make changes only if something doesn’t fit." : step === "review" ? "What happened when you used it? Keep what helped, change what didn't, or mark an instruction for removal." : "Take these instructions into your AI tool, or try them with our optional managed service. Come back and improve them whenever you're ready."}</p>
+        <h1>{step === "choose" ? <>Make AI work <em>your way.</em></> : step === "packs" ? <>Choose your <em>starting point.</em></> : step === "adjust" ? <>Here’s a <em>starting point.</em></> : step === "review" ? <>Make your approach <em>better.</em></> : <>Your approach is <em>ready.</em></>}</h1>
+        <p className="page-lede">{step === "choose" ? "You don't need to know how to write a perfect prompt. Tell rack what you want to do, start with a thoughtful approach, and shape it as you learn." : step === "packs" ? "Start with a pack, load a RACK you already have, or make your own from scratch." : step === "adjust" ? "Make this RACK yours. Change, add or remove any practice." : step === "review" ? "What happened when you used it? Keep what helped, change what didn't, or mark an instruction for removal." : "Take these instructions into your AI tool, or try them with our optional managed service. Come back and improve them whenever you're ready."}</p>
       </div>
       <nav className="progress" aria-label="Progress"><span className={step==="choose"||step==="packs"?"active":""}>1 · Create</span><span className={step==="adjust"||step==="use"?"active":""}>2 · Use</span><span className={step==="review"?"active":""}>3 · Improve</span></nav>
       {notice ? <div className="notice" role="status">{notice}</div> : null}
@@ -150,13 +151,8 @@ export function App() {
             <span className="choice-icon">{item.icon}</span><strong>{item.title}</strong><span>{item.description}</span><span className="choice-arrow">→</span>
           </button>)}</div>
         </section>
-        <section className="choose-panel"><h2>Or make it your own</h2><div className="choice-grid"><div className="choice-card alternative-choice"><strong>Create from scratch</strong><p>Build an empty collection of practices for the work you do.</p><div className="button-row">{CHOICES.map(item=><button key={item.id} type="button" className="secondary-btn" onClick={()=>createBlank(item.id)}>{item.id}</button>)}</div></div><div className="choice-card alternative-choice"><strong>Open an existing RACK</strong><p>Import a RACK archive exported from the browser or desktop.</p><label className="secondary-btn upload-label">Choose a .tar file<input type="file" accept=".tar,application/x-tar" onChange={e=>{const file=e.target.files?.[0];if(file)void importRack(file);e.target.value="";}} /></label></div></div></section>
-        {saved.length > 0 ? <section className="saved-section"><div className="section-top"><h2>Saved in this browser</h2><div className="button-row"><button type="button" className="secondary-btn" onClick={exportPilotNotes}>Download pilot notes</button><button type="button" className="text-btn" onClick={clearSaved}>Clear browser library</button></div></div><p className="muted small">Notes are never sent automatically. Download and share the feedback file only if you choose to.</p>
-          <div className="saved-grid">{saved.map(item=><div className="saved-item" key={item.id}><div><span className="eyebrow">{item.route}</span><h3>{item.approach.title}</h3><p className="muted small">{item.task || "General approach"} · {item.reviews.length} reviews</p></div>
-            <button type="button" className="secondary-btn" onClick={()=>load(item)}>Open</button></div>)}</div>
-        </section> : null}
       </> : null}
-      {step === "packs" ? <StarterPackPicker key={route} route={route} selectedId={starterPackId} onSelect={selectPack} onBack={()=>navigate("choose")} /> : null}
+      {step === "packs" ? <StarterPackPicker key={route} route={route} selectedId={starterPackId} onSelect={selectPack} onBack={()=>navigate("choose")} onBlank={()=>createBlank(route)} onImport={importRack} saved={saved.filter(item=>item.route===route)} onLoad={load} /> : null}
       {step === "adjust" ? <section className="panel editor-panel">
         <div className="section-top"><span className="eyebrow">{starterPackId ? "Starter pack" : "Basic suggestion"} · {route}</span><button type="button" className="text-btn" onClick={()=>navigate("packs")}>Other starting points</button></div>
         <h2 className="approach-name">{approach.title}</h2>
