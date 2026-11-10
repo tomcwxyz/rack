@@ -1,6 +1,6 @@
-import type { RackProposal } from "./projectFiles.js";
+import { slugify, type RackProposal } from "./projectFiles.js";
 import type { CreationRouteId } from "./firstRun.js";
-import { firstRunInstructions, firstRunSnapshot } from "./firstRun.js";
+import { firstRunApproaches, firstRunProposal, firstRunInstructions, firstRunSnapshot } from "./firstRun.js";
 import { parseProjectSnapshot, readSetupDraft, patchSetupSource, readGuardrailModuleDraft, patchGuardrailModuleSource, readTaskModuleDraft, patchTaskModuleSource } from "@rack/core";
 
 export type EditablePractice = { id: string; title: string; description: string; enabled: boolean; path?: string; sourceId?: string };
@@ -115,4 +115,22 @@ export function applyPractices(base: RackProposal, practices: EditablePractice[]
 export function compilePractices(base: RackProposal, practices: EditablePractice[], route: CreationRouteId) {
   const proposal=applyPractices(base,practices,route);
   return {proposal,instructions:firstRunInstructions(proposal,route)};
+}
+
+
+export function blankRackProposal(route: CreationRouteId, title = "My new RACK"): RackProposal {
+  const rackTitle=title.trim();
+  if (!rackTitle) throw new Error("Give your RACK a name.");
+  const base=firstRunProposal(route,"", {...firstRunApproaches[route],title:rackTitle});
+  const slug=slugify(rackTitle);
+  const files=base.files.filter(f=>!f.path.startsWith("modules/") || f.path==="modules/index.md").map(file=>{
+    if(file.path==="rack.yaml"){
+      return {...file,content:file.content.replace(/^name:.*$/m,"name: "+slug).replace(/^title:.*$/m,"title: "+quote(rackTitle))};
+    }
+    if(file.path.startsWith("profiles/")){
+      return {...file,content:patchSetupSource(file.content,{...readSetupDraft(file.content),include:[]}).content};
+    }
+    return {...file};
+  });
+  return {folderName:slug,files};
 }
