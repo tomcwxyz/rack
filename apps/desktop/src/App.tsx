@@ -18,6 +18,7 @@ import { StarterPackChooser } from "./components/StarterPackChooser.js";
 import {ScratchRackCreator} from "./components/ScratchRackCreator.js";
 import { TopoConnectionIndicator } from "./components/TopoConnectionIndicator.js";
 import type { StarterPackIntent } from "./creationStarterPack.js";
+import {readRackTar,firstRunSnapshot} from "@rack/creation";
 
 type CreationState = "choose" | "pack" | "scratch" | CreationRouteId | null;
 
@@ -72,6 +73,41 @@ export function App() {
             ? reason
             : "Rack could not open that folder.",
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const importArchive = async (route: CreationRouteId) => {
+    setOpenError(null);
+    setLoading(true);
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: "Import a RACK exported from Web or Local",
+        filters: [{name: "RACK archive", extensions: ["tar"]}],
+      });
+      const path = Array.isArray(selected) ? selected[0] : selected;
+      if (!path) return;
+      const data = await invoke<number[]>("read_rack_archive", {path});
+      const proposal = readRackTar(new Uint8Array(data));
+      const parsed = parseProjectSnapshot(firstRunSnapshot(proposal));
+      const domain = route === "coding" ? "code" : route;
+      if(!parsed.profiles.some(profile=>profile.domains.includes(domain)))
+        throw new Error("This RACK is for another kind of work. Go back and choose the matching work type.");
+      const folderName = (parsed.manifest?.name || "imported-rack").replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"") || "imported-rack";
+      const destination = await open({
+        directory:true,multiple:false,title:"Choose where to save the imported RACK",
+      });
+      const parentPath = Array.isArray(destination) ? destination[0] : destination;
+      if (!parentPath) return;
+      const snapshot = await invoke<ProjectSnapshot>("create_rack_project",{
+        parentPath,folderName,files:proposal.files,
+      });
+      applySnapshot(snapshot);
+    } catch(reason) {
+      setOpenError(reason instanceof Error?reason.message:String(reason));
     } finally {
       setLoading(false);
     }
@@ -150,6 +186,7 @@ export function App() {
             <StarterPackChooser
               route={creationRoute}
               onOpenExisting={() => void chooseRack(creationRoute)}
+              onImportArchive={() => void importArchive(creationRoute)}
               onScratch={() => setCreating("scratch")}
               onBack={() => {
                 setCreationRoute(null);
