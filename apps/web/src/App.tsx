@@ -73,10 +73,10 @@ export function App() {
     setPractices(item.practices || []); setImportedRack(item.importedRack || null);
     setSelectedId(item.id); navigate("adjust");
   };
-  const save = (nextReviews = reviews) => {
+  const save = (nextReviews = reviews, duplicate = false) => {
     if (!preview.proposal) { setError(preview.error); return; }
     const item: SavedPractice = {
-      id: selectedId || crypto.randomUUID(), route, task, approach, starterPackId, reviews: nextReviews, practices, importedRack,
+      id: duplicate ? crypto.randomUUID() : (selectedId || crypto.randomUUID()), route, task, approach, starterPackId, reviews: nextReviews, practices, importedRack,
       updatedAt: new Date().toISOString(),
     };
     const next = [item, ...saved.filter(entry => entry.id !== item.id)].slice(0, 30);
@@ -163,12 +163,12 @@ export function App() {
         <PracticeEditor practices={practices} onChange={setPractices} title={approach.title} onTitleChange={title=>setApproach({...approach,title})}/>
         {selectedPack && !importedRack ? <>
           <p className="pack-selected-note">{selectedPack.promise}</p>
-          <p className="pack-applied-count">This approach includes {selectedPack.practices.length} real starter practices:</p>
-          <div className="pack-applied-practices">
+          <p className="pack-applied-count">Your edited practice list above determines what is included in the generated RACK. The original pack contained {selectedPack.practices.length} practices.</p>
+          <details className="pack-extra-guidance"><summary>See original pack contents</summary><div className="pack-applied-practices">
             {selectedPack.practices.map(practice => <div key={practice.id} className="pack-applied-item">
               <strong>{practice.title}</strong><span>{practice.description}</span>
             </div>)}
-          </div>
+          </div></details>
           <details className="pack-extra-guidance">
             <summary>Your additional guidance and boundaries</summary>
             <p className="muted small">These basic instructions are added alongside the selected pack; they do not replace its practices.</p>
@@ -192,8 +192,8 @@ export function App() {
       </section> : null}
       {step === "use" && preview.proposal ? <>
         <section className="panel ready-panel"><span className="eyebrow">Ready to work · {route}</span>
-          <h2>{approach.title}</h2>{selectedPack ? <p className="muted">{selectedPack.practices.length} starter practices included · {selectedPack.promise}</p> : null}<p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
-          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button><button className="secondary-btn" type="button" onClick={()=>{setSelectedId(null);save();}}>Save a copy</button></div>
+          <h2>{approach.title}</h2>{selectedPack ? <p className="muted">{practices.filter(item=>item.enabled).length} selected practices · {selectedPack.promise}</p> : null}<p className="muted">Copy your approach into an AI tool, then add the work you want it to help with.</p>
+          <div className="button-row"><button className="primary-btn" type="button" onClick={()=>void copy()}>Copy for AI</button><button className="secondary-btn" type="button" onClick={()=>save()}>{selectedId ? "Save changes" : "Save for next time"}</button><button className="secondary-btn" type="button" onClick={()=>save(reviews,true)}>Save a copy</button></div>
           <div className="next-step-note"><strong>Then try it on real work.</strong><span>Once you’ve used it, come back to decide what to keep or change.</span></div>
           <div className="button-row"><button className="secondary-btn" type="button" onClick={()=>navigate("review")}>Improve this approach</button><button className="text-btn" type="button" onClick={()=>{setEditingApproach(true);navigate("adjust");}}>Edit approach</button></div>
           <details className="calm-technical"><summary>Downloads and technical details</summary>
