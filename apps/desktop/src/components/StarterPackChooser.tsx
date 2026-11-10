@@ -12,6 +12,7 @@ type StarterPackChooserProps = {
   route: CreationRouteId;
   onBack: () => void;
   onOpenExisting: () => void;
+  onScratch: () => void;
   onSelect: (
     templateId: string | null,
     intent: StarterPackIntent,
@@ -64,6 +65,7 @@ export function StarterPackChooser({
   route,
   onBack,
   onOpenExisting,
+  onScratch,
   onSelect,
 }: StarterPackChooserProps) {
   const packs = starterPackIds[route].map(getPack);
@@ -102,7 +104,7 @@ export function StarterPackChooser({
       <div className="starter-start-options" aria-label="Choose your starting point">
         <button type="button" className="starter-start-option" aria-expanded={showPacks} onClick={() => setShowPacks(value => !value)}><strong>Choose a pack</strong><span>Browse ready-made practices for {route} that you can edit later.</span><span className="starter-start-action">{showPacks ? "Hide packs" : "Browse packs"} →</span></button>
         <button type="button" className="starter-start-option" onClick={onOpenExisting}><strong>Load a RACK</strong><span>Open an existing {route} RACK from a folder on your computer.</span><span className="starter-start-action">Choose folder →</span></button>
-        <button type="button" className="starter-start-option" onClick={() => onSelect(null, "tune", null)}><strong>Start from scratch</strong><span>Create a RACK using your own instructions and context.</span><span className="starter-start-action">Create your own →</span></button>
+        <button type="button" className="starter-start-option" onClick={onScratch}><strong>Start from scratch</strong><span>Create a RACK using your own instructions and context.</span><span className="starter-start-action">Create your own →</span></button>
       </div>
       {showPacks ? <div className="starter-pack-grid">
         {packs.map((pack) => {
