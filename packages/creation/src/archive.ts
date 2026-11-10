@@ -23,7 +23,11 @@ export function readRackTar(bytes:Uint8Array):RackProposal {
   let offset=0,terminated=false;
   while(offset+BLOCK<=bytes.length) {
     const header=bytes.subarray(offset,offset+BLOCK);
-    if(header.every(b=>b===0)){terminated=true;break;}
+    if(header.every(b=>b===0)){
+      if(offset+BLOCK*2>bytes.length || !bytes.subarray(offset+BLOCK,offset+BLOCK*2).every(b=>b===0))
+        throw new Error("The RACK archive terminator is incomplete.");
+      terminated=true;break;
+    }
     if(field(header,257,5)!=="ustar")throw new Error("This is not a supported RACK tar archive.");
     const path=[field(header,345,155),field(header,0,100)].filter(Boolean).join("/");
     const kind=header[156];
