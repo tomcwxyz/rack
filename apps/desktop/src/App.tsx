@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { FirstRun } from "./components/FirstRun.js";
-import type { FirstRunHost } from "./components/FirstRunHandoff.js";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -17,15 +15,16 @@ import {
 } from "./components/RouteChooser.js";
 import { WritingRoute } from "./components/WritingRoute.js";
 import { StarterPackChooser } from "./components/StarterPackChooser.js";
+import {ScratchRackCreator} from "./components/ScratchRackCreator.js";
 import { TopoConnectionIndicator } from "./components/TopoConnectionIndicator.js";
 import type { StarterPackIntent } from "./creationStarterPack.js";
+import {readRackTar,firstRunSnapshot} from "@rack/creation";
 
-type CreationState = "choose" | "pack" | CreationRouteId | null;
+type CreationState = "choose" | "pack" | "scratch" | CreationRouteId | null;
 
 export function App() {
-  const [initialHost, setInitialHost] = useState<FirstRunHost | null>(null);
   const [project, setProject] = useState<RackProject | null>(null);
-  const [creating, setCreating] = useState<CreationState>(null);
+  const [creating, setCreating] = useState<CreationState>("choose");
   const [creationRoute, setCreationRoute] = useState<CreationRouteId | null>(null);
   const [starterPackId, setStarterPackId] = useState<string | null>(null);
   const [starterPackModuleIds, setStarterPackModuleIds] =
@@ -36,7 +35,6 @@ export function App() {
   const [openError, setOpenError] = useState<string | null>(null);
 
   const applySnapshot = (snapshot: ProjectSnapshot) => {
-    setInitialHost(null);
     setProject(parseProjectSnapshot(snapshot));
     setCreating(null);
     setCreationRoute(null);
@@ -45,7 +43,7 @@ export function App() {
     setOpenError(null);
   };
 
-  const chooseRack = async () => {
+  const chooseRack = async (expectedRoute?: CreationRouteId | null) => {
     setOpenError(null);
     setLoading(true);
 
@@ -61,6 +59,11 @@ export function App() {
       const snapshot = await invoke<ProjectSnapshot>("read_rack_project", {
         path,
       });
+      if (expectedRoute) {
+        const opened = parseProjectSnapshot(snapshot);
+        const domains = opened.profiles.flatMap(profile => profile.domains);
+        if (!domains.includes(expectedRoute === "coding" ? "code" : expectedRoute)) throw new Error(`This RACK is not configured for ${expectedRoute}. Choose its work type first.`);
+      }
       applySnapshot(snapshot);
     } catch (reason) {
       setOpenError(
@@ -75,12 +78,46 @@ export function App() {
     }
   };
 
+  const importArchive = async (route: CreationRouteId) => {
+    setOpenError(null);
+    setLoading(true);
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: "Import a RACK exported from Web or Local",
+        filters: [{name: "RACK archive", extensions: ["tar"]}],
+      });
+      const path = Array.isArray(selected) ? selected[0] : selected;
+      if (!path) return;
+      const data = await invoke<number[]>("read_rack_archive", {path});
+      const proposal = readRackTar(new Uint8Array(data));
+      const parsed = parseProjectSnapshot(firstRunSnapshot(proposal));
+      const domain = route === "coding" ? "code" : route;
+      if(!parsed.profiles.some(profile=>profile.domains.includes(domain)))
+        throw new Error("This RACK is for another kind of work. Go back and choose the matching work type.");
+      const folderName = (parsed.manifest?.name || "imported-rack").replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"") || "imported-rack";
+      const destination = await open({
+        directory:true,multiple:false,title:"Choose where to save the imported RACK",
+      });
+      const parentPath = Array.isArray(destination) ? destination[0] : destination;
+      if (!parentPath) return;
+      const snapshot = await invoke<ProjectSnapshot>("create_rack_project",{
+        parentPath,folderName,files:proposal.files,
+      });
+      applySnapshot(snapshot);
+    } catch(reason) {
+      setOpenError(reason instanceof Error?reason.message:String(reason));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (project) {
     return (
       <ProjectWorkspace
         key={project.root}
         project={project}
-        initialHost={initialHost}
         onOpenAnother={() => {
           void chooseRack();
         }}
@@ -99,12 +136,12 @@ export function App() {
     };
 
     return (
-      <div className="app-shell app-shell--creation">
+      <div className="app-shell app-shell--creation" aria-busy={loading}>
         <aside className="sidebar">
           <button
             className="wordmark wordmark--button"
             type="button"
-            onClick={() => setCreating(null)}
+            onClick={() => setCreating("choose")}
             aria-label="Rack home"
           >
             rack
@@ -126,20 +163,21 @@ export function App() {
             <button
               className="sidebar-link"
               type="button"
-              onClick={() => setCreating(null)}
+              onClick={() => setCreating("choose")}
             >
-              Back to Rack home
+              Choose work type
             </button>
           </div>
         </aside>
         <main className="workspace creation-workspace">
+          {openError ? <div className="notice notice--error" role="alert">{openError}</div> : null}
           {creating === "choose" ? (
             <RouteChooser
-              onCancel={() => setCreating(null)}
               onSelect={(route) => {
                 setCreationRoute(route);
                 setStarterPackId(null);
                 setStarterPackModuleIds(null);
+                setOpenError(null);
                 setCreating("pack");
               }}
             />
@@ -147,10 +185,14 @@ export function App() {
           {creating === "pack" && creationRoute ? (
             <StarterPackChooser
               route={creationRoute}
+              onOpenExisting={() => void chooseRack(creationRoute)}
+              onImportArchive={() => void importArchive(creationRoute)}
+              onScratch={() => setCreating("scratch")}
               onBack={() => {
                 setCreationRoute(null);
                 setStarterPackId(null);
                 setStarterPackModuleIds(null);
+                setOpenError(null);
                 setCreating("choose");
               }}
               onSelect={(templateId, intent, moduleIds) => {
@@ -161,6 +203,7 @@ export function App() {
               }}
             />
           ) : null}
+          {creating === "scratch" && creationRoute ? <ScratchRackCreator route={creationRoute} onBack={()=>setCreating("pack")} onCreated={applySnapshot}/> : null}
           {creating === "writing" ? <WritingRoute {...routeProps} /> : null}
           {creating === "research" ? <ResearchRoute {...routeProps} /> : null}
           {creating === "coding" ? <CodingRoute {...routeProps} /> : null}
@@ -169,16 +212,5 @@ export function App() {
     );
   }
 
-  return (
-    <FirstRun
-      onOpen={() => void chooseRack()}
-      opening={loading}
-      openError={openError}
-      onAdvanced={() => setCreating("choose")}
-      onCreated={(snapshot, host) => {
-        applySnapshot(snapshot);
-        setInitialHost(host);
-      }}
-    />
-  );
+  return null;
 }

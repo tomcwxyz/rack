@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstRunApproaches } from "@rack/creation";
+import { firstRunApproaches, blankRackProposal } from "@rack/creation";
 import { buildStarterPractice } from "./starterPacks.js";
 import { applyPractices, compilePractices, extractPractices, readRackTar } from "./practiceWorkspace.js";
 import { buildRackTar } from "./archive.js";
@@ -19,8 +19,14 @@ describe("editable web RACK workspace", () => {
     const edited=practices.map((p,i)=>i===0?{...p,description:"Inspect repository layout before any modifications."}:p);
     const output=applyPractices(base,edited,"coding");
     expect(output.files.find(f=>f.path===practices[0].path)?.content).toContain("Inspect repository layout");
-    const dropped=applyPractices(base,edited.map((p,i)=>i===0?{...p,enabled:false}:p),"coding");
-    expect(dropped.files.find(f=>f.path===practices[0].path)).toBeUndefined();
+    expect(() => applyPractices(base,edited.map((p,i)=>i===0?{...p,enabled:false}:p),"coding")).toThrow(/depends on it/);
+  });
+  it.each(["writing","research","coding"] as const)("starts with no hidden practices in %s",route=>{
+    const proposal=blankRackProposal(route,"A new RACK");
+    expect(proposal.files.filter(f=>f.path.startsWith("modules/")&&f.path!=="modules/index.md")).toHaveLength(0);
+    const compiled=compilePractices(proposal,[{id:"personal-rule",title:"Own practice",description:"Always show a clear list of next steps.",enabled:true}],route);
+    expect(compiled.instructions).toContain("Always show a clear list of next steps.");
+    expect(compiled.proposal.files.find(f=>f.path==="rack.yaml")?.content).toContain('title: "A new RACK"');
   });
   it("reads a RACK exported by the web pilot", () => {
     const base=buildStarterPractice("writing","A useful report",firstRunApproaches.writing,null).proposal;
