@@ -28,7 +28,7 @@ describe("portable RACK archives",()=>{
     expect(()=>readRackTar(new Uint8Array([1,2,3]))).toThrow();
     expect(()=>readRackTar(good.slice(0,good.length-512))).toThrow();
     const tampered=good.slice();
-    tampered[0]="x".charCodeAt(0);
+    tampered[108]="1".charCodeAt(0);
     expect(()=>readRackTar(tampered)).toThrow(/checksum/);
   });
   it("rejects unsafe relative paths before writing",()=>{
