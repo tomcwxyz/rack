@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { FirstRun } from "./components/FirstRun.js";
-import type { FirstRunHost } from "./components/FirstRunHandoff.js";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -23,9 +21,8 @@ import type { StarterPackIntent } from "./creationStarterPack.js";
 type CreationState = "choose" | "pack" | CreationRouteId | null;
 
 export function App() {
-  const [initialHost, setInitialHost] = useState<FirstRunHost | null>(null);
   const [project, setProject] = useState<RackProject | null>(null);
-  const [creating, setCreating] = useState<CreationState>(null);
+  const [creating, setCreating] = useState<CreationState>("choose");
   const [creationRoute, setCreationRoute] = useState<CreationRouteId | null>(null);
   const [starterPackId, setStarterPackId] = useState<string | null>(null);
   const [starterPackModuleIds, setStarterPackModuleIds] =
@@ -36,7 +33,6 @@ export function App() {
   const [openError, setOpenError] = useState<string | null>(null);
 
   const applySnapshot = (snapshot: ProjectSnapshot) => {
-    setInitialHost(null);
     setProject(parseProjectSnapshot(snapshot));
     setCreating(null);
     setCreationRoute(null);
@@ -45,7 +41,7 @@ export function App() {
     setOpenError(null);
   };
 
-  const chooseRack = async () => {
+  const chooseRack = async (expectedRoute?: CreationRouteId | null) => {
     setOpenError(null);
     setLoading(true);
 
@@ -61,6 +57,11 @@ export function App() {
       const snapshot = await invoke<ProjectSnapshot>("read_rack_project", {
         path,
       });
+      if (expectedRoute) {
+        const opened = parseProjectSnapshot(snapshot);
+        const domains = opened.profiles.flatMap(profile => profile.domains);
+        if (!domains.includes(expectedRoute)) throw new Error(`This RACK is not configured for ${expectedRoute}. Choose its work type first.`);
+      }
       applySnapshot(snapshot);
     } catch (reason) {
       setOpenError(
@@ -80,7 +81,6 @@ export function App() {
       <ProjectWorkspace
         key={project.root}
         project={project}
-        initialHost={initialHost}
         onOpenAnother={() => {
           void chooseRack();
         }}
@@ -99,7 +99,7 @@ export function App() {
     };
 
     return (
-      <div className="app-shell app-shell--creation">
+      <div className="app-shell app-shell--creation" aria-busy={loading}>
         <aside className="sidebar">
           <button
             className="wordmark wordmark--button"
@@ -133,6 +133,7 @@ export function App() {
           </div>
         </aside>
         <main className="workspace creation-workspace">
+          {openError ? <div className="notice notice--error" role="alert">{openError}</div> : null}
           {creating === "choose" ? (
             <RouteChooser
               onCancel={() => setCreating(null)}
@@ -140,6 +141,7 @@ export function App() {
                 setCreationRoute(route);
                 setStarterPackId(null);
                 setStarterPackModuleIds(null);
+                setOpenError(null);
                 setCreating("pack");
               }}
             />
@@ -147,10 +149,12 @@ export function App() {
           {creating === "pack" && creationRoute ? (
             <StarterPackChooser
               route={creationRoute}
+              onOpenExisting={() => void chooseRack(creationRoute)}
               onBack={() => {
                 setCreationRoute(null);
                 setStarterPackId(null);
                 setStarterPackModuleIds(null);
+                setOpenError(null);
                 setCreating("choose");
               }}
               onSelect={(templateId, intent, moduleIds) => {
@@ -169,16 +173,5 @@ export function App() {
     );
   }
 
-  return (
-    <FirstRun
-      onOpen={() => void chooseRack()}
-      opening={loading}
-      openError={openError}
-      onAdvanced={() => setCreating("choose")}
-      onCreated={(snapshot, host) => {
-        applySnapshot(snapshot);
-        setInitialHost(host);
-      }}
-    />
-  );
+  return null;
 }
