@@ -37,6 +37,7 @@ export function App() {
   const [saved, setSaved] = useState<SavedPractice[]>(() => loadPractices());
   const [practices, setPractices] = useState<EditablePractice[]>([]);
   const [importedRack, setImportedRack] = useState<RackProposal | null>(null);
+  const [blank, setBlank] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reviews, setReviews] = useState<PracticeReview[]>([]);
   const [reviewDecision, setReviewDecision] = useState<ReviewDecision>("keep");
@@ -46,23 +47,23 @@ export function App() {
   const selectedPack = useMemo(() => getStarterPackSummary(starterPackId), [starterPackId]);
   const preview = useMemo(() => {
     try {
-      const base = importedRack || buildStarterPractice(route, task, approach, starterPackId).proposal;
+      const base = blank ? blankRackProposal(route,approach.title) : (importedRack || buildStarterPractice(route, task, approach, starterPackId).proposal);
       const { proposal, instructions } = compilePractices(base, practices, route);
       return { proposal, instructions, error: "" };
     } catch (reason) { return { proposal: null, instructions: "", error: errorText(reason) }; }
-  }, [route, task, approach, starterPackId, practices, importedRack]);
+  }, [route, task, approach, starterPackId, practices, importedRack, blank]);
 
   const navigate = (next: Step) => { setNotice(""); setError(""); setStep(next); window.scrollTo({top:0, behavior:"smooth"}); };
   const choose = (next: CreationRouteId) => {
     setRoute(next); setApproach({...firstRunApproaches[next]}); setStarterPackId(null); setSelectedId(null); setReviews([]);
-    setEditingApproach(false); setPractices([]); setImportedRack(null);
+    setEditingApproach(false); setPractices([]); setImportedRack(null); setBlank(false);
     navigate("packs");
   };
   const selectPack = (id: string | null, nextRoute: CreationRouteId) => {
     setRoute(nextRoute);
     setStarterPackId(id);
     setApproach({ ...firstRunApproaches[nextRoute], ...(id ? { title: starterTemplates.find(pack=>pack.id===id)?.title || firstRunApproaches[nextRoute].title } : {}) });
-    setSelectedId(null); setReviews([]); setEditingApproach(false); setImportedRack(null);
+    setSelectedId(null); setReviews([]); setEditingApproach(false); setImportedRack(null); setBlank(false);
     try {
       const nextApproach = { ...firstRunApproaches[nextRoute], ...(id ? { title: starterTemplates.find(pack=>pack.id===id)?.title || firstRunApproaches[nextRoute].title } : {}) };
       setPractices(id ? extractPractices(buildStarterPractice(nextRoute, task, nextApproach, id).proposal) : []);
@@ -71,13 +72,13 @@ export function App() {
   };
   const load = (item: SavedPractice) => {
     setRoute(item.route); setTask(item.task); setApproach({...item.approach}); setReviews(item.reviews); setStarterPackId(item.starterPackId ?? null);
-    setPractices(item.practices || []); setImportedRack(item.importedRack || null);
+    setPractices(item.practices || []); setImportedRack(item.importedRack || null); setBlank(item.blank ?? false);
     setSelectedId(item.id); navigate("adjust");
   };
   const save = (nextReviews = reviews, duplicate = false) => {
     if (!preview.proposal) { setError(preview.error); return; }
     const item: SavedPractice = {
-      id: duplicate ? crypto.randomUUID() : (selectedId || crypto.randomUUID()), route, task, approach, starterPackId, reviews: nextReviews, practices, importedRack,
+      id: duplicate ? crypto.randomUUID() : (selectedId || crypto.randomUUID()), route, task, approach, starterPackId, reviews: nextReviews, practices, importedRack, blank,
       updatedAt: new Date().toISOString(),
     };
     const next = [item, ...saved.filter(entry => entry.id !== item.id)].slice(0, 30);
@@ -86,7 +87,7 @@ export function App() {
   };
   const createBlank = (nextRoute: CreationRouteId) => {
     setRoute(nextRoute); setApproach({...firstRunApproaches[nextRoute], title:"My new RACK", guidance:"Follow the practices I have chosen.", boundary:"Ask when information is missing."});
-    setStarterPackId(null); setImportedRack(blankRackProposal(nextRoute,"My new RACK")); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
+    setStarterPackId(null); setImportedRack(null); setBlank(true); setPractices([]); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
   };
   const importRack = async (file: File) => {
     try {
@@ -100,7 +101,7 @@ export function App() {
       const manifest = archive.files.find(f=>f.path==="rack.yaml")?.content || "";
       const title = manifest.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^"|"$/g,"") || "Imported RACK";
       setApproach({...firstRunApproaches[detected],title}); setImportedRack(archive);
-      setPractices(items); setStarterPackId(null); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
+      setPractices(items); setStarterPackId(null); setBlank(false); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
       setNotice("Imported locally. Review the practices, then save a copy in this browser.");
     } catch(reason) { setError("Could not import RACK: "+errorText(reason)); }
   };
