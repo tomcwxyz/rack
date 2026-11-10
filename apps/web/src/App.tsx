@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   firstRunApproaches,
   blankRackProposal,
+  firstRunSnapshot,
   type FirstRunApproach,
 } from "@rack/creation";
 import type { CreationRouteId } from "@rack/creation";
@@ -9,6 +10,7 @@ import { downloadRack } from "./lib/archive.js";
 import { PracticeEditor } from "./components/PracticeEditor.js";
 import { compilePractices, extractPractices, readRackTar, type EditablePractice } from "./lib/practiceWorkspace.js";
 import type { RackProposal } from "@rack/creation";
+import {parseProjectSnapshot} from "@rack/core";
 import { loadPractices, persistPractices, type SavedPractice, type PracticeReview, type ReviewDecision } from "./lib/storage.js";
 import { ManagedTrial } from "./components/ManagedTrial.js";
 import { StarterPackPicker } from "./components/StarterPackPicker.js";
@@ -92,14 +94,14 @@ export function App() {
   const importRack = async (file: File) => {
     try {
       const archive = readRackTar(new Uint8Array(await file.arrayBuffer()));
-      const detected = (["writing","research","coding"] as const).find(value=>archive.files.some(f=>f.path==="profiles/"+value+".yaml"));
-      if (!detected) throw new Error("This RACK has no supported writing, research or coding profile.");
-      if (detected !== route) throw new Error("This RACK is for "+detected+". Go back and choose that type of work first.");
+      const project = parseProjectSnapshot(firstRunSnapshot(archive));
+      const activeDomain = route === "coding" ? "code" : route;
+      if (!project.profiles.some(profile => profile.domains.includes(activeDomain))) throw new Error("This RACK has no "+route+" Set-up. Choose the matching type of work first.");
+      const detected = route;
       // Validate before replacing the open workspace.
       const items = extractPractices(archive);
       compilePractices(archive, items, detected);
-      const manifest = archive.files.find(f=>f.path==="rack.yaml")?.content || "";
-      const title = manifest.match(/^title:\s*(.+)$/m)?.[1]?.trim().replace(/^"|"$/g,"") || "Imported RACK";
+      const title = project.manifest?.title || "Imported RACK";
       setApproach({...firstRunApproaches[detected],title}); setImportedRack(archive);
       setPractices(items); setStarterPackId(null); setBlank(false); setSelectedId(null); setReviews([]); setEditingApproach(false); navigate("adjust");
       setNotice("Imported locally. Review the practices, then save a copy in this browser.");
