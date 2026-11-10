@@ -1,20 +1,23 @@
-import { useState } from "react";
 import { starterTemplates, getStarterEntry } from "@rack/starter";
 import type { CreationRouteId } from "@rack/creation";
+import type { SavedPractice } from "../lib/storage.js";
 
 type Props = {
   route: CreationRouteId;
   selectedId: string | null;
   onSelect: (id: string | null, route: CreationRouteId) => void;
   onBack: () => void;
+  onBlank: () => void;
+  onImport: (file: File) => Promise<void>;
+  saved: SavedPractice[];
+  onLoad: (item: SavedPractice) => void;
 };
 const LABELS: Record<CreationRouteId, string> = { writing: "Writing", research: "Research", coding: "Coding" };
-export function StarterPackPicker({ route, selectedId, onSelect, onBack }: Props) {
-  const [category, setCategory] = useState<CreationRouteId>(route);
-  const templates = starterTemplates.filter(template => template.route === category);
+export function StarterPackPicker({ route, selectedId, onSelect, onBack, onBlank, onImport, saved, onLoad }: Props) {
+  const templates = starterTemplates.filter(template => template.route === route);
   return <section className="panel pack-picker" aria-labelledby="pack-picker-title">
     <div className="section-top">
-      <span className="eyebrow">Create · choose a starting point</span>
+      <span className="eyebrow">Create · {LABELS[route]}</span>
       <button className="text-btn" type="button" onClick={onBack}>Back to my work</button>
     </div>
     <h2 id="pack-picker-title">Choose how you'd like AI to work</h2>
@@ -34,12 +37,9 @@ export function StarterPackPicker({ route, selectedId, onSelect, onBack }: Props
           <summary>What's included?</summary>
           <ul>{template.moduleIds.map(id=>{const entry=getStarterEntry(id);return <li key={id}><strong>{entry?.title || id}</strong>{entry?.description ? <span>{entry.description}</span> : null}</li>;})}</ul>
         </details>
-        <button className="primary-btn" type="button" aria-label={"Use "+template.title} onClick={()=>onSelect(template.id,template.route)}>{selectedId===template.id ? "Use this again" : "Use this approach"}</button>
+        <button className="primary-btn" type="button" aria-label={"Use "+template.title} onClick={()=>onSelect(template.id,route)}>{selectedId===template.id ? "Use this again" : "Use this approach"}</button>
       </article>)}
     </div>
-    <div className="pack-basic">
-      <div><strong>Want something simpler?</strong><span>Start with RACK's basic suggestion and shape it yourself.</span></div>
-      <button className="secondary-btn" type="button" onClick={()=>onSelect(null,category)}>Use a basic approach</button>
-    </div>
+
   </section>;
 }
