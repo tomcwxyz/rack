@@ -163,6 +163,29 @@ fn editable_project_file(root: &Path, relative_path: &str) -> Result<PathBuf, St
 }
 
 #[tauri::command]
+fn read_rack_archive(path: String) -> Result<Vec<u8>, String> {
+    const MAX_BYTES: u64 = 12_000_000;
+    let requested = PathBuf::from(path);
+    let metadata = fs::symlink_metadata(&requested)
+        .map_err(|error| format!("Could not inspect the RACK archive: {error}"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err("Only an ordinary RACK archive file may be imported.".to_string());
+    }
+    if metadata.len() > MAX_BYTES {
+        return Err("RACK archive is larger than 12 MB.".to_string());
+    }
+    if requested.extension().and_then(|ext| ext.to_str()) != Some("tar") {
+        return Err("Choose a .tar RACK archive.".to_string());
+    }
+    let content = fs::read(&requested)
+        .map_err(|error| format!("Could not read the RACK archive: {error}"))?;
+    if content.len() as u64 > MAX_BYTES {
+        return Err("RACK archive is larger than 12 MB.".to_string());
+    }
+    Ok(content)
+}
+
+#[tauri::command]
 fn read_rack_project(path: String) -> Result<ProjectSnapshot, String> {
     let root = PathBuf::from(path)
         .canonicalize()
@@ -644,6 +667,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
+            read_rack_archive,
             document_import::import_document,
             read_shared_practice_file,
             read_shared_practice_state,
