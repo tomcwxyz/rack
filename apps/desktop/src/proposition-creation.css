@@ -118,3 +118,7 @@
 .scratch-rack-save{border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;align-items:center;gap:16px}
 .scratch-rack-save span{color:var(--muted)}
 @media(max-width:700px){.scratch-rack-card{padding:16px}.scratch-rack-save{align-items:flex-start;flex-direction:column}}
+
+.starter-start-option--load{cursor:default}
+.starter-load-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.starter-load-actions .secondary-action{font-size:.85rem;white-space:nowrap}
