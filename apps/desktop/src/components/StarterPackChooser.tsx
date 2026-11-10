@@ -12,6 +12,7 @@ type StarterPackChooserProps = {
   route: CreationRouteId;
   onBack: () => void;
   onOpenExisting: () => void;
+  onImportArchive: () => void;
   onScratch: () => void;
   onSelect: (
     templateId: string | null,
@@ -65,6 +66,7 @@ export function StarterPackChooser({
   route,
   onBack,
   onOpenExisting,
+  onImportArchive,
   onScratch,
   onSelect,
 }: StarterPackChooserProps) {
@@ -103,7 +105,7 @@ export function StarterPackChooser({
 
       <div className="starter-start-options" aria-label="Choose your starting point">
         <button type="button" className="starter-start-option" aria-expanded={showPacks} onClick={() => setShowPacks(value => !value)}><strong>Choose a pack</strong><span>Browse ready-made practices for {route} that you can edit later.</span><span className="starter-start-action">{showPacks ? "Hide packs" : "Browse packs"} →</span></button>
-        <button type="button" className="starter-start-option" onClick={onOpenExisting}><strong>Load a RACK</strong><span>Open an existing {route} RACK from a folder on your computer.</span><span className="starter-start-action">Choose folder →</span></button>
+        <div className="starter-start-option starter-start-option--load"><strong>Load a RACK</strong><span>Open an existing local RACK or import one exported from RACK Web.</span><div className="starter-load-actions"><button type="button" className="secondary-action" onClick={onOpenExisting}>Open folder</button><button type="button" className="secondary-action" onClick={onImportArchive}>Import .tar</button></div></div>
         <button type="button" className="starter-start-option" onClick={onScratch}><strong>Start from scratch</strong><span>Create a RACK using your own instructions and context.</span><span className="starter-start-action">Create your own →</span></button>
       </div>
       {showPacks ? <div className="starter-pack-grid">
