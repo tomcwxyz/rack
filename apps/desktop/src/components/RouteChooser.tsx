@@ -2,7 +2,7 @@ export type CreationRouteId = "writing" | "research" | "coding";
 
 type RouteChooserProps = {
   onSelect: (route: CreationRouteId) => void;
-  onCancel: () => void;
+  onCancel?: () => void;
 };
 
 const routes: Array<{
@@ -51,9 +51,7 @@ export function RouteChooser({ onSelect, onCancel }: RouteChooserProps) {
             inspect exactly what is inside.
           </p>
         </div>
-        <button className="quiet-action" type="button" onClick={onCancel}>
-          Back
-        </button>
+        {onCancel ? <button className="quiet-action" type="button" onClick={onCancel}>Back</button> : null}
       </header>
 
       <div className="route-choice-grid">
