@@ -23,7 +23,7 @@ export function PracticeEditor({practices, onChange, title, onTitleChange}: Prop
         <div className="field"><label htmlFor={"title-"+practice.id}>Practice name</label><input id={"title-"+practice.id} maxLength={120} value={practice.title} onChange={e=>change(practice.id,{title:e.target.value})}/></div>
         <div className="field"><label htmlFor={"body-"+practice.id}>What should AI do?</label><textarea id={"body-"+practice.id} rows={5} value={practice.description} onChange={e=>change(practice.id,{description:e.target.value})}/></div>
         <div className="button-row"><button type="button" className="primary-btn" onClick={()=>setEditing(null)} disabled={!practice.title.trim()||!practice.description.trim()}>Done</button>
-          <button type="button" className="text-btn" onClick={()=>{onChange(practices.filter(p=>p.id!==practice.id));setEditing(null)}}>Remove practice</button></div>
+          <button type="button" className="text-btn" onClick={()=>{onChange(practice.path ? practices.map(p=>p.id===practice.id?{...p,enabled:false}:p) : practices.filter(p=>p.id!==practice.id));setEditing(null)}}>Remove practice</button></div>
       </>:<>
         <div className="practice-item-top"><div><strong>{practice.title}</strong><p>{practice.description}</p></div><label className="practice-checkbox"><input type="checkbox" checked={practice.enabled} onChange={e=>change(practice.id,{enabled:e.target.checked})}/><span>Include</span></label></div>
         {guided ? <div className="practice-actions">
@@ -34,7 +34,7 @@ export function PracticeEditor({practices, onChange, title, onTitleChange}: Prop
           <button type="button" className="text-btn" onClick={()=>setEditing(practice.id)}>Edit</button>
           <button type="button" className="text-btn" disabled={index===0} onClick={()=>move(index,-1)}>Move up</button>
           <button type="button" className="text-btn" disabled={index===practices.length-1} onClick={()=>move(index,1)}>Move down</button>
-          <button type="button" className="text-btn" onClick={()=>{if(window.confirm("Remove this practice?"))onChange(practices.filter(p=>p.id!==practice.id))}}>Remove</button>
+          <button type="button" className="text-btn" onClick={()=>{if(window.confirm("Leave this practice out of your RACK?"))onChange(practice.path ? practices.map(p=>p.id===practice.id?{...p,enabled:false}:p) : practices.filter(p=>p.id!==practice.id))}}>{practice.path?"Leave out":"Remove"}</button>
         </div>}
       </>}
     </article>)}</div>
