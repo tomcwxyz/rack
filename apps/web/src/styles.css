@@ -97,3 +97,16 @@
 .upload-label{display:inline-flex;align-items:center;cursor:pointer}
 .upload-label input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
 @media(max-width:760px){.practice-workspace{padding:14px}.practice-item-top{flex-direction:column;gap:12px}.practice-actions{gap:8px}}
+
+/* One creation route: work type, then choose pack / load / scratch */
+.starting-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0 30px}
+.starting-option{display:flex;align-items:flex-start;flex-direction:column;gap:12px;border:1px solid #ddd8ce;background:#faf9f5;border-radius:12px;padding:20px;min-width:0}
+.starting-option>strong{font:normal 1.32rem Georgia,serif;color:#243c30}
+.starting-option p{color:#6c685f;font-size:.9rem;line-height:1.55;margin:0}
+.starting-option>.secondary-btn,.starting-option>.upload-label{margin-top:auto}
+.starting-option>.muted{margin-top:auto}
+.pack-section-title{font:normal 1.45rem Georgia,serif;margin:0 0 16px}
+.saved-load-list{display:grid;width:100%;gap:7px}
+.saved-load-item{background:#fff;border:1px solid #ddd8ce;text-align:left;border-radius:8px;padding:10px;color:#263e30;font-weight:650}
+.saved-load-item span{display:block;font-weight:400;font-size:.75rem;color:#73796f;margin-top:3px}
+@media(max-width:800px){.starting-options{grid-template-columns:1fr}}
