@@ -20,13 +20,17 @@ export function StarterPackPicker({ route, selectedId, onSelect, onBack, onBlank
       <span className="eyebrow">Create · {LABELS[route]}</span>
       <button className="text-btn" type="button" onClick={onBack}>Back to my work</button>
     </div>
-    <h2 id="pack-picker-title">Choose how you'd like AI to work</h2>
-    <p className="muted">These are complete starting practices from RACK's real library. You can see what they contain and adjust them later.</p>
-    <div className="pack-categories" aria-label="Kinds of work">
-      {(["writing","research","coding"] as const).map(value =>
-        <button key={value} type="button" className={category===value?"active":""} aria-pressed={category===value} onClick={()=>setCategory(value)}>{LABELS[value]}</button>
-      )}
+    <h2 id="pack-picker-title">How would you like to begin?</h2>
+    <p className="muted">Choose a starter pack, open a RACK you've saved, or begin with an empty one. You can edit every practice afterwards.</p>
+    <div className="starting-options">
+      <div className="starting-option"><strong>Choose a pack</strong><p>Start with a collection of practices you can change.</p><span className="muted small">Browse the packs below.</span></div>
+      <div className="starting-option"><strong>Load a RACK</strong><p>Open an existing {LABELS[route].toLowerCase()} RACK.</p>
+        <label className="secondary-btn upload-label">Import a RACK archive<input type="file" accept=".tar,application/x-tar" onChange={e=>{const file=e.target.files?.[0];if(file)void onImport(file);e.target.value="";}} /></label>
+        {saved.length > 0 ? <div className="saved-load-list">{saved.map(item=><button key={item.id} type="button" className="saved-load-item" onClick={()=>onLoad(item)}>{item.approach.title}<span>Open saved RACK</span></button>)}</div> : <span className="muted small">No RACKs saved for this type in this browser yet.</span>}
+      </div>
+      <div className="starting-option"><strong>Start from scratch</strong><p>Build a new RACK with your own practices.</p><button type="button" className="secondary-btn" onClick={onBlank}>Create empty RACK</button></div>
     </div>
+    <h3 className="pack-section-title">Starter packs for {LABELS[route].toLowerCase()}</h3>
     <div className="pack-grid">
       {templates.map(template => <article className="pack-card" key={template.id}>
         <p className="eyebrow">{LABELS[template.route]} · {template.moduleIds.length} practices</p>
