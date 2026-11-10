@@ -73,3 +73,27 @@
 .pack-extra-guidance summary{cursor:pointer;color:#315c43;font-weight:650;padding:10px 0}
 .pack-extra-guidance .approach-summary{margin:10px 0 0}
 @media(max-width:700px){.pack-applied-practices{grid-template-columns:1fr}}
+
+/* Editable RACK workspace */
+.practice-workspace{margin:24px 0;padding:22px;border:1px solid #dbe5d8;border-radius:14px;background:#f9faf6}
+.practice-workspace h3{margin-bottom:5px}
+.practice-items{display:grid;gap:10px;margin:20px 0}
+.practice-item{border:1px solid #d7e1d5;border-radius:10px;background:white;padding:19px}
+.practice-item-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.practice-item-top strong{display:block;color:#304c39;margin-bottom:7px}
+.practice-item-top p{color:#57695d;line-height:1.6;white-space:pre-wrap;margin:0}
+.practice-disabled{opacity:.58}
+.practice-checkbox{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:.82rem;color:#4b6652}
+.practice-checkbox input{width:18px;height:18px;accent-color:#315a40}
+.practice-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px}
+.practice-actions .secondary-btn{min-height:38px;padding:8px 12px}
+.practice-workspace .field{margin-bottom:18px}
+.empty-practices{color:#687970;background:#eef3e9;border-radius:10px;padding:22px}
+.add-practice{margin-top:4px}
+.alternative-choice{min-height:170px;display:block;cursor:default}
+.alternative-choice p{margin-top:12px;color:#677b6e;font-size:.9rem}
+.alternative-choice .button-row{margin-top:15px}
+.alternative-choice .secondary-btn{padding:9px 12px;min-height:38px}
+.upload-label{display:inline-flex;align-items:center;cursor:pointer}
+.upload-label input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+@media(max-width:760px){.practice-workspace{padding:14px}.practice-item-top{flex-direction:column;gap:12px}.practice-actions{gap:8px}}
