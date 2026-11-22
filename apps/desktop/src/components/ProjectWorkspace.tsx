@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import {buildRackTar,type RackProposal} from "@rack/creation";
 import type {
   HostIntegrationId,
   ProjectSnapshot,
@@ -184,6 +185,25 @@ export function ProjectWorkspace({
 
   const advancedActive = ["shared", "setups", "checks", "library"].includes(section);
   const showWorkTarget = ["preview", "verify", "checks"].includes(section);
+  const exportRack = async () => {
+    try {
+      setActionStatus(null);
+      const files = await invoke<RackProposal["files"]>("read_rack_source_files", {
+        root: project.root,
+      });
+      const archive = buildRackTar({folderName:project.manifest?.name || "my-rack",files});
+      const destination = await save({
+        title:"Export portable RACK archive",
+        defaultPath:(project.manifest?.name || "my-rack") + ".tar",
+        filters:[{name:"RACK archive",extensions:["tar"]}],
+      });
+      if(!destination)return;
+      await invoke("write_rack_archive",{path:destination,bytes:Array.from(archive)});
+      setActionStatus("RACK archive exported. You can import this .tar file into RACK Web or another Local installation.");
+    }catch(reason){
+      setActionStatus("Export could not be completed: "+(reason instanceof Error?reason.message:String(reason)));
+    }
+  };
   const goHome = () => {
     setHandoffHost(null);
     setSection("home");
@@ -309,6 +329,7 @@ export function ProjectWorkspace({
                   "Maintain the source once, then use it across different AI tools."}
             </p>
           </div>
+          <button type="button" className="quiet-action" onClick={() => void exportRack()}>Export RACK archive</button>
           {section !== "home" ? (
             <div className="header-path" title={project.root}>
               <span>Stored locally</span>

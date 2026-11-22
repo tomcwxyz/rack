@@ -163,6 +163,83 @@ fn editable_project_file(root: &Path, relative_path: &str) -> Result<PathBuf, St
 }
 
 #[tauri::command]
+fn read_rack_source_files(root: String) -> Result<Vec<SourceFile>, String> {
+    let canonical = PathBuf::from(root)
+        .canonicalize()
+        .map_err(|error| format!("Could not open the RACK folder: {error}"))?;
+    let snapshot = project_snapshot(&canonical)?;
+    let mut files = vec![snapshot.manifest];
+    files.extend(snapshot.modules);
+    files.extend(snapshot.profiles);
+    files.extend(collect_files(&canonical, &canonical.join("eval"), "yaml")?);
+    if files.len() > 500 {
+        return Err("This RACK has too many source files for an archive.".to_string());
+    }
+    let total: usize = files.iter().map(|file| file.path.len() + file.content.len()).sum();
+    if total > 11_000_000 {
+        return Err("This RACK is too large to export in the 12 MB archive format.".to_string());
+    }
+    Ok(files)
+}
+
+#[tauri::command]
+fn write_rack_archive(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    if bytes.len() > 12_000_000 || bytes.len() < 1536 {
+        return Err("The RACK archive size is invalid.".to_string());
+    }
+    let requested = PathBuf::from(&path);
+    if requested.extension().and_then(|value| value.to_str()) != Some("tar") {
+        return Err("Export the RACK as a .tar file.".to_string());
+    }
+    let parent = requested.parent()
+        .ok_or_else(|| "Choose a folder for the archive.".to_string())?
+        .canonicalize()
+        .map_err(|error| format!("Could not open the export folder: {error}"))?;
+    let filename = requested.file_name()
+        .ok_or_else(|| "The archive filename is invalid.".to_string())?;
+    let destination = parent.join(filename);
+    if destination.exists() {
+        let metadata = fs::symlink_metadata(&destination)
+            .map_err(|error| format!("Could not inspect existing archive: {error}"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err("RACK will not overwrite a symlink or special file.".to_string());
+        }
+    }
+    let temporary = parent.join(format!(".rack-archive-{}.tmp", std::process::id()));
+    fs::write(&temporary, bytes)
+        .map_err(|error| format!("Could not stage the RACK archive: {error}"))?;
+    if destination.exists() {
+        let _ = fs::remove_file(&temporary);
+        return Err("An archive with that name already exists. Choose another filename.".to_string());
+    }
+    fs::rename(&temporary, &destination)
+        .map_err(|error| {let _ = fs::remove_file(&temporary);format!("Could not finish exporting: {error}")})
+}
+
+#[tauri::command]
+fn read_rack_archive(path: String) -> Result<Vec<u8>, String> {
+    const MAX_BYTES: u64 = 12_000_000;
+    let requested = PathBuf::from(path);
+    let metadata = fs::symlink_metadata(&requested)
+        .map_err(|error| format!("Could not inspect the RACK archive: {error}"))?;
+    if !metadata.is_file() || metadata.file_type().is_symlink() {
+        return Err("Only an ordinary RACK archive file may be imported.".to_string());
+    }
+    if metadata.len() > MAX_BYTES {
+        return Err("RACK archive is larger than 12 MB.".to_string());
+    }
+    if requested.extension().and_then(|ext| ext.to_str()) != Some("tar") {
+        return Err("Choose a .tar RACK archive.".to_string());
+    }
+    let content = fs::read(&requested)
+        .map_err(|error| format!("Could not read the RACK archive: {error}"))?;
+    if content.len() as u64 > MAX_BYTES {
+        return Err("RACK archive is larger than 12 MB.".to_string());
+    }
+    Ok(content)
+}
+
+#[tauri::command]
 fn read_rack_project(path: String) -> Result<ProjectSnapshot, String> {
     let root = PathBuf::from(path)
         .canonicalize()
@@ -644,6 +721,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             read_rack_project,
+            read_rack_archive,
+            read_rack_source_files,
+            write_rack_archive,
             document_import::import_document,
             read_shared_practice_file,
             read_shared_practice_state,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../proposition-creation.css";
 import {
   getStarterEntry,
   getStarterTemplate,
@@ -10,6 +11,9 @@ import type { CreationRouteId } from "./RouteChooser.js";
 type StarterPackChooserProps = {
   route: CreationRouteId;
   onBack: () => void;
+  onOpenExisting: () => void;
+  onImportArchive: () => void;
+  onScratch: () => void;
   onSelect: (
     templateId: string | null,
     intent: StarterPackIntent,
@@ -61,11 +65,15 @@ const getPack = (id: string): StarterTemplate => {
 export function StarterPackChooser({
   route,
   onBack,
+  onOpenExisting,
+  onImportArchive,
+  onScratch,
   onSelect,
 }: StarterPackChooserProps) {
   const packs = starterPackIds[route].map(getPack);
   const copy = routeCopy[route];
   const [customisingPackId, setCustomisingPackId] = useState<string | null>(null);
+  const [showPacks, setShowPacks] = useState(false);
   const [customModules, setCustomModules] = useState<Set<string>>(new Set());
 
   const startCustomising = (pack: StarterTemplate) => {
@@ -88,14 +96,19 @@ export function StarterPackChooser({
         <div>
           <p className="eyebrow">{copy.eyebrow} · good ways to start</p>
           <h1 id="starter-pack-title">{copy.title}</h1>
-          <p className="lede">{copy.intro}</p>
+          <p className="lede">Choose a pack, load an existing RACK, or start with your own. All three lead into the same local workspace.</p>
         </div>
         <button className="quiet-action" type="button" onClick={onBack}>
           Choose different work
         </button>
       </header>
 
-      <div className="starter-pack-grid">
+      <div className="starter-start-options" aria-label="Choose your starting point">
+        <button type="button" className="starter-start-option" aria-expanded={showPacks} onClick={() => setShowPacks(value => !value)}><strong>Choose a pack</strong><span>Browse ready-made practices for {route} that you can edit later.</span><span className="starter-start-action">{showPacks ? "Hide packs" : "Browse packs"} →</span></button>
+        <div className="starter-start-option starter-start-option--load"><strong>Load a RACK</strong><span>Open an existing local RACK or import one exported from RACK Web.</span><div className="starter-load-actions"><button type="button" className="secondary-action" onClick={onOpenExisting}>Open folder</button><button type="button" className="secondary-action" onClick={onImportArchive}>Import .tar</button></div></div>
+        <button type="button" className="starter-start-option" onClick={onScratch}><strong>Start from scratch</strong><span>Create a RACK using your own instructions and context.</span><span className="starter-start-action">Create your own →</span></button>
+      </div>
+      {showPacks ? <div className="starter-pack-grid">
         {packs.map((pack) => {
           const entries = pack.moduleIds
             .map((id) => getStarterEntry(id))
@@ -214,24 +227,9 @@ export function StarterPackChooser({
             </article>
           );
         })}
-      </div>
+      </div> : null}
 
-      <aside className="starter-pack-scratch">
-        <div>
-          <strong>None of these quite fit?</strong>
-          <span>
-            Start from the basic route and build your practice yourself. Nothing
-            stops you adding a Starter Pack later.
-          </span>
-        </div>
-        <button
-          className="quiet-action"
-          type="button"
-          onClick={() => onSelect(null, "tune", null)}
-        >
-          Start from the basics
-        </button>
-      </aside>
+
     </section>
   );
 }

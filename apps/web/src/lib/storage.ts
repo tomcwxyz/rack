@@ -18,6 +18,7 @@ export type SavedPractice = {
   reviews: PracticeReview[];
   practices?: EditablePractice[];
   importedRack?: RackProposal | null;
+  blank?: boolean;
   updatedAt: string;
 };
 const KEY = "rack:web-pilot:practices:v1";
@@ -37,6 +38,7 @@ export function loadPractices(storage: Pick<Storage, "getItem"> = localStorage):
       (item.starterPackId == null || typeof item.starterPackId === "string") &&
       Array.isArray(item.reviews) &&
       (item.practices === undefined || (Array.isArray(item.practices) && item.practices.every((p: EditablePractice) => typeof p.id === "string" && typeof p.title === "string" && typeof p.description === "string" && typeof p.enabled === "boolean"))) &&
+      (item.blank === undefined || typeof item.blank === "boolean") &&
       (item.importedRack == null || (Array.isArray(item.importedRack.files) && item.importedRack.files.every((f: {path: string; content: string}) => typeof f.path === "string" && typeof f.content === "string"))) &&
       typeof item.updatedAt === "string"
     ).slice(0, 30);
