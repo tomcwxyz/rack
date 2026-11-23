@@ -67,7 +67,7 @@ export function FirstValueSection({
       <div className="first-value__hero">
         <div>
           <p className="eyebrow">Start here</p>
-          <h2 id="first-value-title">Start working. Shape the practice as you go.</h2>
+          <h2 id="first-value-title">Your practice is ready.</h2>
           <p className="section-intro">
             Rack has given you a useful way to start. Use it with real work first;
             you can change the practice once you have something concrete to react to.
@@ -90,96 +90,32 @@ export function FirstValueSection({
         </div>
       </div>
 
-      <div className="first-value__grid">
-        <article className="first-value__step">
-          <span className="first-value__number">1</span>
-          <div>
-            <p className="eyebrow">Where are you working?</p>
-            <h3>{workRoot ? "Work project selected" : "Choose a project or folder"}</h3>
-            <p>
-              {workRoot
-                ? "Rack will use this folder for AI-tool hand-off and local checks."
-                : "For coding work, choose the repository. For other work, choose the folder this practice belongs with."}
-            </p>
-            {workRoot ? <code className="first-value__path" title={workRoot}>{workRoot}</code> : null}
-            <button className="quiet-action" type="button" onClick={onChooseWorkRoot}>
-              {workRoot ? "Change project" : "Choose project"}
-            </button>
+      <div className="calm-next">
+        <div className="calm-next__intro">
+          <p className="eyebrow">Next step</p>
+          <h3>{workRoot ? "Your project is ready" : "Choose where you're working"}</h3>
+          <p>{workRoot ? "Your practice is ready to use with an AI tool." : "Choose the folder or repository where you want to use this practice. You can change it later."}</p>
+          {workRoot ? <code className="first-value__path" title={workRoot}>{workRoot}</code> : null}
+          <button className={workRoot ? "quiet-action" : "primary-action"} type="button" onClick={onChooseWorkRoot}>{workRoot ? "Change project" : "Choose a project"}</button>
+        </div>
+        <div className="calm-next__action">
+          <p className="eyebrow">Use your practice</p>
+          <h3>Work with AI</h3>
+          <p>{readyHosts.length ? "Choose a tool already on your computer." : "Copy or export your practice to use with an AI tool."}</p>
+          <div className="first-value__host-actions">
+            {readyHosts.map(({ host }) => <button className="primary-action" type="button" key={host.id} onClick={() => onUseWithHost(host.id)}>Use with {host.displayName}</button>)}
+            <button className={readyHosts.length ? "quiet-action" : "primary-action"} type="button" onClick={onUseWithAi}>{readyHosts.length ? "Other ways to use it" : "Use with AI"}</button>
           </div>
-        </article>
-
-        <article className="first-value__step first-value__step--primary">
-          <span className="first-value__number">2</span>
-          <div>
-            <p className="eyebrow">Use it</p>
-            <h3>
-              {readyHosts.length > 0
-                ? "Use a tool already on this computer"
-                : "Take your practice into AI"}
-            </h3>
-            <p>
-              {readyHosts.length > 0
-                ? "Rack has already worked out the right hand-off. Pick a tool and review the small set of project files it will manage."
-                : "Rack will show the best available route, what it will change, and keep persistent practice separate from temporary task context."}
-            </p>
-            <div className="first-value__host-actions">
-              {readyHosts.map(({ host }) => (
-                <button
-                  className="primary-action"
-                  type="button"
-                  key={host.id}
-                  onClick={() => onUseWithHost(host.id)}
-                >
-                  Use with {host.displayName}
-                </button>
-              ))}
-              {readyHosts.length === 0 ? (
-                <button className="primary-action" type="button" onClick={onUseWithAi}>
-                  Use with AI
-                </button>
-              ) : (
-                <button className="quiet-action" type="button" onClick={onUseWithAi}>
-                  Another AI tool
-                </button>
-              )}
-            </div>
-          </div>
-        </article>
-
-        <article className="first-value__step">
-          <span className="first-value__number">3</span>
-          <div>
-            <p className="eyebrow">Check it</p>
-            <h3>Check important work afterwards</h3>
-            <p>
-              Run configured checks and review whether the result actually
-              followed the practice you chose.
-            </p>
-            <button className="quiet-action" type="button" onClick={onCheckWork}>
-              Check work
-            </button>
-          </div>
-        </article>
+        </div>
       </div>
-
-      <aside className="first-value__improve">
-        <div>
-          <p className="eyebrow">Make it yours</p>
-          <strong>Want AI to behave differently?</strong>
-          <span>
-            Review the suggested practice, change anything you dislike, or add
-            something you always want AI to do.
-          </span>
-        </div>
-        <div className="button-row">
-          <button className="quiet-action" type="button" onClick={onExploreStartingPoints}>
-            Try another starting point
-          </button>
-          <button className="quiet-action" type="button" onClick={onImprovePractice}>
-            Improve your practice
-          </button>
-        </div>
-      </aside>
+      <div className="calm-secondary">
+        <button type="button" onClick={onImprovePractice}><strong>Improve your practice</strong><span>Change what AI should do</span></button>
+        <button type="button" onClick={onCheckWork}><strong>Review results</strong><span>Check how the work went</span></button>
+      </div>
+      <details className="calm-extras">
+        <summary>More options</summary>
+        <button type="button" className="quiet-action" onClick={onExploreStartingPoints}>Browse other starting points</button>
+      </details>
     </section>
   );
 }

@@ -153,3 +153,32 @@
     padding: 24px;
   }
 }
+
+
+/* Shared calm starter-pack journey on Windows and macOS. */
+.first-run-packs{display:grid;gap:20px}
+.first-run-pack-tabs{display:flex;flex-wrap:wrap;gap:8px}
+.first-run-pack-tabs button{padding:10px 17px;border:1px solid var(--line);border-radius:999px;color:var(--ink);background:var(--paper);cursor:pointer}
+.first-run-pack-tabs button.active{background:#315c43;color:white;border-color:#315c43}
+.first-run-pack-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.first-run-pack{display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:23px;min-width:0;overflow-wrap:anywhere}
+.first-run-pack h2{font:normal 1.55rem Georgia,serif;margin:0}
+.first-run-pack p{color:var(--muted);line-height:1.55;margin:0}
+.first-run-pack small{color:#315c43;font-weight:650}
+.first-run-pack .first-run-pack-best{font-size:.85rem}
+.first-run-pack details{width:100%;margin:6px 0}
+.first-run-pack details summary{cursor:pointer;color:#315c43;font-weight:650;padding:5px 0}
+.first-run-pack details ul{padding:10px 0 0 20px;margin:0;display:grid;gap:11px}
+.first-run-pack details li{line-height:1.45}
+.first-run-pack details li span{display:block;color:var(--muted);font-size:.84rem}
+.first-run-pack>.primary-action{margin-top:auto}
+.first-run-pack-basic{display:flex;flex-wrap:wrap;align-items:center;gap:15px;justify-content:space-between;border-top:1px solid var(--line);padding-top:20px}
+.first-run-selected-pack{padding:22px;border:1px solid var(--line);border-radius:20px;background:var(--paper);margin-bottom:16px}
+.first-run-selected-pack>p{color:var(--muted);line-height:1.55}
+.first-run-selected-pack h2{font:normal 1.5rem Georgia,serif}
+.first-run-selected-practices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.first-run-selected-practices>div{display:grid;align-content:start;gap:7px;min-width:0;padding:15px;border:1px solid var(--line);border-radius:13px;background:#f8f6f0}
+.first-run-selected-practices strong{font-size:.95rem}
+.first-run-selected-practices span{font-size:.85rem;line-height:1.48;color:var(--muted)}
+.first-run-extra-guidance ul{margin:12px 0}
+@media(max-width:900px){.first-run-pack-grid,.first-run-selected-practices{grid-template-columns:1fr}}

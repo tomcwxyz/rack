@@ -4,11 +4,12 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import type { ProjectSnapshot } from "@rack/core";
 import {
   firstRunApproaches,
-  firstRunInstructions,
-  firstRunProposal,
   type FirstRunApproach as Approach,
 } from "../firstRun.js";
 import type { CreationRouteId } from "./RouteChooser.js";
+import { getStarterEntry, getStarterTemplate } from "@rack/starter";
+import { preparedFirstRun } from "../preparedFirstRun.js";
+import { FirstRunStarterPacks } from "./FirstRunStarterPacks.js";
 import { FirstRunApproach } from "./FirstRunApproach.js";
 import { FirstRunHandoff, type FirstRunHost } from "./FirstRunHandoff.js";
 import "../first-run.css";
@@ -20,7 +21,7 @@ type Props = {
   onAdvanced: () => void;
   onCreated: (snapshot: ProjectSnapshot, host: FirstRunHost | null) => void;
 };
-type Step = "work" | "approach" | "handoff";
+type Step = "work" | "packs" | "approach" | "handoff";
 const workChoices: {
   id: CreationRouteId;
   title: string;
@@ -59,6 +60,7 @@ export function FirstRun({
   const [step, setStep] = useState<Step>("work");
   const [route, setRoute] = useState<CreationRouteId>("writing");
   const [task, setTask] = useState("");
+  const [starterPackId, setStarterPackId] = useState<string | null>(null);
   const [approaches, setApproaches] = useState<
     Record<CreationRouteId, Approach>
   >(() => ({ ...firstRunApproaches }));
@@ -70,6 +72,7 @@ export function FirstRun({
   const [status, setStatus] = useState<string | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const approach = approaches[route];
+  const selectedPack = starterPackId ? getStarterTemplate(starterPackId) : null;
   const visibleError = error || (step === "work" ? openError : null);
 
   useEffect(() => {
@@ -83,9 +86,7 @@ export function FirstRun({
   };
   const useApproach = () => {
     try {
-      setInstructions(
-        firstRunInstructions(firstRunProposal(route, task, approach), route),
-      );
+      setInstructions(preparedFirstRun(route, task, approach, starterPackId).instructions);
       goTo("handoff");
     } catch (reason) {
       setError(errorMessage(reason));
@@ -132,9 +133,8 @@ export function FirstRun({
     });
   const saveApproach = (title: string, host: FirstRunHost | null) =>
     void perform(async () => {
-      const proposal = firstRunProposal(route, task, { ...approach, title });
-      // Validate the exact source being saved, including the chosen name.
-      firstRunInstructions(proposal, route);
+      // Compile exactly the selected starter pack and edited approach into the saved Rack.
+      const { proposal } = preparedFirstRun(route, task, { ...approach, title }, starterPackId);
       const selected = await open({
         directory: true,
         multiple: false,
@@ -165,19 +165,9 @@ export function FirstRun({
         </button>
       </header>
       <div className="first-run-content">
-        <p className="eyebrow">
-          {step === "work"
-            ? "A useful start, in a few minutes"
-            : step === "approach"
-              ? "Your approach · 2 of 3"
-              : "Ready to use · 3 of 3"}
-        </p>
+        <p className="eyebrow">{step === "work" || step === "packs" ? "1 · Create" : step === "approach" || step === "handoff" ? "2 · Use" : "3 · Improve"}</p>
         <h1 ref={heading} tabIndex={-1}>
-          {step === "work"
-            ? "What would you like help with?"
-            : step === "approach"
-              ? "Start with a good approach."
-              : "Where will you use it?"}
+          {step === "work" ? "What would you like help with?" : step === "packs" ? "Find a good starting point." : step === "approach" ? "Here’s your approach." : "Ready to use."}
         </h1>
         {step === "work" ? (
           <p className="lede">
@@ -217,8 +207,9 @@ export function FirstRun({
                   type="button"
                   onClick={() => {
                     setRoute(choice.id);
+                    setStarterPackId(null);
                     setAdjusting(false);
-                    goTo("approach");
+                    goTo("packs");
                   }}
                 >
                   <strong>{choice.title}</strong>
@@ -236,7 +227,21 @@ export function FirstRun({
             </button>
           </>
         ) : null}
+        {step === "packs" ? (
+          <FirstRunStarterPacks route={route} onSelect={(id, nextRoute) => {
+            setRoute(nextRoute);
+            setStarterPackId(id);
+            setApproaches(current => ({...current, [nextRoute]: {
+              ...firstRunApproaches[nextRoute],
+              title: id ? getStarterTemplate(id)?.title ?? firstRunApproaches[nextRoute].title : firstRunApproaches[nextRoute].title,
+            }}));
+            setAdjusting(false);
+            goTo("approach");
+          }} />
+        ) : null}
         {step === "approach" ? (
+          <>
+          {selectedPack ? <section className="first-run-selected-pack" aria-label="Selected starter pack"><p>{selectedPack.promise || selectedPack.description}</p><h2>What this includes</h2><div className="first-run-selected-practices">{selectedPack.moduleIds.map(id => {const item = getStarterEntry(id);return <div key={id}><strong>{item?.title || id}</strong><span>{item?.description}</span></div>;})}</div></section> : null}
           <FirstRunApproach
             approach={approach}
             task={task}
@@ -246,7 +251,9 @@ export function FirstRun({
               setApproaches((current) => ({ ...current, [route]: next }))
             }
             onContinue={useApproach}
+            starterPackSelected={Boolean(selectedPack)}
           />
+          </>
         ) : null}
         {step === "handoff" ? (
           <FirstRunHandoff
@@ -264,9 +271,9 @@ export function FirstRun({
             className="quiet-action first-run-back"
             type="button"
             disabled={busy}
-            onClick={() => goTo(step === "handoff" ? "approach" : "work")}
+            onClick={() => goTo(step === "handoff" ? "approach" : step === "approach" ? "packs" : "work")}
           >
-            {step === "handoff" ? "Back to my approach" : "Back to my work"}
+            {step === "handoff" ? "Back to my approach" : step === "approach" ? "Other starting points" : "Back to my work"}
           </button>
         ) : null}
       </div>
